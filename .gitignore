@@ -25,6 +25,11 @@ Thumbs.db
 .idea/
 *.log
 
+# AI & Agent Context Files (Kept local, untracked on GitHub)
+PROJECT_CONTEXT.md
+CLAUDE.md
+.agents/
+
 # Prisma generated & temp
 backend/node_modules/
 frontend/node_modules/
