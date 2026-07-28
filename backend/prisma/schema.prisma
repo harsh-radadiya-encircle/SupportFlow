@@ -1,0 +1,232 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  PLATFORM_ADMIN
+  BUSINESS_ADMIN
+  SUPPORT_AGENT
+  CUSTOMER
+}
+
+enum SubscriptionPlan {
+  FREE
+  STANDARD
+  BUSINESS
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+  INCOMPLETE
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  WAITING_FOR_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketCategory {
+  GENERAL_INQUIRY
+  TECHNICAL_ISSUE
+  BILLING
+  FEATURE_REQUEST
+  BUG_REPORT
+}
+
+enum MessageType {
+  TEXT
+  ATTACHMENT
+  SYSTEM
+}
+
+model User {
+  id             String    @id @default(uuid())
+  firebaseUid    String    @unique
+  email          String    @unique
+  fullName       String
+  avatarUrl      String?
+  role           Role      @default(CUSTOMER)
+  isActive       Boolean   @default(true)
+  businessId     String?
+  business       Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  createdTickets     Ticket[]        @relation("CustomerTickets")
+  assignedTickets    Ticket[]        @relation("AgentTickets")
+  sentMessages       Message[]
+  internalNotes      InternalNote[]
+  activityLogs       TicketActivity[]
+  fcmTokens          FcmToken[]
+  notifications      Notification[]
+  sentInvitations    Invitation[]    @relation("InvitedBy")
+
+  @@index([firebaseUid])
+  @@index([businessId, role])
+}
+
+model Business {
+  id                   String             @id @default(uuid())
+  name                 String
+  slug                 String             @unique
+  logoUrl              String?
+  isSuspended          Boolean            @default(false)
+  stripeCustomerId     String?            @unique
+  stripeSubscriptionId String?            @unique
+  plan                 SubscriptionPlan   @default(FREE)
+  subscriptionStatus   SubscriptionStatus @default(ACTIVE)
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  users                User[]
+  tickets              Ticket[]
+  invitations          Invitation[]
+  billingHistory       BillingHistory[]
+}
+
+model Invitation {
+  id          String   @id @default(uuid())
+  email       String
+  token       String   @unique
+  role        Role     @default(SUPPORT_AGENT)
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invitedById String
+  invitedBy   User     @relation("InvitedBy", fields: [invitedById], references: [id])
+  isAccepted  Boolean  @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Ticket {
+  id              String         @id @default(uuid())
+  ticketNumber    Int            @default(autoincrement())
+  title           String
+  description     String
+  category        TicketCategory @default(GENERAL_INQUIRY)
+  priority        TicketPriority @default(MEDIUM)
+  status          TicketStatus   @default(OPEN)
+  
+  businessId      String
+  business        Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  customerId      String
+  customer        User           @relation("CustomerTickets", fields: [customerId], references: [id])
+  
+  assignedAgentId String?
+  assignedAgent   User?          @relation("AgentTickets", fields: [assignedAgentId], references: [id])
+
+  firstResponseAt DateTime?
+  resolvedAt      DateTime?
+  closedAt        DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  messages        Message[]
+  internalNotes   InternalNote[]
+  activities      TicketActivity[]
+  notifications   Notification[]
+
+  @@index([businessId, status])
+  @@index([customerId])
+  @@index([assignedAgentId])
+}
+
+model Message {
+  id          String      @id @default(uuid())
+  ticketId    String
+  ticket      Ticket      @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  senderId    String
+  sender      User        @relation(fields: [senderId], references: [id])
+  type        MessageType @default(TEXT)
+  content     String
+  attachments String[]
+  isRead      Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model InternalNote {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model TicketActivity {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id])
+  action    String
+  details   Json
+  createdAt DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model FcmToken {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token      String   @unique
+  deviceType String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ticketId  String?
+  ticket    Ticket?  @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model BillingHistory {
+  id              String   @id @default(uuid())
+  businessId      String
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  stripeInvoiceId String   @unique
+  amountPaid      Int
+  currency        String   @default("usd")
+  status          String
+  pdfUrl          String?
+  createdAt       DateTime @default(now())
+}

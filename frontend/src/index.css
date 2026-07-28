@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* =======================================================
+   * GLOBAL THEME DESIGN SYSTEM (LIGHT MODE DEFAULT)
+   * Easily customize colors globally or toggle dark mode
+   * ======================================================= */
+  :root {
+    /* Page & Surfaces */
+    --bg-page: 210 40% 98%;          /* #f8fafc slate-50 */
+    --bg-card: 0 0% 100%;             /* #ffffff pure white */
+    --bg-card-hover: 210 40% 96%;     /* #f1f5f9 slate-100 */
+    --bg-sidebar: 0 0% 100%;          /* #ffffff pure white */
+    
+    /* Typography & Text Colors */
+    --text-primary: 222 47% 11%;      /* #0f172a slate-900 */
+    --text-secondary: 215 16% 47%;    /* #64748b slate-500 */
+    --text-muted: 215 16% 65%;        /* #94a3b8 slate-400 */
+    
+    /* Brand & Accent (Indigo) */
+    --primary: 239 84% 67%;           /* #6366f1 indigo-500 */
+    --primary-hover: 239 84% 59%;     /* #4f46e5 indigo-600 */
+    --primary-foreground: 0 0% 100%;  /* #ffffff */
+    --primary-light: 239 84% 96%;     /* #eef2ff indigo-50 */
+    
+    /* Borders & Inputs */
+    --border-color: 214 32% 91%;      /* #e2e8f0 slate-200 */
+    --input-bg: 0 0% 100%;
+    
+    --radius: 0.75rem;
+  }
+
+  /* Optional Future Dark Mode Override */
+  .dark {
+    --bg-page: 224 71% 4%;
+    --bg-card: 222 47% 7%;
+    --bg-card-hover: 222 47% 10%;
+    --bg-sidebar: 222 47% 7%;
+    --text-primary: 210 40% 98%;
+    --text-secondary: 215 20% 65%;
+    --border-color: 217 33% 17%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border-color));
+  }
+  body {
+    background-color: hsl(var(--bg-page));
+    color: hsl(var(--text-primary));
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Glassmorphism Surface Utilities */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+}

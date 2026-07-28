@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing & Coverage
+coverage/
+
+# Production & Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Environment variables (SECURITY MANDATE: NEVER COMMIT .env)
+.env
+.env.local
+.env.development
+.env.staging
+.env.production
+
+# IDE & OS Files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+# Prisma generated & temp
+backend/node_modules/
+frontend/node_modules/
