@@ -7,6 +7,8 @@ export interface SyncPayload {
   fullName: string;
   role?: Role;
   businessName?: string;
+  mode?: 'login' | 'register';
+  authProvider?: 'EMAIL_PASSWORD' | 'GOOGLE';
 }
 
 export const authApi = {

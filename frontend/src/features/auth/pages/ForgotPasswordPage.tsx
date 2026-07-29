@@ -3,12 +3,11 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link } from 'react-router-dom';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../../../shared/config/firebase';
+import toast from 'react-hot-toast';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { Card } from '../../../shared/components/ui/Card';
-import { Headset, Mail, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Headset, Mail, ArrowLeft, CheckCircle2, AlertCircle, Info } from 'lucide-react';
 import { authApi } from '../api/auth.api';
 
 const forgotSchema = z.object({
@@ -20,6 +19,7 @@ type ForgotFormValues = z.infer<typeof forgotSchema>;
 export const ForgotPasswordPage: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [googleNotice, setGoogleNotice] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
@@ -33,19 +33,28 @@ export const ForgotPasswordPage: React.FC = () => {
   const onSubmit = async (data: ForgotFormValues) => {
     setIsSubmitting(true);
     setErrorMessage(null);
+    setGoogleNotice(null);
 
     try {
-      try {
-        await sendPasswordResetEmail(auth, data.email);
-      } catch (fbErr: any) {
-        console.warn('[Firebase Auth] Notice:', fbErr.message);
-      }
-
-      await authApi.forgotPassword(data.email).catch(() => null);
+      // Dispatch password reset via Backend Brevo Email API
+      await authApi.forgotPassword(data.email);
 
       setIsSubmitted(true);
+      toast.success('Password reset email sent! Check your inbox.');
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to request password reset.');
+      const msg = err.response?.data?.message || err.message || 'Failed to send password reset email. Please try again.';
+
+      if (msg.includes('Google Sign-In') || msg.includes('Google')) {
+        setGoogleNotice(msg);
+        toast.error('Google Account detected. Sign in directly with Google!');
+      } else if (err.response?.status === 404 || msg.includes('No registered user account found') || msg.includes('not found')) {
+        const notFoundMsg = 'No registered user account found with this email address.';
+        setErrorMessage(notFoundMsg);
+        toast.error(notFoundMsg);
+      } else {
+        setErrorMessage(msg);
+        toast.error(msg);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -71,9 +80,10 @@ export const ForgotPasswordPage: React.FC = () => {
                 <CheckCircle2 className="w-6 h-6" />
               </div>
               <h2 className="text-xl font-bold text-slate-900">Check your inbox</h2>
-              <p className="text-sm text-slate-600 font-medium">
-                We have sent password reset instructions to your registered email address.
+              <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                We have sent an official password reset link to your email address. Please check your inbox and click the link to create your new password.
               </p>
+
               <Link to="/login">
                 <Button variant="outline" className="w-full mt-4">
                   <ArrowLeft className="w-4 h-4" /> Back to Sign In
@@ -85,9 +95,24 @@ export const ForgotPasswordPage: React.FC = () => {
               <div className="space-y-1">
                 <h2 className="text-xl font-bold text-slate-900">Forgot Password?</h2>
                 <p className="text-xs text-slate-500 font-medium">
-                  Enter your email address below and we'll send you a link to reset your password.
+                  Enter your registered email address below to reset your password.
                 </p>
               </div>
+
+              {googleNotice && (
+                <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-900 text-xs font-semibold space-y-2 animate-in fade-in duration-200">
+                  <div className="flex items-center gap-1.5 font-bold text-indigo-700">
+                    <Info className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>Google Account Detected</span>
+                  </div>
+                  <p className="text-indigo-800 font-medium leading-relaxed">{googleNotice}</p>
+                  <Link to="/login" className="inline-block mt-1">
+                    <Button variant="primary" size="sm" className="w-full mt-1">
+                      <ArrowLeft className="w-3.5 h-3.5" /> Sign In with Google
+                    </Button>
+                  </Link>
+                </div>
+              )}
 
               {errorMessage && (
                 <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
@@ -96,18 +121,22 @@ export const ForgotPasswordPage: React.FC = () => {
                 </div>
               )}
 
-              <Input
-                label="Email Address"
-                type="email"
-                placeholder="owner@acme.com"
-                leftIcon={<Mail className="w-4 h-4" />}
-                error={errors.email?.message}
-                {...register('email')}
-              />
+              {!googleNotice && (
+                <>
+                  <Input
+                    label="Email Address"
+                    type="email"
+                    placeholder="owner@acme.com"
+                    leftIcon={<Mail className="w-4 h-4" />}
+                    error={errors.email?.message}
+                    {...register('email')}
+                  />
 
-              <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isSubmitting}>
-                Send Password Reset Link
-              </Button>
+                  <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isSubmitting}>
+                    Send Password Reset Email
+                  </Button>
+                </>
+              )}
 
               <div className="text-center pt-2">
                 <Link to="/login" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors">

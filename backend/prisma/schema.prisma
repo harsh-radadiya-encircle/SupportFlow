@@ -58,18 +58,24 @@ enum MessageType {
   SYSTEM
 }
 
+enum AuthProvider {
+  EMAIL_PASSWORD
+  GOOGLE
+}
+
 model User {
-  id             String    @id @default(uuid())
-  firebaseUid    String    @unique
-  email          String    @unique
+  id             String       @id @default(uuid())
+  firebaseUid    String       @unique
+  email          String       @unique
   fullName       String
   avatarUrl      String?
-  role           Role      @default(CUSTOMER)
-  isActive       Boolean   @default(true)
+  role           Role         @default(CUSTOMER)
+  authProvider   AuthProvider @default(EMAIL_PASSWORD)
+  isActive       Boolean      @default(true)
   businessId     String?
-  business       Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  business       Business?    @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   createdTickets     Ticket[]        @relation("CustomerTickets")
   assignedTickets    Ticket[]        @relation("AgentTickets")

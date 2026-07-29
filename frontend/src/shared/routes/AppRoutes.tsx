@@ -5,6 +5,7 @@ import { DashboardLayout } from '../layouts/DashboardLayout';
 import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '../../features/auth';
 import { BusinessAdminDashboardPage, PlatformAdminDashboardPage, AgentDashboardPage } from '../../features/dashboard';
 import { CustomerTicketListPage, CreateTicketPage, TicketDetailPage } from '../../features/tickets';
+import { AgentManagementPage, AcceptInvitePage } from '../../features/invitations';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -14,6 +15,7 @@ export const AppRoutes: React.FC = () => {
       <Route path="/register" element={<LoginPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
+      <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
       {/* Authenticated Dashboard Routes */}
       <Route element={<ProtectedRoute />}>
@@ -29,7 +31,7 @@ export const AppRoutes: React.FC = () => {
           <Route element={<ProtectedRoute allowedRoles={['BUSINESS_ADMIN']} />}>
             <Route path="/business/dashboard" element={<BusinessAdminDashboardPage />} />
             <Route path="/business/tickets" element={<BusinessAdminDashboardPage />} />
-            <Route path="/business/team" element={<BusinessAdminDashboardPage />} />
+            <Route path="/business/team" element={<AgentManagementPage />} />
             <Route path="/business/billing" element={<BusinessAdminDashboardPage />} />
             <Route path="/business/reports" element={<BusinessAdminDashboardPage />} />
           </Route>

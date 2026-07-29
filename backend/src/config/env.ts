@@ -23,4 +23,12 @@ export const env = {
       BUSINESS: process.env.STRIPE_BUSINESS_PLAN_PRICE_ID || 'price_business',
     },
   },
+  SMTP: {
+    HOST: process.env.SMTP_HOST || 'smtp.gmail.com',
+    PORT: parseInt(process.env.SMTP_PORT || '587', 10),
+    USER: process.env.SMTP_USER || '',
+    PASS: process.env.SMTP_PASS || '',
+    FROM_EMAIL: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || 'noreply@supportflow.com',
+    FROM_NAME: process.env.SMTP_FROM_NAME || 'SupportFlow Team',
+  },
 };

@@ -3,8 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { confirmPasswordReset } from 'firebase/auth';
-import { auth } from '../../../shared/config/firebase';
+import toast from 'react-hot-toast';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { Card } from '../../../shared/components/ui/Card';
@@ -26,7 +25,7 @@ type ResetFormValues = z.infer<typeof resetSchema>;
 export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const oobCode = searchParams.get('oobCode') || searchParams.get('token');
+  const oobCode = searchParams.get('token') || searchParams.get('oobCode');
   
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -45,20 +44,19 @@ export const ResetPasswordPage: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      if (oobCode) {
-        try {
-          await confirmPasswordReset(auth, oobCode, data.password);
-        } catch (fbErr: any) {
-          console.warn('[Firebase Auth] Notice:', fbErr.message);
-        }
-
-        await authApi.resetPassword(oobCode, data.password).catch(() => null);
+      if (!oobCode) {
+        throw new Error('Invalid or missing password reset token.');
       }
 
+      await authApi.resetPassword(oobCode, data.password);
+
       setIsSuccess(true);
+      toast.success('Password updated successfully! Redirecting to sign in...');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to reset password. Link may be expired.');
+      const msg = err.response?.data?.message || err.message || 'Failed to reset password. Link may be expired.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }

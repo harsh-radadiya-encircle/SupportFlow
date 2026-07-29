@@ -2,16 +2,40 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate } from 'react-router-dom';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../../../shared/config/firebase';
+import { useNavigate, Link } from 'react-router-dom';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  fetchSignInMethodsForEmail,
+} from 'firebase/auth';
+import toast from 'react-hot-toast';
+import { auth, googleProvider, requestFcmToken } from '../../../shared/config/firebase';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { Card } from '../../../shared/components/ui/Card';
 import { useAuthStore } from '../../../shared/store/authStore';
-import { Role, User as UserType } from '../../../shared/types';
-import { Headset, Mail, Lock, LogIn, AlertCircle, Building, User, CheckCircle2 } from 'lucide-react';
+import { Role } from '../../../shared/types';
+import { Headset, Mail, Lock, LogIn, AlertCircle, Building, User, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { authApi } from '../api/auth.api';
+
+const registerFcmDeviceToken = async (authToken: string) => {
+  try {
+    const fcmToken = await requestFcmToken();
+    if (fcmToken) {
+      await fetch('http://localhost:5000/api/v1/users/fcm-token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ token: fcmToken, deviceType: 'web' }),
+      }).catch(() => null);
+    }
+  } catch (err) {
+    console.warn('[FCM Registration] Notice:', err);
+  }
+};
 
 const authSchema = z.object({
   fullName: z.string().optional(),
@@ -28,7 +52,10 @@ export const LoginPage: React.FC = () => {
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [selectedRole, setSelectedRole] = useState<'BUSINESS_ADMIN' | 'CUSTOMER'>('BUSINESS_ADMIN');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [isGoogleSubmitting, setIsGoogleSubmitting] = useState<boolean>(false);
 
   const {
     register,
@@ -41,52 +68,104 @@ export const LoginPage: React.FC = () => {
   const onSubmit = async (data: AuthFormValues) => {
     setIsSubmitting(true);
     setErrorMessage(null);
+    setInfoMessage(null);
+    setSuccessMessage(null);
 
     try {
-      let firebaseUser: any = null;
-
+      // Check if email was registered via Google Sign-In
       try {
-        if (isRegisterMode) {
-          const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
-          firebaseUser = cred.user;
-        } else {
-          const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
-          firebaseUser = cred.user;
+        const methods = await fetchSignInMethodsForEmail(auth, data.email);
+        if (methods.includes('google.com') && !methods.includes('password')) {
+          const errMsg = 'This email address was registered using Google Sign-In. Please sign in using the "Continue with Google" button!';
+          toast.error(errMsg);
+          throw new Error(errMsg);
         }
-      } catch (fbErr: any) {
-        console.warn('[Firebase Auth] Notice:', fbErr.message);
+      } catch (checkErr: any) {
+        if (checkErr.message?.includes('Google Sign-In')) {
+          throw checkErr;
+        }
       }
 
-      const uid = firebaseUser?.uid || `dev_uid_${Date.now()}`;
-      const token = firebaseUser ? await firebaseUser.getIdToken() : `dev_token_${Date.now()}`;
+      let firebaseUser: any = null;
 
-      const syncPayload = {
-        firebaseUid: uid,
-        email: data.email,
-        fullName: data.fullName || data.email.split('@')[0],
-        role: (isRegisterMode ? selectedRole : inferRoleFromEmail(data.email)) as Role,
-        businessName: data.businessName,
-      };
+      if (isRegisterMode) {
+        // 1. REGISTER MODE (Email / Password)
+        try {
+          const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+          firebaseUser = cred.user;
+        } catch (fbErr: any) {
+          if (fbErr.code === 'auth/email-already-in-use') {
+            const errMsg = 'An account already exists with this email address. Please sign in instead.';
+            toast.error(errMsg);
+            throw new Error(errMsg);
+          }
+          console.warn('[Firebase Auth Register Notice]:', fbErr.message);
+        }
 
-      try {
-        const result = await authApi.syncUser(syncPayload);
-        setAuth(result.data.user, result.data.token || token);
-        redirectUserByRole(result.data.user.role);
-      } catch (apiErr) {
-        const mockUser: UserType = {
-          id: `usr_${Date.now()}`,
+        const uid = firebaseUser?.uid || `dev_uid_${Date.now()}`;
+        const token = firebaseUser ? await firebaseUser.getIdToken() : `dev_token_${Date.now()}`;
+
+        const syncPayload = {
           firebaseUid: uid,
           email: data.email,
           fullName: data.fullName || data.email.split('@')[0],
-          role: syncPayload.role,
-          isActive: true,
-          businessId: syncPayload.role === 'BUSINESS_ADMIN' ? 'acme-id' : null,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          role: selectedRole as Role,
+          businessName: data.businessName,
+          mode: 'register' as const,
+          authProvider: 'EMAIL_PASSWORD' as const,
         };
 
-        setAuth(mockUser, token);
-        redirectUserByRole(syncPayload.role);
+        try {
+          const result = await authApi.syncUser(syncPayload);
+          const finalToken = result.data.token || token;
+          setAuth(result.data.user, finalToken);
+          registerFcmDeviceToken(finalToken);
+          const succMsg = 'Account registered successfully! Redirecting...';
+          setSuccessMessage(succMsg);
+          toast.success('Account registered successfully!');
+          setTimeout(() => redirectUserByRole(result.data.user.role), 1000);
+        } catch (apiErr: any) {
+          const errMsg = apiErr.response?.data?.message || 'Registration failed. Please try again.';
+          toast.error(errMsg);
+          throw new Error(errMsg);
+        }
+      } else {
+        // 2. LOGIN MODE (Email / Password)
+        try {
+          const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
+          firebaseUser = cred.user;
+        } catch (fbErr: any) {
+          console.warn('[Firebase Auth Login Notice]:', fbErr.message);
+          const errMsg = 'Invalid email or password. Please verify your credentials and try again.';
+          toast.error(errMsg);
+          throw new Error(errMsg);
+        }
+
+        const uid = firebaseUser.uid;
+        const token = await firebaseUser.getIdToken();
+
+        const syncPayload = {
+          firebaseUid: uid,
+          email: data.email,
+          fullName: data.fullName || data.email.split('@')[0],
+          mode: 'login' as const,
+          authProvider: 'EMAIL_PASSWORD' as const,
+        };
+
+        try {
+          const result = await authApi.syncUser(syncPayload);
+          const finalToken = result.data.token || token;
+          setAuth(result.data.user, finalToken);
+          registerFcmDeviceToken(finalToken);
+          const succMsg = 'Authentication successful! Redirecting to dashboard...';
+          setSuccessMessage(succMsg);
+          toast.success('Welcome back! Signed in successfully.');
+          setTimeout(() => redirectUserByRole(result.data.user.role), 800);
+        } catch (apiErr: any) {
+          const msg = apiErr.response?.data?.message || 'No account found with this email. Please register your account first.';
+          toast.error(msg);
+          throw new Error(msg);
+        }
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Authentication failed. Please try again.');
@@ -96,50 +175,93 @@ export const LoginPage: React.FC = () => {
   };
 
   const handleGoogleSignIn = async () => {
-    setIsSubmitting(true);
+    setIsGoogleSubmitting(true);
     setErrorMessage(null);
+    setInfoMessage(null);
+    setSuccessMessage(null);
 
     try {
       const cred = await signInWithPopup(auth, googleProvider);
       const token = await cred.user.getIdToken();
+      const userEmail = cred.user.email || '';
 
-      const syncPayload = {
-        firebaseUid: cred.user.uid,
-        email: cred.user.email || '',
-        fullName: cred.user.displayName || 'Google User',
-        role: selectedRole as Role,
-      };
-
+      // Check if email was registered via Email & Password
       try {
-        const result = await authApi.syncUser(syncPayload);
-        setAuth(result.data.user, result.data.token || token);
-        redirectUserByRole(result.data.user.role);
-      } catch (apiErr) {
-        const mockUser: UserType = {
-          id: `usr_${Date.now()}`,
+        const methods = await fetchSignInMethodsForEmail(auth, userEmail);
+        if (methods.includes('password') && !methods.includes('google.com') && !isRegisterMode) {
+          const errMsg = 'This email address was registered using Email & Password. Please sign in using your email and password!';
+          toast.error(errMsg);
+          throw new Error(errMsg);
+        }
+      } catch (checkErr: any) {
+        if (checkErr.message?.includes('Email & Password')) {
+          throw checkErr;
+        }
+      }
+
+      if (isRegisterMode) {
+        // GOOGLE REGISTER MODE
+        const syncPayload = {
           firebaseUid: cred.user.uid,
-          email: cred.user.email || '',
+          email: userEmail,
           fullName: cred.user.displayName || 'Google User',
           role: selectedRole as Role,
-          isActive: true,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          mode: 'register' as const,
+          authProvider: 'GOOGLE' as const,
         };
-        setAuth(mockUser, token);
-        redirectUserByRole(selectedRole);
+
+        try {
+          const result = await authApi.syncUser(syncPayload);
+          const finalToken = result.data.token || token;
+          setAuth(result.data.user, finalToken);
+          registerFcmDeviceToken(finalToken);
+          const succMsg = 'Google Account registered successfully! Redirecting...';
+          setSuccessMessage(succMsg);
+          toast.success('Registered successfully with Google!');
+          setTimeout(() => redirectUserByRole(result.data.user.role), 1000);
+        } catch (apiErr: any) {
+          const errMsg = apiErr.response?.data?.message || 'Google registration failed. Please try again.';
+          toast.error(errMsg);
+          throw new Error(errMsg);
+        }
+      } else {
+        // GOOGLE LOGIN MODE
+        const syncPayload = {
+          firebaseUid: cred.user.uid,
+          email: userEmail,
+          fullName: cred.user.displayName || 'Google User',
+          mode: 'login' as const,
+          authProvider: 'GOOGLE' as const,
+        };
+
+        try {
+          const result = await authApi.syncUser(syncPayload);
+          const finalToken = result.data.token || token;
+          setAuth(result.data.user, finalToken);
+          registerFcmDeviceToken(finalToken);
+          const succMsg = 'Signed in with Google! Redirecting...';
+          setSuccessMessage(succMsg);
+          toast.success('Signed in with Google successfully!');
+          setTimeout(() => redirectUserByRole(result.data.user.role), 800);
+        } catch (apiErr: any) {
+          // Purge orphan user from Firebase Auth console tab immediately!
+          try {
+            await cred.user.delete().catch(() => auth.signOut());
+          } catch (delErr) {
+            await auth.signOut().catch(() => null);
+          }
+
+          setIsRegisterMode(true);
+          const infMsg = `No existing account found for ${userEmail}. Cleaned up session — please select your account type below to register!`;
+          setInfoMessage(infMsg);
+          toast.error(apiErr.response?.data?.message || 'No account found. Please register your account.');
+        }
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Google sign in canceled or failed.');
     } finally {
-      setIsSubmitting(false);
+      setIsGoogleSubmitting(false);
     }
-  };
-
-  const inferRoleFromEmail = (email: string) => {
-    if (email.includes('admin')) return 'PLATFORM_ADMIN';
-    if (email.includes('owner')) return 'BUSINESS_ADMIN';
-    if (email.includes('agent')) return 'SUPPORT_AGENT';
-    return 'CUSTOMER';
   };
 
   const redirectUserByRole = (role: string) => {
@@ -179,17 +301,25 @@ export const LoginPage: React.FC = () => {
         <Card glass className="p-8 shadow-xl shadow-slate-200/60 border border-slate-200">
           <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-6">
             <button
-              onClick={() => setIsRegisterMode(false)}
+              onClick={() => {
+                setIsRegisterMode(false);
+                setErrorMessage(null);
+                setInfoMessage(null);
+              }}
               className={`text-sm font-bold pb-2 transition-colors ${
-                !isRegisterMode ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400'
+                !isRegisterMode ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               Sign In
             </button>
             <button
-              onClick={() => setIsRegisterMode(true)}
+              onClick={() => {
+                setIsRegisterMode(true);
+                setErrorMessage(null);
+                setInfoMessage(null);
+              }}
               className={`text-sm font-bold pb-2 transition-colors ${
-                isRegisterMode ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400'
+                isRegisterMode ? 'text-indigo-600 border-b-2 border-indigo-600' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               Create Account
@@ -197,8 +327,22 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            {successMessage && (
+              <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
+                <span>{successMessage}</span>
+              </div>
+            )}
+
+            {infoMessage && (
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+                <AlertCircle className="w-4 h-4 shrink-0 text-amber-600" />
+                <span>{infoMessage}</span>
+              </div>
+            )}
+
             {errorMessage && (
-              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2 animate-in fade-in duration-200">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
                 <span>{errorMessage}</span>
               </div>
@@ -214,7 +358,7 @@ export const LoginPage: React.FC = () => {
                       onClick={() => setSelectedRole('BUSINESS_ADMIN')}
                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
                         selectedRole === 'BUSINESS_ADMIN'
-                          ? 'bg-indigo-50 border-indigo-600 text-indigo-700'
+                          ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm'
                           : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                       }`}
                     >
@@ -225,7 +369,7 @@ export const LoginPage: React.FC = () => {
                       onClick={() => setSelectedRole('CUSTOMER')}
                       className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all ${
                         selectedRole === 'CUSTOMER'
-                          ? 'bg-indigo-50 border-indigo-600 text-indigo-700'
+                          ? 'bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm'
                           : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                       }`}
                     >
@@ -272,20 +416,31 @@ export const LoginPage: React.FC = () => {
               {...register('password')}
             />
 
+            {!isRegisterMode && (
+              <div className="flex items-center justify-end pt-1">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+            )}
+
             <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isSubmitting}>
               <LogIn className="w-4 h-4" />
               {isRegisterMode ? 'Register Account' : 'Sign In'}
             </Button>
           </form>
 
-          <div className="mt-4 pt-4 border-t border-slate-200">
+          <div className="mt-5 pt-4 border-t border-slate-200">
             <Button
               type="button"
               variant="outline"
               size="md"
               className="w-full justify-center bg-white hover:bg-slate-50 border-slate-200 text-slate-700 shadow-sm"
               onClick={handleGoogleSignIn}
-              isLoading={isSubmitting}
+              isLoading={isGoogleSubmitting}
             >
               <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                 <path
@@ -309,106 +464,9 @@ export const LoginPage: React.FC = () => {
             </Button>
           </div>
 
-          <div className="mt-6 pt-5 border-t border-slate-200">
-            <p className="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 mb-2.5">
-              Quick Role Test Logins:
-            </p>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setAuth(
-                    {
-                      id: 'admin-1',
-                      firebaseUid: 'admin-1',
-                      email: 'admin@supportflow.com',
-                      fullName: 'System Platform Admin',
-                      role: 'PLATFORM_ADMIN',
-                      isActive: true,
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                    },
-                    'mock_token'
-                  );
-                  navigate('/admin/dashboard');
-                }}
-                className="p-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-indigo-500 text-slate-700 text-left transition-colors shadow-sm"
-              >
-                <span className="font-bold block text-rose-600">Platform Admin</span>
-                admin@supportflow.com
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuth(
-                    {
-                      id: 'owner-1',
-                      firebaseUid: 'owner-1',
-                      email: 'owner@acme.com',
-                      fullName: 'Sarah (Business Admin)',
-                      role: 'BUSINESS_ADMIN',
-                      businessId: 'acme-id',
-                      isActive: true,
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                    },
-                    'mock_token'
-                  );
-                  navigate('/business/dashboard');
-                }}
-                className="p-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-indigo-500 text-slate-700 text-left transition-colors shadow-sm"
-              >
-                <span className="font-bold block text-purple-600">Business Admin</span>
-                owner@acme.com
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuth(
-                    {
-                      id: 'agent-1',
-                      firebaseUid: 'agent-1',
-                      email: 'agent@acme.com',
-                      fullName: 'David (Support Agent)',
-                      role: 'SUPPORT_AGENT',
-                      businessId: 'acme-id',
-                      isActive: true,
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                    },
-                    'mock_token'
-                  );
-                  navigate('/agent/dashboard');
-                }}
-                className="p-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-indigo-500 text-slate-700 text-left transition-colors shadow-sm"
-              >
-                <span className="font-bold block text-emerald-600">Support Agent</span>
-                agent@acme.com
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setAuth(
-                    {
-                      id: 'customer-1',
-                      firebaseUid: 'customer-1',
-                      email: 'customer@gmail.com',
-                      fullName: 'John (Customer)',
-                      role: 'CUSTOMER',
-                      isActive: true,
-                      createdAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString(),
-                    },
-                    'mock_token'
-                  );
-                  navigate('/customer/tickets');
-                }}
-                className="p-2 rounded-xl bg-slate-50 border border-slate-200 hover:border-indigo-500 text-slate-700 text-left transition-colors shadow-sm"
-              >
-                <span className="font-bold block text-sky-600">Customer</span>
-                customer@gmail.com
-              </button>
-            </div>
+          <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] font-bold text-slate-400">
+            <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
+            <span>Encrypted 256-bit SSL Firebase Security</span>
           </div>
         </Card>
       </div>

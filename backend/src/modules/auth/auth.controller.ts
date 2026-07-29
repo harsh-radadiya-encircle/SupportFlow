@@ -50,8 +50,8 @@ export class AuthController {
 
   static async resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { token } = req.body;
-      const result = await AuthService.resetPassword(token);
+      const { token, password } = req.body;
+      const result = await AuthService.resetPassword(token, password);
       sendResponse({
         res,
         statusCode: 200,

@@ -165,6 +165,21 @@ SupportFlow/
 
 ---
 
-## 7. Decision Log (ADR Index)
+## 7. Code Quality & Engineering Standards
 
-- **ADR-0001**: Monorepo structure with dual `/backend` & `/frontend` directories, feature-driven frontend layout, Prisma PostgreSQL ORM, and Socket.IO real-time engine.
+All code written for SupportFlow MUST comply with the following 8 quality pillars:
+
+1. **TypeScript Only**: JavaScript (`.js`/`.jsx`) is strictly prohibited.
+2. **ESLint & Prettier**: Configured via `.prettierrc` and ESLint for clean, consistent formatting.
+3. **Husky & lint-staged**: Automated git pre-commit checks for type checks and code style.
+4. **Feature-Based Folder Structure**: Modular separation inside `src/features/` and `src/shared/`.
+5. **Reusable UI Components**: UI primitives in `shared/components/ui/` (`Button`, `Input`, `Card`, `Badge`).
+6. **Centralized API Services**: Axios instance in `shared/api/apiClient.ts` + feature API files.
+7. **Centralized Error Handling**: Express middleware + `ApiError` class on backend; Zod + state alerts on frontend.
+8. **Consistent Naming Standards**: `PascalCase` for Components/Classes, `camelCase` for methods/vars, `UPPER_CASE` for Constants/Enums.
+
+---
+
+## 8. Decision Log (ADR Index)
+
+- **ADR-0001**: Monorepo structure with dual `/backend` & `/frontend` directories, feature-based frontend layout, Prisma PostgreSQL ORM, and Socket.IO real-time engine.
