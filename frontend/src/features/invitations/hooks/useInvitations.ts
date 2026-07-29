@@ -2,10 +2,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { invitationsApi, InviteAgentPayload, AcceptInvitePayload } from '../api/invitations.api';
 
-export const useInvitations = () => {
+export const useInvitations = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ['invitations'],
     queryFn: invitationsApi.getTeamAndInvitations,
+    enabled,
     staleTime: 2 * 60 * 1000,
   });
 };

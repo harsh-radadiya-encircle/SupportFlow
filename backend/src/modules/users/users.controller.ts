@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { UsersService } from './users.service';
 import { sendResponse } from '../../common/responses/apiResponse';
 import { AuthenticatedRequest } from '../../common/types';
@@ -19,6 +19,20 @@ export class UsersController {
         statusCode: 200,
         message: 'FCM push notification token registered successfully',
         data: savedToken,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getActiveBusinesses(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const businesses = await UsersService.getActiveBusinesses();
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: 'Active businesses retrieved successfully',
+        data: businesses,
       });
     } catch (error) {
       next(error);

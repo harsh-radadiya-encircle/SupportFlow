@@ -27,4 +27,20 @@ export class UsersService {
       where: { token },
     });
   }
+
+  /**
+   * Get list of active registered businesses for customer ticket creation selector
+   */
+  static async getActiveBusinesses() {
+    return prisma.business.findMany({
+      where: { isSuspended: false },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        logoUrl: true,
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
 }

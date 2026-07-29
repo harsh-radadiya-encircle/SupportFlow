@@ -6,6 +6,7 @@ import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '../../features
 import { BusinessAdminDashboardPage, PlatformAdminDashboardPage, AgentDashboardPage } from '../../features/dashboard';
 import { CustomerTicketListPage, CreateTicketPage, TicketDetailPage } from '../../features/tickets';
 import { AgentManagementPage, AcceptInvitePage } from '../../features/invitations';
+import { BillingManagementPage } from '../../features/subscriptions/pages/BillingManagementPage';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -30,16 +31,16 @@ export const AppRoutes: React.FC = () => {
           {/* Business Admin */}
           <Route element={<ProtectedRoute allowedRoles={['BUSINESS_ADMIN']} />}>
             <Route path="/business/dashboard" element={<BusinessAdminDashboardPage />} />
-            <Route path="/business/tickets" element={<BusinessAdminDashboardPage />} />
+            <Route path="/business/tickets" element={<CustomerTicketListPage />} />
             <Route path="/business/team" element={<AgentManagementPage />} />
-            <Route path="/business/billing" element={<BusinessAdminDashboardPage />} />
+            <Route path="/business/billing" element={<BillingManagementPage />} />
             <Route path="/business/reports" element={<BusinessAdminDashboardPage />} />
           </Route>
 
           {/* Support Agent */}
           <Route element={<ProtectedRoute allowedRoles={['SUPPORT_AGENT', 'BUSINESS_ADMIN']} />}>
             <Route path="/agent/dashboard" element={<AgentDashboardPage />} />
-            <Route path="/agent/tickets" element={<AgentDashboardPage />} />
+            <Route path="/agent/tickets" element={<CustomerTicketListPage />} />
           </Route>
 
           {/* Customer & Shared Ticket Routes */}

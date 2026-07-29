@@ -1,8 +1,30 @@
 import { apiClient } from '../../../shared/api/apiClient';
 
+export interface CreateTicketPayload {
+  title: string;
+  description: string;
+  category?: string;
+  priority?: string;
+  businessId?: string;
+}
+
+export interface TicketFilterQuery {
+  status?: string;
+  priority?: string;
+  category?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
 export const ticketsApi = {
-  getTickets: async (params?: Record<string, any>) => {
-    const response = await apiClient.get('/tickets', { params });
+  createTicket: async (payload: CreateTicketPayload) => {
+    const response = await apiClient.post('/tickets', payload);
+    return response.data;
+  },
+
+  getTickets: async (query?: TicketFilterQuery) => {
+    const response = await apiClient.get('/tickets', { params: query });
     return response.data;
   },
 
@@ -11,18 +33,18 @@ export const ticketsApi = {
     return response.data;
   },
 
-  createTicket: async (payload: any) => {
-    const response = await apiClient.post('/tickets', payload);
+  updateStatus: async (id: string, status: string) => {
+    const response = await apiClient.patch(`/tickets/${id}/status`, { status });
     return response.data;
   },
 
-  sendMessage: async (ticketId: string, content: string) => {
-    const response = await apiClient.post(`/tickets/${ticketId}/messages`, { content });
+  assignAgent: async (id: string, assignedAgentId: string) => {
+    const response = await apiClient.patch(`/tickets/${id}/assign`, { assignedAgentId });
     return response.data;
   },
 
-  addInternalNote: async (ticketId: string, content: string) => {
-    const response = await apiClient.post(`/tickets/${ticketId}/notes`, { content });
+  addInternalNote: async (id: string, content: string) => {
+    const response = await apiClient.post(`/tickets/${id}/notes`, { content });
     return response.data;
   },
 };

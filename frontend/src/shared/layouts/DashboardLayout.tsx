@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { auth } from '../config/firebase';
 import { Badge } from '../components/ui/Badge';
+import { NotificationBell } from '../../features/notifications/components/NotificationBell';
 import {
   LayoutDashboard,
   Ticket,
@@ -10,7 +11,6 @@ import {
   Building2,
   CreditCard,
   BarChart3,
-  Bell,
   LogOut,
   Headset,
   ChevronDown,
@@ -88,17 +88,17 @@ export const DashboardLayout: React.FC = () => {
   const navLinks = getNavLinks();
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 antialiased">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 antialiased font-sans">
       {/* Sidebar Navigation */}
-      <aside className="w-full md:w-64 bg-white border-r border-slate-200 flex flex-col shrink-0 shadow-sm">
-        {/* Brand */}
+      <aside className="w-full md:w-64 bg-white border-r border-slate-200/80 flex flex-col shrink-0 shadow-sm">
+        {/* Brand Header */}
         <div className="p-5 border-b border-slate-100 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-sm">
-            <Headset className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-sm">
+            <Headset className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-extrabold text-lg tracking-tight text-slate-900">SupportFlow</h1>
-            <p className="text-[10px] uppercase font-bold tracking-widest text-slate-400">
+            <h1 className="font-bold text-lg tracking-tight text-slate-900">SupportFlow</h1>
+            <p className="text-[10px] uppercase font-semibold tracking-wider text-indigo-600">
               Customer Success
             </p>
           </div>
@@ -106,20 +106,20 @@ export const DashboardLayout: React.FC = () => {
 
         {/* User Business Banner */}
         {user?.business && (
-          <div className="mx-4 mt-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-            <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">
+          <div className="mx-4 mt-4 p-3 rounded-2xl bg-slate-50 border border-slate-200/80 text-xs">
+            <span className="text-slate-400 block text-[10px] uppercase font-semibold tracking-wider">
               Organization
             </span>
-            <span className="font-bold text-slate-800 truncate block mt-0.5">
+            <span className="font-bold text-slate-900 truncate block mt-0.5 text-sm">
               {user.business.name}
             </span>
-            <span className="text-[11px] text-indigo-600 font-semibold capitalize mt-1 inline-block">
+            <span className="text-xs text-indigo-600 font-semibold capitalize mt-0.5 inline-block">
               {user.business.plan.toLowerCase()} Plan
             </span>
           </div>
         )}
 
-        {/* Links */}
+        {/* Navigation Links */}
         <nav className="p-4 space-y-1 flex-1">
           {navLinks.map((link) => {
             const Icon = link.icon;
@@ -129,13 +129,13 @@ export const DashboardLayout: React.FC = () => {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
                   isActive
                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-4.5 h-4.5" />
                 <span>{link.name}</span>
               </Link>
             );
@@ -153,7 +153,7 @@ export const DashboardLayout: React.FC = () => {
                 {user?.fullName ? user.fullName[0].toUpperCase() : 'U'}
               </div>
               <div className="text-left overflow-hidden">
-                <p className="text-xs font-bold text-slate-800 truncate">{user?.fullName}</p>
+                <p className="text-sm font-semibold text-slate-900 truncate">{user?.fullName}</p>
                 <Badge variant={getRoleBadgeVariant(user?.role)} className="mt-0.5 text-[10px]">
                   {user?.role?.replace('_', ' ')}
                 </Badge>
@@ -163,10 +163,10 @@ export const DashboardLayout: React.FC = () => {
           </button>
 
           {isProfileOpen && (
-            <div className="absolute bottom-16 left-4 right-4 bg-white border border-slate-200 rounded-xl p-2 shadow-xl space-y-1">
+            <div className="absolute bottom-16 left-4 right-4 bg-white border border-slate-200 rounded-xl p-2 shadow-xl space-y-1 z-30">
               <div className="px-3 py-2 border-b border-slate-100 text-xs">
                 <p className="text-slate-400">Signed in as</p>
-                <p className="text-slate-800 font-semibold truncate">{user?.email}</p>
+                <p className="text-slate-900 font-semibold truncate">{user?.email}</p>
               </div>
               <button
                 onClick={handleLogout}
@@ -185,14 +185,11 @@ export const DashboardLayout: React.FC = () => {
         {/* Top Navbar */}
         <header className="h-16 border-b border-slate-200/80 px-6 flex items-center justify-between bg-white/80 sticky top-0 z-20 backdrop-blur-md">
           <div className="flex items-center gap-2 text-sm text-slate-500">
-            <span className="font-semibold text-slate-800">SupportFlow Console</span>
+            <span className="font-bold text-slate-900 text-base">SupportFlow Console</span>
           </div>
 
           <div className="flex items-center gap-4">
-            <button className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 hover:text-slate-800 hover:border-slate-300 transition-colors relative shadow-sm">
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-600"></span>
-            </button>
+            <NotificationBell />
           </div>
         </header>
 

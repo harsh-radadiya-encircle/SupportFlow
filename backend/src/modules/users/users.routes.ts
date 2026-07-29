@@ -4,6 +4,7 @@ import { authenticate } from '../../middleware/authenticate';
 
 const router = Router();
 
+router.get('/businesses', UsersController.getActiveBusinesses);
 router.post('/fcm-token', authenticate, UsersController.saveFcmToken);
 
 export default router;
