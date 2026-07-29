@@ -5,6 +5,7 @@ import invitationsRoutes from '../modules/invitations/invitations.routes';
 import ticketsRoutes from '../modules/tickets/tickets.routes';
 import notificationsRoutes from '../modules/notifications/notifications.routes';
 import subscriptionsRoutes from '../modules/subscriptions/subscriptions.routes';
+import dashboardRoutes from '../modules/dashboard/dashboard.routes';
 
 const router = Router();
 
@@ -14,6 +15,7 @@ router.use('/invitations', invitationsRoutes);
 router.use('/tickets', ticketsRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/subscriptions', subscriptionsRoutes);
+router.use('/dashboard', dashboardRoutes);
 
 router.get('/', (req, res) => {
   res.json({ message: 'SupportFlow API V1 Operational' });

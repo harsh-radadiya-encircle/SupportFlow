@@ -5,26 +5,38 @@
 @layer base {
   :root {
     /* Page & Surfaces */
-    --bg-page: 210 40% 98%;          /* slate-50 */
-    --bg-card: 0 0% 100%;             /* pure white */
-    --bg-card-hover: 210 40% 96%;     /* slate-100 */
-    --bg-sidebar: 0 0% 100%;          /* pure white */
-    
+    --bg-page: 210 40% 98%;
+    /* slate-50 */
+    --bg-card: 0 0% 100%;
+    /* pure white */
+    --bg-card-hover: 210 40% 96%;
+    /* slate-100 */
+    --bg-sidebar: 0 0% 100%;
+    /* pure white */
+
     /* Typography & Text Colors */
-    --text-primary: 222 47% 11%;      /* slate-900 */
-    --text-secondary: 215 16% 47%;    /* slate-500 */
-    --text-muted: 215 16% 65%;        /* slate-400 */
-    
+    --text-primary: 222 47% 11%;
+    /* slate-900 */
+    --text-secondary: 215 16% 47%;
+    /* slate-500 */
+    --text-muted: 215 16% 65%;
+    /* slate-400 */
+
     /* Brand & Accent (Indigo) */
-    --primary: 239 84% 67%;           /* indigo-500 */
-    --primary-hover: 239 84% 59%;     /* indigo-600 */
-    --primary-foreground: 0 0% 100%;  /* white */
-    --primary-light: 239 84% 96%;     /* indigo-50 */
-    
+    --primary: 239 84% 67%;
+    /* indigo-500 */
+    --primary-hover: 239 84% 59%;
+    /* indigo-600 */
+    --primary-foreground: 0 0% 100%;
+    /* white */
+    --primary-light: 239 84% 96%;
+    /* indigo-50 */
+
     /* Borders & Inputs */
-    --border-color: 214 32% 91%;      /* slate-200 */
+    --border-color: 214 32% 91%;
+    /* slate-200 */
     --input-bg: 0 0% 100%;
-    
+
     --radius: 0.75rem;
   }
 }
@@ -35,11 +47,16 @@
   }
 
   html {
-    font-size: 15px; /* Base 15px root for comfortable, readable font sizes everywhere */
+    font-size: 16px;
+    /* Base 15px root for comfortable, readable font sizes everywhere */
     scroll-behavior: smooth;
   }
 
-  body, button, input, select, textarea {
+  body,
+  button,
+  input,
+  select,
+  textarea {
     background-color: hsl(var(--bg-page));
     color: hsl(var(--text-primary));
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -50,27 +67,33 @@
 
   /* Global Heading Typography Standards */
   h1 {
-    font-size: 1.875rem; /* 30px */
+    font-size: 1.875rem;
+    /* 30px */
     line-height: 2.25rem;
     font-weight: 700;
     letter-spacing: -0.025em;
   }
 
   h2 {
-    font-size: 1.5rem; /* 24px */
+    font-size: 1.5rem;
+    /* 24px */
     line-height: 2rem;
     font-weight: 600;
     letter-spacing: -0.02em;
   }
 
   h3 {
-    font-size: 1.25rem; /* 20px */
+    font-size: 1.25rem;
+    /* 20px */
     line-height: 1.75rem;
     font-weight: 600;
   }
 
-  h4, h5, h6 {
-    font-size: 1rem; /* 16px */
+  h4,
+  h5,
+  h6 {
+    font-size: 1rem;
+    /* 16px */
     line-height: 1.5rem;
     font-weight: 600;
   }

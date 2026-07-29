@@ -14,23 +14,31 @@ export const useActiveBusinesses = () => {
       return response.data?.data || [];
     },
     staleTime: 5 * 60 * 1000,
+    retry: 1,
   });
 };
 
 export const useTickets = (query?: TicketFilterQuery) => {
+  const { isAuthenticated } = useAuthStore();
+
   return useQuery({
     queryKey: ['tickets', query],
     queryFn: () => ticketsApi.getTickets(query),
+    enabled: isAuthenticated,
     staleTime: 10 * 1000,
-    refetchInterval: 15 * 1000, // Background polling fallback
+    retry: 1,
+    refetchInterval: (q) => (q.state.status === 'error' ? false : 15 * 1000),
   });
 };
 
 export const useTicketDetail = (id: string) => {
+  const { isAuthenticated } = useAuthStore();
+
   return useQuery({
     queryKey: ['ticket', id],
     queryFn: () => ticketsApi.getTicketById(id),
-    enabled: Boolean(id),
+    enabled: isAuthenticated && Boolean(id),
+    retry: 1,
   });
 };
 

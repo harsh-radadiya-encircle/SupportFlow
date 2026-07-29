@@ -155,14 +155,14 @@ export const LoginPage: React.FC = () => {
           authProvider: 'EMAIL_PASSWORD',
         });
 
-        const idToken = await auth.currentUser?.getIdToken(true);
-        if (idToken) {
-          localStorage.setItem('supportflow_token', idToken);
-          await registerFcmDeviceToken(idToken);
-        }
+        const syncData = response?.data || response;
+        const user = syncData.user;
+        const sessionToken = syncData.token;
 
-        const user = response.data.user;
-        setAuth(user, idToken || '');
+        localStorage.setItem('supportflow_token', sessionToken);
+        await registerFcmDeviceToken(sessionToken);
+
+        setAuth(user, sessionToken);
         toast.success(`Welcome to SupportFlow, ${user.fullName}!`);
         redirectUserByRole(user.role);
       } else {
@@ -195,11 +195,14 @@ export const LoginPage: React.FC = () => {
           mode: 'login',
         });
 
-        localStorage.setItem('supportflow_token', idToken);
-        await registerFcmDeviceToken(idToken);
+        const syncData = response?.data || response;
+        const user = syncData.user;
+        const sessionToken = syncData.token || idToken;
 
-        const user = response.data.user;
-        setAuth(user, idToken);
+        localStorage.setItem('supportflow_token', sessionToken);
+        await registerFcmDeviceToken(sessionToken);
+
+        setAuth(user, sessionToken);
         toast.success(`Welcome back, ${user.fullName}!`);
         redirectUserByRole(user.role);
       }
@@ -230,11 +233,14 @@ export const LoginPage: React.FC = () => {
         authProvider: 'GOOGLE',
       });
 
-      localStorage.setItem('supportflow_token', idToken);
-      await registerFcmDeviceToken(idToken);
+      const syncData = response?.data || response;
+      const user = syncData.user;
+      const sessionToken = syncData.token || idToken;
 
-      const user = response.data.user;
-      setAuth(user, idToken);
+      localStorage.setItem('supportflow_token', sessionToken);
+      await registerFcmDeviceToken(sessionToken);
+
+      setAuth(user, sessionToken);
       toast.success(`Welcome back, ${user.fullName}!`);
       redirectUserByRole(user.role);
     } catch (err: any) {

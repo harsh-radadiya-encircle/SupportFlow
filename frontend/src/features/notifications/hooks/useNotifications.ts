@@ -6,11 +6,11 @@ import { notificationsApi } from '../api/notifications.api';
 import { useAuthStore } from '../../../shared/store/authStore';
 
 export const useNotifications = () => {
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!user) return;
+    if (!user || !isAuthenticated) return;
 
     const socket = io('http://localhost:5000', {
       withCredentials: true,
@@ -26,13 +26,15 @@ export const useNotifications = () => {
     return () => {
       socket.disconnect();
     };
-  }, [user, queryClient]);
+  }, [user, isAuthenticated, queryClient]);
 
   return useQuery({
     queryKey: ['notifications'],
     queryFn: notificationsApi.getNotifications,
-    staleTime: 5000,
-    refetchInterval: 15000, // Background polling fallback
+    enabled: isAuthenticated && Boolean(user),
+    staleTime: 10000,
+    retry: 1,
+    refetchInterval: (query) => (query.state.status === 'error' ? false : 15000),
   });
 };
 

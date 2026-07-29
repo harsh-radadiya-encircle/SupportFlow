@@ -5,7 +5,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { LandingPage } from '../../features/landing';
 import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '../../features/auth';
-import { BusinessAdminDashboardPage, PlatformAdminDashboardPage, AgentDashboardPage } from '../../features/dashboard';
+import { BusinessAdminDashboardPage, PlatformAdminDashboardPage, AgentDashboardPage, ReportsPage } from '../../features/dashboard';
 import { CustomerTicketListPage, CreateTicketPage, TicketDetailPage } from '../../features/tickets';
 import { AgentManagementPage, AcceptInvitePage } from '../../features/invitations';
 import { BillingManagementPage } from '../../features/subscriptions/pages/BillingManagementPage';
@@ -61,7 +61,7 @@ export const AppRoutes: React.FC = () => {
             <Route path="/business/tickets" element={<CustomerTicketListPage />} />
             <Route path="/business/team" element={<AgentManagementPage />} />
             <Route path="/business/billing" element={<BillingManagementPage />} />
-            <Route path="/business/reports" element={<BusinessAdminDashboardPage />} />
+            <Route path="/business/reports" element={<ReportsPage />} />
           </Route>
 
           {/* Support Agent */}

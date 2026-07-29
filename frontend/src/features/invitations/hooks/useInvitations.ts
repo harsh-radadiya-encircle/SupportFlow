@@ -1,13 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { invitationsApi, InviteAgentPayload, AcceptInvitePayload } from '../api/invitations.api';
+import { useAuthStore } from '../../../shared/store/authStore';
 
 export const useInvitations = (enabled: boolean = true) => {
+  const { user, isAuthenticated } = useAuthStore();
+
   return useQuery({
     queryKey: ['invitations'],
     queryFn: invitationsApi.getTeamAndInvitations,
-    enabled,
+    enabled: enabled && isAuthenticated && Boolean(user),
     staleTime: 2 * 60 * 1000,
+    retry: 1,
+    refetchInterval: (q) => (q.state.status === 'error' ? false : 30000),
   });
 };
 
@@ -16,7 +21,7 @@ export const useInviteAgent = () => {
 
   return useMutation({
     mutationFn: (payload: InviteAgentPayload) => invitationsApi.inviteAgent(payload),
-    onSuccess: (res) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
       toast.success('Agent invitation created successfully!');
     },
