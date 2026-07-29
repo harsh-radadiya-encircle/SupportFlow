@@ -4,7 +4,7 @@ import { Role } from '../../../shared/types';
 export interface SyncPayload {
   firebaseUid: string;
   email: string;
-  fullName: string;
+  fullName?: string;
   role?: Role;
   businessName?: string;
   mode?: 'login' | 'register';
@@ -17,8 +17,13 @@ export const authApi = {
     return response.data;
   },
 
-  login: async (email: string) => {
-    const response = await apiClient.post('/auth/login', { email });
+  register: async (payload: SyncPayload) => {
+    const response = await apiClient.post('/auth/sync', { ...payload, mode: 'register' });
+    return response.data;
+  },
+
+  login: async (idTokenOrEmail: string) => {
+    const response = await apiClient.post('/auth/sync', { mode: 'login' });
     return response.data;
   },
 

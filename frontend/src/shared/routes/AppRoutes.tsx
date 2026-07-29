@@ -1,7 +1,9 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuthStore } from '../store/authStore';
 import { ProtectedRoute } from './ProtectedRoute';
 import { DashboardLayout } from '../layouts/DashboardLayout';
+import { LandingPage } from '../../features/landing';
 import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '../../features/auth';
 import { BusinessAdminDashboardPage, PlatformAdminDashboardPage, AgentDashboardPage } from '../../features/dashboard';
 import { CustomerTicketListPage, CreateTicketPage, TicketDetailPage } from '../../features/tickets';
@@ -9,16 +11,41 @@ import { AgentManagementPage, AcceptInvitePage } from '../../features/invitation
 import { BillingManagementPage } from '../../features/subscriptions/pages/BillingManagementPage';
 
 export const AppRoutes: React.FC = () => {
+  const { isAuthenticated, user } = useAuthStore();
+
+  const getRoleDashboardPath = () => {
+    switch (user?.role) {
+      case 'PLATFORM_ADMIN':
+        return '/admin/dashboard';
+      case 'BUSINESS_ADMIN':
+        return '/business/dashboard';
+      case 'SUPPORT_AGENT':
+        return '/agent/dashboard';
+      case 'CUSTOMER':
+      default:
+        return '/customer/tickets';
+    }
+  };
+
   return (
     <Routes>
-      {/* Public Auth Routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<LoginPage />} />
+      {/* Public Landing Page */}
+      <Route path="/" element={<LandingPage />} />
+
+      {/* Public Auth Routes (Redirect to Dashboard if already logged in) */}
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to={getRoleDashboardPath()} replace /> : <LoginPage />}
+      />
+      <Route
+        path="/register"
+        element={isAuthenticated ? <Navigate to={getRoleDashboardPath()} replace /> : <LoginPage />}
+      />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/accept-invite" element={<AcceptInvitePage />} />
 
-      {/* Authenticated Dashboard Routes */}
+      {/* Authenticated Console Routes */}
       <Route element={<ProtectedRoute />}>
         <Route element={<DashboardLayout />}>
           {/* Platform Admin */}
@@ -50,8 +77,8 @@ export const AppRoutes: React.FC = () => {
         </Route>
       </Route>
 
-      {/* Default Catch-all Redirect */}
-      <Route path="*" element={<Navigate to="/login" replace />} />
+      {/* Default Catch-all Redirect to Landing Page */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

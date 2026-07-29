@@ -1,54 +1,42 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  /* =======================================================
-   * GLOBAL THEME DESIGN SYSTEM (LIGHT MODE DEFAULT)
-   * Easily customize colors globally or toggle dark mode
-   * ======================================================= */
   :root {
     /* Page & Surfaces */
-    --bg-page: 210 40% 98%;          /* #f8fafc slate-50 */
-    --bg-card: 0 0% 100%;             /* #ffffff pure white */
-    --bg-card-hover: 210 40% 96%;     /* #f1f5f9 slate-100 */
-    --bg-sidebar: 0 0% 100%;          /* #ffffff pure white */
+    --bg-page: 210 40% 98%;          /* slate-50 */
+    --bg-card: 0 0% 100%;             /* pure white */
+    --bg-card-hover: 210 40% 96%;     /* slate-100 */
+    --bg-sidebar: 0 0% 100%;          /* pure white */
     
     /* Typography & Text Colors */
-    --text-primary: 222 47% 11%;      /* #0f172a slate-900 */
-    --text-secondary: 215 16% 47%;    /* #64748b slate-500 */
-    --text-muted: 215 16% 65%;        /* #94a3b8 slate-400 */
+    --text-primary: 222 47% 11%;      /* slate-900 */
+    --text-secondary: 215 16% 47%;    /* slate-500 */
+    --text-muted: 215 16% 65%;        /* slate-400 */
     
     /* Brand & Accent (Indigo) */
-    --primary: 239 84% 67%;           /* #6366f1 indigo-500 */
-    --primary-hover: 239 84% 59%;     /* #4f46e5 indigo-600 */
-    --primary-foreground: 0 0% 100%;  /* #ffffff */
-    --primary-light: 239 84% 96%;     /* #eef2ff indigo-50 */
+    --primary: 239 84% 67%;           /* indigo-500 */
+    --primary-hover: 239 84% 59%;     /* indigo-600 */
+    --primary-foreground: 0 0% 100%;  /* white */
+    --primary-light: 239 84% 96%;     /* indigo-50 */
     
     /* Borders & Inputs */
-    --border-color: 214 32% 91%;      /* #e2e8f0 slate-200 */
+    --border-color: 214 32% 91%;      /* slate-200 */
     --input-bg: 0 0% 100%;
     
     --radius: 0.75rem;
-  }
-
-  /* Optional Future Dark Mode Override */
-  .dark {
-    --bg-page: 224 71% 4%;
-    --bg-card: 222 47% 7%;
-    --bg-card-hover: 222 47% 10%;
-    --bg-sidebar: 222 47% 7%;
-    --text-primary: 210 40% 98%;
-    --text-secondary: 215 20% 65%;
-    --border-color: 217 33% 17%;
   }
 }
 
 @layer base {
   * {
     border-color: hsl(var(--border-color));
+  }
+
+  html {
+    font-size: 15px; /* Base 15px root for comfortable, readable font sizes everywhere */
+    scroll-behavior: smooth;
   }
 
   body, button, input, select, textarea {
@@ -62,26 +50,28 @@
 
   /* Global Heading Typography Standards */
   h1 {
-    font-size: 1.5rem; /* 24px */
-    line-height: 2rem;
+    font-size: 1.875rem; /* 30px */
+    line-height: 2.25rem;
     font-weight: 700;
     letter-spacing: -0.025em;
   }
 
   h2 {
-    font-size: 1.25rem; /* 20px */
-    line-height: 1.75rem;
+    font-size: 1.5rem; /* 24px */
+    line-height: 2rem;
     font-weight: 600;
     letter-spacing: -0.02em;
   }
 
   h3 {
-    font-size: 1.125rem; /* 18px */
+    font-size: 1.25rem; /* 20px */
     line-height: 1.75rem;
     font-weight: 600;
   }
 
   h4, h5, h6 {
+    font-size: 1rem; /* 16px */
+    line-height: 1.5rem;
     font-weight: 600;
   }
 
