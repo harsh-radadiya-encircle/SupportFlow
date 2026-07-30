@@ -23,6 +23,20 @@ router.get(
   InvitationsController.getTeamAndInvitations
 );
 
+router.patch(
+  '/agents/:agentId/toggle-active',
+  authenticate,
+  authorize(['BUSINESS_ADMIN']),
+  InvitationsController.toggleAgentActiveStatus
+);
+
+router.delete(
+  '/:id',
+  authenticate,
+  authorize(['BUSINESS_ADMIN']),
+  InvitationsController.deleteInvitation
+);
+
 // Public Invitation Endpoints for Invited Agents
 router.get('/verify/:token', InvitationsController.verifyToken);
 router.post('/accept', validate(acceptInvitationSchema), InvitationsController.acceptInvitation);

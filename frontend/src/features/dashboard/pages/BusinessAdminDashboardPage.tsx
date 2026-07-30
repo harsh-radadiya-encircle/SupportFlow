@@ -247,7 +247,7 @@ export const BusinessAdminDashboardPage: React.FC = () => {
                 <span className="text-xs font-semibold text-slate-500 block">Open</span>
                 <p className="text-lg font-bold text-slate-900 mt-0.5">{ticketsByStatus.OPEN}</p>
               </div>
-              <Badge variant="info" className="text-[10px]">Unassigned</Badge>
+              <Badge variant="info" className="text-xs">Unassigned</Badge>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
@@ -255,7 +255,7 @@ export const BusinessAdminDashboardPage: React.FC = () => {
                 <span className="text-xs font-semibold text-slate-500 block">Assigned</span>
                 <p className="text-lg font-bold text-slate-900 mt-0.5">{ticketsByStatus.ASSIGNED}</p>
               </div>
-              <Badge variant="purple" className="text-[10px]">With Agent</Badge>
+              <Badge variant="purple" className="text-xs">With Agent</Badge>
             </div>
 
             <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">

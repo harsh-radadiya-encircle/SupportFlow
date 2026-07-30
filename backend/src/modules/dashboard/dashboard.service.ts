@@ -38,7 +38,7 @@ export class DashboardService {
       },
     });
 
-    let avgResponseTimeFormatted = '18 mins';
+    let avgResponseTimeFormatted = '0 mins';
     if (respondedTickets.length > 0) {
       const totalMinutes = respondedTickets.reduce((acc, t) => {
         const diffMs = new Date(t.firstResponseAt!).getTime() - new Date(t.createdAt).getTime();
@@ -60,7 +60,7 @@ export class DashboardService {
       },
     });
 
-    let avgResolutionTimeFormatted = '2.4 hrs';
+    let avgResolutionTimeFormatted = '0 hrs';
     if (resolvedList.length > 0) {
       const totalHours = resolvedList.reduce((acc, t) => {
         const diffMs = new Date(t.updatedAt).getTime() - new Date(t.createdAt).getTime();
@@ -182,12 +182,209 @@ export class DashboardService {
         resolvedTickets,
         avgResponseTime: avgResponseTimeFormatted,
         avgResolutionTime: avgResolutionTimeFormatted,
-        resolutionRate: totalTickets > 0 ? Math.round((resolvedTickets / totalTickets) * 100) : 100,
+        resolutionRate: totalTickets > 0 ? Math.round((resolvedTickets / totalTickets) * 100) : 0,
       },
       ticketsByPriority,
       ticketsByStatus,
       agentWorkload,
       recentTickets,
     };
+  }
+
+  /**
+   * Get Support Agent Dashboard Metrics (Assigned, Open, Waiting, Resolved, Recent Messages, Notifications)
+   */
+  async getAgentMetrics(agentId: string) {
+    const assignedTicketsCount = await prisma.ticket.count({
+      where: { assignedAgentId: agentId },
+    });
+
+    const openTicketsCount = await prisma.ticket.count({
+      where: {
+        assignedAgentId: agentId,
+        status: { in: ['OPEN', 'ASSIGNED'] },
+      },
+    });
+
+    const waitingTicketsCount = await prisma.ticket.count({
+      where: {
+        assignedAgentId: agentId,
+        status: { in: ['WAITING_FOR_CUSTOMER', 'IN_PROGRESS'] },
+      },
+    });
+
+    const resolvedTicketsCount = await prisma.ticket.count({
+      where: {
+        assignedAgentId: agentId,
+        status: { in: ['RESOLVED', 'CLOSED'] },
+      },
+    });
+
+    // Recent Messages on tickets assigned to the agent
+    const recentMessages = await prisma.message.findMany({
+      where: {
+        ticket: {
+          assignedAgentId: agentId,
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 6,
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        sender: {
+          select: {
+            id: true,
+            fullName: true,
+            role: true,
+          },
+        },
+        ticket: {
+          select: {
+            id: true,
+            ticketNumber: true,
+            title: true,
+          },
+        },
+      },
+    });
+
+    // Recent Notifications for this Agent
+    const notifications = await prisma.notification.findMany({
+      where: { userId: agentId },
+      orderBy: { createdAt: 'desc' },
+      take: 5,
+      select: {
+        id: true,
+        title: true,
+        message: true,
+        isRead: true,
+        createdAt: true,
+        ticketId: true,
+      },
+    });
+
+    return {
+      summary: {
+        assignedTickets: assignedTicketsCount,
+        openTickets: openTicketsCount,
+        waitingTickets: waitingTicketsCount,
+        resolvedTickets: resolvedTicketsCount,
+      },
+      recentMessages,
+      notifications,
+    };
+  }
+
+  /**
+   * Get Platform Admin Dashboard Metrics (Total Businesses, Active Subscriptions, MRR, Businesses by Plan, Suspended Count, Businesses List)
+   */
+  async getPlatformAdminMetrics() {
+    const totalBusinesses = await prisma.business.count();
+    const activeSubscriptions = await prisma.business.count({
+      where: {
+        subscriptionStatus: 'ACTIVE',
+        isSuspended: false,
+      },
+    });
+    const suspendedBusinesses = await prisma.business.count({
+      where: { isSuspended: true },
+    });
+
+    const planGroup = await prisma.business.groupBy({
+      by: ['plan'],
+      _count: { id: true },
+    });
+
+    const businessesByPlan = {
+      FREE: 0,
+      STANDARD: 0,
+      BUSINESS: 0,
+    };
+    planGroup.forEach((p) => {
+      if (p.plan in businessesByPlan) {
+        businessesByPlan[p.plan as keyof typeof businessesByPlan] = p._count.id;
+      }
+    });
+
+    // Monthly Recurring Revenue calculation ($49 for STANDARD, $149 for BUSINESS)
+    const monthlyRevenue = businessesByPlan.STANDARD * 49 + businessesByPlan.BUSINESS * 149;
+
+    const businesses = await prisma.business.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        plan: true,
+        subscriptionStatus: true,
+        isSuspended: true,
+        createdAt: true,
+        _count: {
+          select: {
+            users: true,
+            tickets: true,
+          },
+        },
+        users: {
+          where: { role: 'BUSINESS_ADMIN' },
+          take: 1,
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    const formattedBusinesses = businesses.map((b) => ({
+      id: b.id,
+      name: b.name,
+      slug: b.slug,
+      plan: b.plan,
+      subscriptionStatus: b.subscriptionStatus,
+      isSuspended: b.isSuspended,
+      createdAt: b.createdAt,
+      usersCount: b._count.users,
+      ticketsCount: b._count.tickets,
+      ownerName: b.users[0]?.fullName || 'System Owner',
+      ownerEmail: b.users[0]?.email || 'N/A',
+    }));
+
+    return {
+      summary: {
+        totalBusinesses,
+        activeSubscriptions,
+        monthlyRevenue: `$${monthlyRevenue.toLocaleString()}`,
+        mrrNumber: monthlyRevenue,
+        suspendedBusinesses,
+      },
+      businessesByPlan,
+      businesses: formattedBusinesses,
+    };
+  }
+
+  /**
+   * Toggle Business Suspension State (Platform Admin Only)
+   */
+  async toggleBusinessSuspension(businessId: string) {
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+    });
+
+    if (!business) {
+      throw new Error('Business account not found.');
+    }
+
+    const updated = await prisma.business.update({
+      where: { id: businessId },
+      data: {
+        isSuspended: !business.isSuspended,
+      },
+    });
+
+    return updated;
   }
 }

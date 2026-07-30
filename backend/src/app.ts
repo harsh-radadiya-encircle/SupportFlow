@@ -10,7 +10,7 @@ import routes from './routes';
 
 const app: Express = express();
 
-// Stripe Webhook requires raw body parsing for signature verification
+// Razorpay Webhook requires raw body parsing for HMAC signature verification
 app.use('/api/v1/subscriptions/webhook', express.raw({ type: 'application/json' }));
 
 // Global Security & Rate Limiting Middlewares

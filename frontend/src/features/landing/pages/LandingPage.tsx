@@ -254,8 +254,8 @@ export const LandingPage: React.FC = () => {
                   </div>
 
                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
-                    <h4 className="font-bold text-slate-900">Stripe Subscription Upgrades</h4>
-                    <p className="text-slate-500">Manage plan quotas, upgrade to Standard ($29/mo) or Business ($79/mo), and access Stripe invoices.</p>
+                    <h4 className="font-bold text-slate-900">Razorpay Subscription Upgrades</h4>
+                    <p className="text-slate-500">Manage plan quotas, upgrade to Standard (₹2,499/mo) or Business (₹6,499/mo), and access Razorpay payment receipts.</p>
                   </div>
 
                   <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">

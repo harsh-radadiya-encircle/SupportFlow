@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -5,50 +7,36 @@
 @layer base {
   :root {
     /* Page & Surfaces */
-    --bg-page: 210 40% 98%;
-    /* slate-50 */
-    --bg-card: 0 0% 100%;
-    /* pure white */
-    --bg-card-hover: 210 40% 96%;
-    /* slate-100 */
-    --bg-sidebar: 0 0% 100%;
-    /* pure white */
+    --bg-page: 210 40% 98%;          /* slate-50 */
+    --bg-card: 0 0% 100%;             /* pure white */
+    --bg-card-hover: 210 40% 96%;     /* slate-100 */
+    --bg-sidebar: 0 0% 100%;          /* pure white */
 
     /* Typography & Text Colors */
-    --text-primary: 222 47% 11%;
-    /* slate-900 */
-    --text-secondary: 215 16% 47%;
-    /* slate-500 */
-    --text-muted: 215 16% 65%;
-    /* slate-400 */
+    --text-primary: 222 47% 11%;      /* slate-900 (#0f172a) */
+    --text-secondary: 215 16% 47%;    /* slate-500 (#64748b) */
+    --text-muted: 215 16% 65%;        /* slate-400 (#94a3b8) */
 
     /* Brand & Accent (Indigo) */
-    --primary: 239 84% 67%;
-    /* indigo-500 */
-    --primary-hover: 239 84% 59%;
-    /* indigo-600 */
-    --primary-foreground: 0 0% 100%;
-    /* white */
-    --primary-light: 239 84% 96%;
-    /* indigo-50 */
+    --primary: 239 84% 67%;           /* indigo-500 */
+    --primary-hover: 239 84% 59%;     /* indigo-600 */
+    --primary-foreground: 0 0% 100%;  /* white */
+    --primary-light: 239 84% 96%;     /* indigo-50 */
 
     /* Borders & Inputs */
-    --border-color: 214 32% 91%;
-    /* slate-200 */
+    --border-color: 214 32% 91%;      /* slate-200 (#e2e8f0) */
     --input-bg: 0 0% 100%;
 
     --radius: 0.75rem;
   }
-}
 
-@layer base {
   * {
     border-color: hsl(var(--border-color));
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
   }
 
   html {
-    font-size: 16px;
-    /* Base 15px root for comfortable, readable font sizes everywhere */
+    font-size: 16px; /* Base 16px root for comfortable, readable font sizes everywhere */
     scroll-behavior: smooth;
   }
 
@@ -59,46 +47,60 @@
   textarea {
     background-color: hsl(var(--bg-page));
     color: hsl(var(--text-primary));
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-size: 1rem; /* 16px default */
+    line-height: 1.5rem;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
-  /* Global Heading Typography Standards */
+  /* Central Heading Hierarchy */
   h1 {
-    font-size: 1.875rem;
-    /* 30px */
+    font-size: 1.875rem; /* 30px */
     line-height: 2.25rem;
     font-weight: 700;
     letter-spacing: -0.025em;
+    color: hsl(var(--text-primary));
   }
 
   h2 {
-    font-size: 1.5rem;
-    /* 24px */
+    font-size: 1.5rem; /* 24px */
     line-height: 2rem;
     font-weight: 600;
     letter-spacing: -0.02em;
+    color: hsl(var(--text-primary));
   }
 
   h3 {
-    font-size: 1.25rem;
-    /* 20px */
+    font-size: 1.25rem; /* 20px */
     line-height: 1.75rem;
     font-weight: 600;
+    color: hsl(var(--text-primary));
   }
 
   h4,
   h5,
   h6 {
-    font-size: 1rem;
-    /* 16px */
+    font-size: 1rem; /* 16px */
     line-height: 1.5rem;
     font-weight: 600;
+    color: hsl(var(--text-primary));
   }
 
-  /* Global Font Weight Normalization Rules */
+  p {
+    font-size: 0.875rem; /* 14px default paragraph */
+    line-height: 1.25rem;
+    color: hsl(var(--text-secondary));
+  }
+
+  label {
+    font-size: 0.875rem; /* 14px label */
+    font-weight: 600;
+    color: hsl(var(--text-primary));
+  }
+
+  /* Normalize Weight Classes */
   .font-extrabold,
   .font-black {
     font-weight: 700 !important;

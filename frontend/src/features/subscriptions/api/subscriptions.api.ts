@@ -6,7 +6,7 @@ export interface SubscriptionDetailsResponse {
   plan: 'FREE' | 'STANDARD' | 'BUSINESS';
   subscriptionStatus: string;
   currentPeriodEnd: string | null;
-  stripeCustomerId: string | null;
+  razorpayCustomerId: string | null;
   usage: {
     agents: {
       used: number;
@@ -21,7 +21,8 @@ export interface SubscriptionDetailsResponse {
   };
   billingHistory: Array<{
     id: string;
-    stripeInvoiceId: string;
+    razorpayPaymentId: string;
+    razorpayOrderId?: string | null;
     amountPaid: number;
     currency: string;
     status: string;
@@ -30,17 +31,39 @@ export interface SubscriptionDetailsResponse {
   }>;
 }
 
+export interface RazorpayOrderResponse {
+  isTestMode?: boolean;
+  message?: string;
+  orderId?: string;
+  amount?: number;
+  currency?: string;
+  keyId?: string;
+  plan?: 'STANDARD' | 'BUSINESS';
+  businessName?: string;
+  userEmail?: string;
+}
+
 export const getSubscriptionDetails = async (): Promise<SubscriptionDetailsResponse> => {
   const response = await apiClient.get<{ success: boolean; data: SubscriptionDetailsResponse }>('/subscriptions/current');
   return response.data.data;
 };
 
-export const createCheckoutSession = async (plan: 'STANDARD' | 'BUSINESS'): Promise<{ checkoutUrl: string }> => {
-  const response = await apiClient.post<{ success: boolean; data: { checkoutUrl: string } }>('/subscriptions/checkout', { plan });
+export const createRazorpayOrder = async (plan: 'STANDARD' | 'BUSINESS'): Promise<RazorpayOrderResponse> => {
+  const response = await apiClient.post<{ success: boolean; data: RazorpayOrderResponse }>('/subscriptions/razorpay-order', { plan });
   return response.data.data;
 };
 
-export const createBillingPortalSession = async (): Promise<{ portalUrl: string }> => {
-  const response = await apiClient.post<{ success: boolean; data: { portalUrl: string } }>('/subscriptions/portal');
+export const verifyRazorpayPayment = async (payload: {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+  plan: 'STANDARD' | 'BUSINESS';
+}): Promise<{ success: boolean; message: string; plan: string }> => {
+  const response = await apiClient.post<{ success: boolean; data: { success: boolean; message: string; plan: string } }>('/subscriptions/verify-payment', payload);
+  return response.data.data;
+};
+
+export const cancelSubscription = async (): Promise<{ success: boolean; message: string; plan: string }> => {
+  const response = await apiClient.post<{ success: boolean; data: { success: boolean; message: string; plan: string } }>('/subscriptions/cancel');
   return response.data.data;
 };

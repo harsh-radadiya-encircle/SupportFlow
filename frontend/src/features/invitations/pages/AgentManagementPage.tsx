@@ -3,12 +3,14 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import toast from 'react-hot-toast';
-import { useInvitations, useInviteAgent } from '../hooks/useInvitations';
+import { useInvitations, useInviteAgent, useToggleAgentActive, useDeleteInvitation } from '../hooks/useInvitations';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
+import { DataTable, Column } from '../../../shared/components/ui/DataTable';
 import { Role } from '../../../shared/types';
+import { useAuthStore } from '../../../shared/store/authStore';
 import {
   UserPlus,
   Users,
@@ -20,7 +22,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   Sparkles,
-  Building,
+  Ban,
+  UserX,
+  UserCheck,
+  Trash2,
 } from 'lucide-react';
 
 const inviteSchema = z.object({
@@ -31,8 +36,12 @@ const inviteSchema = z.object({
 type InviteFormValues = z.infer<typeof inviteSchema>;
 
 export const AgentManagementPage: React.FC = () => {
+  const { user } = useAuthStore();
   const { data, isLoading, isError, error } = useInvitations();
   const inviteMutation = useInviteAgent();
+  const toggleActiveMutation = useToggleAgentActive();
+  const deleteInviteMutation = useDeleteInvitation();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
 
@@ -65,6 +74,12 @@ export const AgentManagementPage: React.FC = () => {
     setTimeout(() => setCopiedToken(null), 3000);
   };
 
+  const handleDeleteInvite = (inviteId: string, email: string) => {
+    if (window.confirm(`Are you sure you want to revoke the pending invitation for "${email}"?`)) {
+      deleteInviteMutation.mutate(inviteId);
+    }
+  };
+
   const onSubmit = (formData: InviteFormValues) => {
     inviteMutation.mutate(
       { email: formData.email, role: formData.role as Role },
@@ -81,6 +96,96 @@ export const AgentManagementPage: React.FC = () => {
       }
     );
   };
+
+  const agentColumns: Column<any>[] = [
+    {
+      key: 'fullName',
+      header: 'User',
+      sortable: true,
+      render: (agent) => (
+        <div className="flex items-center gap-2.5 font-bold text-slate-900">
+          <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs">
+            {agent.fullName ? agent.fullName.charAt(0).toUpperCase() : 'U'}
+          </div>
+          <span>{agent.fullName}</span>
+        </div>
+      ),
+    },
+    {
+      key: 'email',
+      header: 'Email',
+      sortable: true,
+      render: (agent) => <span className="text-slate-600 font-medium">{agent.email}</span>,
+    },
+    {
+      key: 'role',
+      header: 'Role',
+      sortable: true,
+      render: (agent) => (
+        <Badge variant={agent.role === 'BUSINESS_ADMIN' ? 'purple' : 'info'}>
+          {agent.role === 'BUSINESS_ADMIN' ? 'Business Admin' : 'Support Agent'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'isActive',
+      header: 'Status',
+      sortable: true,
+      render: (agent) =>
+        agent.isActive ? (
+          <Badge variant="success" className="text-xs font-semibold flex items-center gap-1">
+            <CheckCircle2 className="w-3 h-3" /> Active
+          </Badge>
+        ) : (
+          <Badge variant="danger" className="text-xs font-semibold flex items-center gap-1">
+            <Ban className="w-3 h-3" /> Deactivated
+          </Badge>
+        ),
+    },
+    {
+      key: 'createdAt',
+      header: 'Joined',
+      sortable: true,
+      render: (agent) => (
+        <span className="text-slate-500 font-normal">
+          {new Date(agent.createdAt).toLocaleDateString()}
+        </span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      className: 'text-right whitespace-nowrap',
+      render: (agent) => {
+        const isSelf = agent.id === user?.id;
+
+        return (
+          <Button
+            variant={agent.isActive ? 'outline' : 'success'}
+            size="sm"
+            disabled={isSelf}
+            className={
+              agent.isActive
+                ? 'border-rose-200 text-rose-700 hover:bg-rose-50 font-semibold text-xs disabled:opacity-40'
+                : 'bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs'
+            }
+            isLoading={toggleActiveMutation.isPending && toggleActiveMutation.variables === agent.id}
+            onClick={() => toggleActiveMutation.mutate(agent.id)}
+          >
+            {agent.isActive ? (
+              <>
+                <UserX className="w-3.5 h-3.5 mr-1" /> Deactivate
+              </>
+            ) : (
+              <>
+                <UserCheck className="w-3.5 h-3.5 mr-1" /> Activate
+              </>
+            )}
+          </Button>
+        );
+      },
+    },
+  ];
 
   if (isLoading) {
     return (
@@ -106,18 +211,18 @@ export const AgentManagementPage: React.FC = () => {
   const quotaPercent = Math.min(100, Math.round((teamData.activeAgentCount / teamData.maxAgents) * 100));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Support Team & Invites</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Support Team & Invites</h1>
             <Badge variant="purple" className="text-xs">
               {teamData.plan} Plan
             </Badge>
           </div>
-          <p className="text-sm text-slate-500 font-medium">
-            Manage your active support agents and invite new team members
+          <p className="text-sm text-slate-500 font-normal">
+            Manage your active support agents, toggle agent access, and invite new team members
           </p>
         </div>
 
@@ -125,7 +230,7 @@ export const AgentManagementPage: React.FC = () => {
           variant="primary"
           onClick={() => setIsModalOpen(true)}
           disabled={teamData.remainingSlots <= 0}
-          className="shrink-0"
+          className="shrink-0 bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-md"
         >
           <UserPlus className="w-4 h-4 mr-2" /> Invite Support Agent
         </Button>
@@ -138,7 +243,7 @@ export const AgentManagementPage: React.FC = () => {
             <Users className="w-4 h-4 text-indigo-600" /> Support Agent Quota Usage
           </span>
           <span className="text-xs font-bold text-slate-700">
-            {teamData.activeAgentCount} / {teamData.maxAgents} Used ({teamData.remainingSlots} slots remaining)
+            {teamData.activeAgentCount} / {teamData.maxAgents} Active ({teamData.remainingSlots} slots remaining)
           </span>
         </div>
         <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
@@ -156,59 +261,27 @@ export const AgentManagementPage: React.FC = () => {
         )}
       </Card>
 
-      {/* Active Team Members Section */}
+      {/* Active Team Members Section using Shared DataTable */}
       <div className="space-y-3">
         <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <Shield className="w-4 h-4 text-indigo-600" /> Active Team Members ({teamData.agents.length})
+          <Shield className="w-4 h-4 text-indigo-600" /> Business Team Members
         </h2>
 
-        <Card glass className="overflow-hidden border border-slate-200">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
-                <tr>
-                  <th className="p-3.5">User</th>
-                  <th className="p-3.5">Email</th>
-                  <th className="p-3.5">Role</th>
-                  <th className="p-3.5">Provider</th>
-                  <th className="p-3.5">Joined</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-                {teamData.agents.map((agent: any) => (
-                  <tr key={agent.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="p-3.5 font-bold text-slate-900 flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-extrabold flex items-center justify-center text-xs">
-                        {agent.fullName.charAt(0).toUpperCase()}
-                      </div>
-                      {agent.fullName}
-                    </td>
-                    <td className="p-3.5 text-slate-600">{agent.email}</td>
-                    <td className="p-3.5">
-                      <Badge variant={agent.role === 'BUSINESS_ADMIN' ? 'purple' : 'info'}>
-                        {agent.role === 'BUSINESS_ADMIN' ? 'Business Admin' : 'Support Agent'}
-                      </Badge>
-                    </td>
-                    <td className="p-3.5">
-                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                        {agent.authProvider || 'EMAIL_PASSWORD'}
-                      </span>
-                    </td>
-                    <td className="p-3.5 text-slate-400">
-                      {new Date(agent.createdAt).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
+        <DataTable
+          title="Agents"
+          totalCount={teamData.agents.length}
+          data={teamData.agents}
+          columns={agentColumns}
+          isLoading={isLoading}
+          searchPlaceholder="Search team members by name or email..."
+          emptyMessage="No team members found."
+        />
       </div>
 
       {/* Pending Invitations Section */}
-      <div className="space-y-3 pt-2">
+      <div className="space-y-3 pt-4">
         <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <Mail className="w-4 h-4 text-indigo-600" /> Sent Invitations ({teamData.invitations.length})
+          <Mail className="w-4 h-4 text-indigo-600" /> Pending Invitations ({teamData.invitations.length})
         </h2>
 
         {teamData.invitations.length === 0 ? (
@@ -227,7 +300,7 @@ export const AgentManagementPage: React.FC = () => {
                     <th className="p-3.5">Assigned Role</th>
                     <th className="p-3.5">Status</th>
                     <th className="p-3.5">Expires</th>
-                    <th className="p-3.5 text-right">Action</th>
+                    <th className="p-3.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
@@ -240,11 +313,7 @@ export const AgentManagementPage: React.FC = () => {
                           <Badge variant="info">Support Agent</Badge>
                         </td>
                         <td className="p-3.5">
-                          {invite.isAccepted ? (
-                            <Badge variant="success" icon={<CheckCircle2 className="w-3 h-3" />}>
-                              Accepted
-                            </Badge>
-                          ) : isExpired ? (
+                          {isExpired ? (
                             <Badge variant="danger" icon={<Clock className="w-3 h-3" />}>
                               Expired
                             </Badge>
@@ -258,24 +327,36 @@ export const AgentManagementPage: React.FC = () => {
                           {new Date(invite.expiresAt).toLocaleDateString()}
                         </td>
                         <td className="p-3.5 text-right">
-                          {!invite.isAccepted && !isExpired && (
+                          <div className="flex items-center justify-end gap-2">
+                            {!isExpired && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCopyLink(invite.token)}
+                                className="text-xs font-semibold"
+                              >
+                                {copiedToken === invite.token ? (
+                                  <>
+                                    <Check className="w-3.5 h-3.5 text-emerald-600 mr-1" /> Copied
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy className="w-3.5 h-3.5 mr-1" /> Copy Link
+                                  </>
+                                )}
+                              </Button>
+                            )}
+
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleCopyLink(invite.token)}
-                              className="text-xs"
+                              className="border-rose-200 text-rose-700 hover:bg-rose-50 text-xs font-semibold"
+                              isLoading={deleteInviteMutation.isPending && deleteInviteMutation.variables === invite.id}
+                              onClick={() => handleDeleteInvite(invite.id, invite.email)}
                             >
-                              {copiedToken === invite.token ? (
-                                <>
-                                  <Check className="w-3.5 h-3.5 text-emerald-600 mr-1" /> Copied
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="w-3.5 h-3.5 mr-1" /> Copy Link
-                                </>
-                              )}
+                              <Trash2 className="w-3.5 h-3.5 mr-1" /> Revoke
                             </Button>
-                          )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -290,7 +371,7 @@ export const AgentManagementPage: React.FC = () => {
       {/* Invite Agent Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4">
+          <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4 font-sans">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-lg">
                 <UserPlus className="w-5 h-5 text-indigo-600" /> Invite Support Agent
@@ -317,7 +398,7 @@ export const AgentManagementPage: React.FC = () => {
                 <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
                   Cancel
                 </Button>
-                <Button type="submit" variant="primary" isLoading={inviteMutation.isPending}>
+                <Button type="submit" variant="primary" isLoading={inviteMutation.isPending} className="bg-slate-900 hover:bg-slate-800 text-white font-bold">
                   Send Invitation
                 </Button>
               </div>

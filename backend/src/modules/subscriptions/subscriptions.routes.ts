@@ -5,18 +5,19 @@ import { authorize } from '../../middleware/authorize';
 
 const router = Router();
 
-// Public Raw Webhook Endpoint for Stripe Event Signature Verification
+// Public Webhook Endpoint for Razorpay Event Signature Verification
 router.post(
   '/webhook',
   express.raw({ type: 'application/json' }),
   SubscriptionsController.handleWebhook as any
 );
 
-// Protected Business Admin Routes
+// Protected Business Admin Subscription Routes
 router.use(authenticate as any, authorize(['BUSINESS_ADMIN']) as any);
 
 router.get('/current', SubscriptionsController.getCurrentSubscription as any);
-router.post('/checkout', SubscriptionsController.createCheckoutSession as any);
-router.post('/portal', SubscriptionsController.createPortalSession as any);
+router.post('/razorpay-order', SubscriptionsController.createRazorpayOrder as any);
+router.post('/verify-payment', SubscriptionsController.verifyPayment as any);
+router.post('/cancel', SubscriptionsController.cancelSubscription as any);
 
 export default router;

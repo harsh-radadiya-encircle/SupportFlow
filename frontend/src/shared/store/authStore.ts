@@ -9,6 +9,7 @@ interface AuthState {
   setAuth: (user: User, token: string) => void;
   clearAuth: () => void;
   setLoading: (isLoading: boolean) => void;
+  updateUserBusinessPlan: (plan: string) => void;
 }
 
 const initialToken = localStorage.getItem('supportflow_token');
@@ -44,4 +45,19 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setLoading: (isLoading: boolean) => set({ isLoading }),
+
+  updateUserBusinessPlan: (plan: string) => {
+    set((state) => {
+      if (!state.user || !state.user.business) return state;
+      const updatedUser = {
+        ...state.user,
+        business: {
+          ...state.user.business,
+          plan: plan as any,
+        },
+      };
+      localStorage.setItem('supportflow_user', JSON.stringify(updatedUser));
+      return { user: updatedUser };
+    });
+  },
 }));

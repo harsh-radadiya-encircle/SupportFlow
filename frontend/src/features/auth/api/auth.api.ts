@@ -12,8 +12,23 @@ export interface SyncPayload {
 }
 
 export const authApi = {
+  checkProvider: async (email: string) => {
+    const response = await apiClient.post('/auth/check-provider', { email });
+    return response.data;
+  },
+
   syncUser: async (payload: SyncPayload) => {
     const response = await apiClient.post('/auth/sync', payload);
+    return response.data;
+  },
+
+  syncPassword: async (payload: { email: string; password: string }) => {
+    const response = await apiClient.post('/auth/sync-password', payload);
+    return response.data;
+  },
+
+  getCustomToken: async () => {
+    const response = await apiClient.get('/auth/custom-token');
     return response.data;
   },
 

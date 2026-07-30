@@ -1,4 +1,4 @@
-import { Role } from '@prisma/client';
+import { Role, AuthProvider } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../../utils/prisma';
 import { env } from '../../config/env';
@@ -13,52 +13,81 @@ export interface SyncUserDto {
   role?: Role;
   businessName?: string;
   mode?: 'login' | 'register';
-  authProvider?: 'EMAIL_PASSWORD' | 'GOOGLE';
+  authProvider?: 'EMAIL_PASSWORD' | 'GOOGLE' | 'MULTI_PROVIDER';
 }
 
 export class AuthService {
+  static async checkProvider(email: string) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        authProvider: true,
+      },
+    });
+
+    if (!user) {
+      return { exists: false };
+    }
+
+    return {
+      exists: true,
+      authProvider: user.authProvider,
+    };
+  }
+
   static async syncOrRegisterUser(dto: SyncUserDto) {
     const isLoginMode = dto.mode === 'login';
+    const isRegisterMode = dto.mode === 'register';
 
     let existingUser = await prisma.user.findFirst({
       where: {
-        OR: [{ firebaseUid: dto.firebaseUid }, { email: dto.email }],
+        OR: [{ email: dto.email }, { firebaseUid: dto.firebaseUid }],
       },
       include: { business: true },
     });
 
-    // 1. If in LOGIN mode and user does NOT exist in PostgreSQL DB, reject authentication
-    if (isLoginMode && !existingUser) {
-      throw ApiError.notFound('No account found for this email address. Please register an account first.');
+    // 1. If in REGISTER mode and user ALREADY exists in PostgreSQL DB, reject duplicate registration attempt
+    if (isRegisterMode && existingUser) {
+      throw ApiError.badRequest(
+        'An account with this email address already exists. Please sign in directly using Email & Password or Google.'
+      );
     }
 
-    // 2. Validate Auth Provider Mutual Exclusion & Sync DB state
+    // 2. If in LOGIN mode and user does NOT exist in PostgreSQL DB
+    if (isLoginMode && !existingUser && dto.authProvider !== 'GOOGLE') {
+      throw ApiError.notFound('No account found for this email address. Please click "Create account" below to sign up first.');
+    }
+
+    // 3. Multi-Provider Seamless Synchronization for existing users
     if (existingUser) {
-      const isDbGoogle = (existingUser as any).authProvider === 'GOOGLE';
-      const isDbEmail = (existingUser as any).authProvider === 'EMAIL_PASSWORD';
+      const updateData: any = {};
 
-      if (dto.authProvider === 'GOOGLE' && isDbEmail) {
-        throw ApiError.badRequest('This email address was registered using Email & Password. Please sign in using your email and password.');
+      // Keep firebaseUid in sync if updated in Firebase Auth
+      if (existingUser.firebaseUid !== dto.firebaseUid && dto.firebaseUid !== 'check') {
+        updateData.firebaseUid = dto.firebaseUid;
       }
 
-      if (dto.authProvider === 'EMAIL_PASSWORD' && isDbGoogle) {
-        throw ApiError.badRequest('This email address was registered using Google Sign-In. Please sign in using the "Continue with Google" button.');
+      // If user logs in with a different provider than originally registered, store MULTI_PROVIDER
+      if (
+        dto.authProvider &&
+        (existingUser.authProvider as string) !== 'MULTI_PROVIDER' &&
+        existingUser.authProvider !== (dto.authProvider as AuthProvider)
+      ) {
+        updateData.authProvider = AuthProvider.MULTI_PROVIDER;
       }
 
-      // Sync firebaseUid if it changed or was updated in Firebase Auth
-      if (existingUser.firebaseUid !== dto.firebaseUid || (dto.authProvider && (existingUser as any).authProvider !== dto.authProvider)) {
+      if (Object.keys(updateData).length > 0) {
         existingUser = await prisma.user.update({
           where: { id: existingUser.id },
-          data: {
-            firebaseUid: dto.firebaseUid,
-            ...(dto.authProvider ? { authProvider: dto.authProvider as any } : {}),
-          },
+          data: updateData,
           include: { business: true },
         });
       }
     }
 
-    // 3. If in REGISTER mode and user does not exist, provision new user and business
+    // 4. Provision new user if not existing
     if (!existingUser) {
       let businessId: string | undefined;
 
@@ -79,7 +108,7 @@ export class AuthService {
           email: dto.email,
           fullName: dto.fullName,
           role: dto.role || Role.CUSTOMER,
-          authProvider: (dto.authProvider as any) || 'EMAIL_PASSWORD',
+          authProvider: (dto.authProvider as AuthProvider) || AuthProvider.EMAIL_PASSWORD,
           businessId,
         },
         include: { business: true },
@@ -99,7 +128,27 @@ export class AuthService {
       { expiresIn: '7d' }
     );
 
-    return { user: existingUser, token };
+    const firebaseCustomToken = await this.createFirebaseCustomToken(existingUser.firebaseUid);
+
+    return { user: existingUser, token, firebaseCustomToken };
+  }
+
+  static async createFirebaseCustomToken(firebaseUid: string): Promise<string | undefined> {
+    if (isFirebaseInitialized && firebaseUid && firebaseUid !== 'check') {
+      try {
+        return await admin.auth().createCustomToken(firebaseUid);
+      } catch (err: any) {
+        console.warn('[Firebase Custom Token Notice]:', err.message);
+      }
+    }
+    return undefined;
+  }
+
+  static async getCustomToken(email: string) {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) throw ApiError.notFound('User not found');
+    const firebaseCustomToken = await this.createFirebaseCustomToken(user.firebaseUid);
+    return { firebaseCustomToken };
   }
 
   static async login(email: string) {
@@ -124,7 +173,56 @@ export class AuthService {
       { expiresIn: '7d' }
     );
 
-    return { user, token };
+    const firebaseCustomToken = await this.createFirebaseCustomToken(user.firebaseUid);
+
+    return { user, token, firebaseCustomToken };
+  }
+
+  static async syncPassword(email: string, password: string) {
+    const user = await prisma.user.findUnique({
+      where: { email },
+      include: { business: true },
+    });
+
+    if (!user) {
+      throw ApiError.notFound('No registered user account found for this email address.');
+    }
+
+    let firebaseUid = user.firebaseUid;
+
+    if (isFirebaseInitialized) {
+      try {
+        const fbUser = await admin.auth().getUserByEmail(email);
+        firebaseUid = fbUser.uid;
+        await admin.auth().updateUser(fbUser.uid, { password });
+        console.log(`[Firebase Auth Sync] Successfully restored/synced password for ${email}`);
+      } catch (fbErr: any) {
+        console.warn('[Firebase Auth Sync Notice]:', fbErr.message);
+      }
+    }
+
+    if (user.authProvider !== AuthProvider.MULTI_PROVIDER) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { authProvider: AuthProvider.MULTI_PROVIDER, firebaseUid },
+      });
+    }
+
+    const token = jwt.sign(
+      {
+        id: user.id,
+        uid: firebaseUid,
+        email: user.email,
+        role: user.role,
+        businessId: user.businessId,
+      },
+      env.JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    const firebaseCustomToken = await this.createFirebaseCustomToken(firebaseUid);
+
+    return { user, token, firebaseCustomToken };
   }
 
   static async forgotPassword(email: string) {
@@ -133,16 +231,10 @@ export class AuthService {
       throw ApiError.notFound('No registered user account found with this email address.');
     }
 
-    if ((user as any).authProvider === 'GOOGLE') {
-      throw ApiError.badRequest(
-        'This account was registered using Google Sign-In and does not have a password. Please sign in directly using "Continue with Google".'
-      );
-    }
-
     const resetToken = jwt.sign({ id: user.id, email: user.email }, env.JWT_SECRET, { expiresIn: '15m' });
     const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
-    // Send beautiful transactional HTML password reset email via Brevo
+    // Send transactional HTML password reset email via Brevo
     try {
       await EmailService.sendPasswordResetEmail(user.email, user.fullName, resetUrl);
     } catch (emailErr: any) {
@@ -162,14 +254,11 @@ export class AuthService {
       const user = await prisma.user.findUnique({ where: { id: decoded.id } });
       if (!user) throw ApiError.notFound('User account not found');
 
-      if ((user as any).authProvider === 'GOOGLE') {
-        throw ApiError.badRequest('Password reset is not applicable for accounts registered via Google Sign-In.');
-      }
-
-      // Sync updated password into Firebase Auth if Firebase Admin SDK is active
+      // Update password in Firebase Auth via Firebase Admin SDK if active
       if (newPassword && isFirebaseInitialized && user.firebaseUid) {
         try {
           await admin.auth().updateUser(user.firebaseUid, { password: newPassword });
+          console.log(`[Firebase Auth] Successfully updated password for user ${user.email}`);
         } catch (fbErr: any) {
           console.warn('[Firebase Auth Password Sync Notice]:', fbErr.message);
         }

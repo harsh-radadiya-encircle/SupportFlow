@@ -29,7 +29,7 @@
 ## 4 Questions Before Adding Any Package
 
 1. **Can this be solved cleanly with existing installed packages?**
-   - *Installed*: `express`, `prisma`, `firebase-admin`, `stripe`, `socket.io`, `zod`, `express-rate-limit`, `helmet`, `react 19`, `zustand`, `tanstack query`, `axios`, `lucide-react`, `recharts`.
+   - *Installed*: `express`, `prisma`, `firebase-admin`, `razorpay`, `socket.io`, `zod`, `express-rate-limit`, `helmet`, `react 19`, `zustand`, `tanstack query`, `axios`, `lucide-react`, `recharts`, `date-fns`.
 
 2. **Is the package TypeScript native or supported with `@types`?**
    - *Rule*: JavaScript-only packages without TypeScript types are prohibited.

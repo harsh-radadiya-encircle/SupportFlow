@@ -13,6 +13,16 @@ export interface AcceptInvitePayload {
   authProvider?: 'EMAIL_PASSWORD' | 'GOOGLE';
 }
 
+export interface TeamAgentItem {
+  id: string;
+  email: string;
+  fullName: string;
+  role: Role;
+  authProvider: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
 export const invitationsApi = {
   inviteAgent: async (payload: InviteAgentPayload) => {
     const response = await apiClient.post('/invitations', payload);
@@ -21,6 +31,16 @@ export const invitationsApi = {
 
   getTeamAndInvitations: async () => {
     const response = await apiClient.get('/invitations');
+    return response.data;
+  },
+
+  toggleAgentActiveStatus: async (agentId: string) => {
+    const response = await apiClient.patch(`/invitations/agents/${agentId}/toggle-active`);
+    return response.data;
+  },
+
+  deleteInvitation: async (invitationId: string) => {
+    const response = await apiClient.delete(`/invitations/${invitationId}`);
     return response.data;
   },
 

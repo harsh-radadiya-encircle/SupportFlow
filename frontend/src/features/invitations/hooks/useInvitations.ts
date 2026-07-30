@@ -32,6 +32,38 @@ export const useInviteAgent = () => {
   });
 };
 
+export const useToggleAgentActive = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (agentId: string) => invitationsApi.toggleAgentActiveStatus(agentId),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['invitations'] });
+      toast.success(res.message || 'Agent status updated successfully.');
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.message || 'Failed to update agent status.';
+      toast.error(msg);
+    },
+  });
+};
+
+export const useDeleteInvitation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (invitationId: string) => invitationsApi.deleteInvitation(invitationId),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['invitations'] });
+      toast.success(res.message || 'Invitation revoked successfully.');
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.message || 'Failed to revoke invitation.';
+      toast.error(msg);
+    },
+  });
+};
+
 export const useVerifyInvitationToken = (token: string) => {
   return useQuery({
     queryKey: ['invitationToken', token],

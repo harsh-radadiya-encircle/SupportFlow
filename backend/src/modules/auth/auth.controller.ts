@@ -4,6 +4,21 @@ import { sendResponse } from '../../common/responses/apiResponse';
 import { AuthenticatedRequest } from '../../common/types';
 
 export class AuthController {
+  static async checkProvider(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email } = req.body;
+      const result = await AuthService.checkProvider(email);
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: 'User provider checked successfully',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async syncUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const result = await AuthService.syncOrRegisterUser(req.body);
@@ -26,6 +41,35 @@ export class AuthController {
         res,
         statusCode: 200,
         message: 'Logged in successfully',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async syncPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { email, password } = req.body;
+      const result = await AuthService.syncPassword(email, password);
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: 'Password synced and authenticated successfully',
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getCustomToken(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const result = await AuthService.getCustomToken(req.user!.email);
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: 'Firebase custom token generated successfully',
         data: result,
       });
     } catch (error) {

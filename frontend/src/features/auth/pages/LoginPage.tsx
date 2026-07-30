@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithCustomToken,
   fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import toast from 'react-hot-toast';
@@ -40,14 +41,30 @@ const getFriendlyAuthErrorMessage = (err: any): string => {
   const code = err?.code || '';
   const serverMsg = err?.response?.data?.message || err?.message || '';
 
-  if (code === 'auth/account-exists-with-different-credential') {
-    return 'An account with this email address already exists using Email & Password. Please sign in with your email and password above.';
+  if (serverMsg && !serverMsg.includes('Firebase: Error')) {
+    return serverMsg;
   }
-  if (code === 'auth/invalid-credential' || code === 'auth/wrong-password' || code === 'auth/user-not-found') {
-    return 'Invalid email address or password. Please check your login details and try again.';
+
+  if (code === 'auth/account-exists-with-different-credential') {
+    return 'This email address is already registered using Email & Password. Please sign in with your email and password first, then connect your Google account in Profile Settings.';
+  }
+  if (code === 'auth/credential-already-in-use') {
+    return 'This account is already linked to a different user account.';
+  }
+  if (code === 'auth/provider-already-linked') {
+    return 'Google account is already linked to your profile.';
+  }
+  if (code === 'auth/user-not-found') {
+    return 'No account found for this email address. Please click "Create account" below to sign up first.';
+  }
+  if (code === 'auth/wrong-password') {
+    return 'Incorrect password. Please check your password or click "Forgot Password?" to reset it.';
+  }
+  if (code === 'auth/invalid-credential') {
+    return 'Invalid email address or password. If you do not have an account, please click "Create account" below to sign up first.';
   }
   if (code === 'auth/email-already-in-use') {
-    return 'An account with this email address already exists. Please sign in with your password instead.';
+    return 'An account with this email address already exists. Please sign in with your password or Google.';
   }
   if (code === 'auth/weak-password') {
     return 'Password is too weak. Please use at least 6 characters.';
@@ -61,12 +78,7 @@ const getFriendlyAuthErrorMessage = (err: any): string => {
   if (code === 'auth/popup-closed-by-user') {
     return 'Google sign-in popup was closed before completing authentication.';
   }
-  if (serverMsg) {
-    if (serverMsg.includes('Firebase: Error (auth/')) {
-      return 'Authentication failed. Please check your credentials and try again.';
-    }
-    return serverMsg;
-  }
+
   return 'Authentication failed. Please check your login details and try again.';
 };
 
@@ -104,7 +116,6 @@ export const LoginPage: React.FC = () => {
     setInfoMessage(null);
     setSuccessMessage(null);
 
-    // Business Owner Name Validation
     if (isRegisterMode) {
       if (!data.fullName?.trim()) {
         setErrorMessage('Please enter your full name to create an account.');
@@ -120,79 +131,104 @@ export const LoginPage: React.FC = () => {
 
     try {
       if (isRegisterMode) {
-        // Register Mode
+        // Register Mode with Email & Password
         let firebaseUid: string;
+
         try {
           const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
           firebaseUid = userCredential.user.uid;
         } catch (firebaseErr: any) {
           if (firebaseErr.code === 'auth/email-already-in-use') {
-            const methods = await fetchSignInMethodsForEmail(auth, data.email).catch(() => []);
-            if (methods.includes('google.com')) {
-              const msg = 'This email is already registered using Google Sign-In. Please click "Sign in with Google" below.';
-              setErrorMessage(msg);
-              toast.error('Registered via Google! Please sign in with Google.');
-              return;
-            } else {
-              const msg = 'An account with this email already exists. Please sign in with your password.';
-              setErrorMessage(msg);
-              setIsRegisterMode(false);
-              toast.error('Email already registered. Switching to Sign In.');
-              return;
-            }
+            const msg = 'An account with this email address already exists. Please sign in with your password or click Google Sign-In.';
+            setErrorMessage(msg);
+            setIsRegisterMode(false);
+            toast.error('Email already registered. Switching to Sign In.');
+            return;
           }
           throw firebaseErr;
         }
 
-        // Register user in PostgreSQL database via backend sync API
-        const response = await authApi.syncUser({
-          firebaseUid,
-          email: data.email,
-          fullName: data.fullName || 'User',
-          role: selectedRole,
-          businessName: selectedRole === 'BUSINESS_ADMIN' ? data.businessName : undefined,
-          mode: 'register',
-          authProvider: 'EMAIL_PASSWORD',
-        });
+        // Register in PostgreSQL DB
+        try {
+          const response = await authApi.syncUser({
+            firebaseUid,
+            email: data.email,
+            fullName: data.fullName || 'User',
+            role: selectedRole,
+            businessName: selectedRole === 'BUSINESS_ADMIN' ? data.businessName : undefined,
+            mode: 'register',
+            authProvider: 'EMAIL_PASSWORD',
+          });
 
-        const syncData = response?.data || response;
-        const user = syncData.user;
-        const sessionToken = syncData.token;
+          const syncData = response?.data || response;
+          const user = syncData.user;
+          const sessionToken = syncData.token;
 
-        localStorage.setItem('supportflow_token', sessionToken);
-        await registerFcmDeviceToken(sessionToken);
+          localStorage.setItem('supportflow_token', sessionToken);
+          await registerFcmDeviceToken(sessionToken);
 
-        setAuth(user, sessionToken);
-        toast.success(`Welcome to SupportFlow, ${user.fullName}!`);
-        redirectUserByRole(user.role);
+          setAuth(user, sessionToken);
+          toast.success(`Welcome to SupportFlow, ${user.fullName}!`);
+          redirectUserByRole(user.role);
+        } catch (dbErr: any) {
+          await auth.signOut().catch(() => null);
+          throw dbErr;
+        }
       } else {
-        // Login Mode
-        let idToken: string;
-        let userUid: string;
-        let userEmail: string;
+        // Login Mode with Email & Password
+        let idToken: string = '';
+        let userUid: string = '';
+        let userEmail: string = data.email;
+
         try {
           const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
           idToken = await userCredential.user.getIdToken();
           userUid = userCredential.user.uid;
           userEmail = userCredential.user.email || data.email;
         } catch (firebaseErr: any) {
-          if (firebaseErr.code === 'auth/invalid-credential' || firebaseErr.code === 'auth/user-not-found') {
-            const methods = await fetchSignInMethodsForEmail(auth, data.email).catch(() => []);
-            if (methods.includes('google.com')) {
-              const msg = 'This account was registered using Google Sign-In. Please click "Sign in with Google" below!';
+          const code = firebaseErr?.code || '';
+          if (
+            code === 'auth/wrong-password' ||
+            code === 'auth/invalid-credential' ||
+            code === 'auth/user-not-found'
+          ) {
+            // Attempt automatic backend password sync & restoration via Firebase Admin SDK
+            try {
+              const syncRes = await authApi.syncPassword({ email: data.email, password: data.password });
+              const syncData = syncRes?.data || syncRes;
+
+              if (syncData?.user && syncData?.token) {
+                const user = syncData.user;
+                const sessionToken = syncData.token;
+
+                if (syncData.firebaseCustomToken) {
+                  await signInWithCustomToken(auth, syncData.firebaseCustomToken).catch(() => null);
+                }
+
+                localStorage.setItem('supportflow_token', sessionToken);
+                await registerFcmDeviceToken(sessionToken);
+
+                setAuth(user, sessionToken);
+                toast.success(`Welcome back, ${user.fullName}!`);
+                redirectUserByRole(user.role);
+                return;
+              }
+            } catch (syncErr) {
+              const msg = 'Incorrect password. Please check your password or click "Forgot Password?" to reset it.';
               setErrorMessage(msg);
-              toast.error('Registered via Google! Click "Sign in with Google".');
+              toast.error(msg);
               return;
             }
           }
           throw firebaseErr;
         }
 
-        // Authenticate backend session via sync API
+        // Authenticate via PostgreSQL DB sync API
         const response = await authApi.syncUser({
           firebaseUid: userUid,
           email: userEmail,
           mode: 'login',
+          authProvider: 'EMAIL_PASSWORD',
         });
 
         const syncData = response?.data || response;
@@ -223,13 +259,35 @@ export const LoginPage: React.FC = () => {
 
     try {
       const result = await signInWithPopup(auth, googleProvider);
+      const email = result.user.email!;
       const idToken = await result.user.getIdToken();
 
+      // Check if account already exists in DB registered via Email & Password
+      const checkRes = await authApi.checkProvider(email).catch(() => null);
+      const isExistingPasswordAccount =
+        checkRes?.data?.exists && checkRes?.data?.authProvider === 'EMAIL_PASSWORD';
+
+      // Check if Firebase Auth has explicitly linked 'password' provider to this user
+      const hasPasswordProvider = result.user.providerData.some((p) => p.providerId === 'password');
+
+      if (isExistingPasswordAccount && !hasPasswordProvider) {
+        // Sign out transient Google session without modifying or overwriting the password account
+        await auth.signOut().catch(() => null);
+
+        const msg =
+          'This email is already registered using Email & Password. Please sign in with your password first. After signing in, link your Google account under My Profile -> Connected Accounts.';
+        setErrorMessage(msg);
+        toast.error(msg);
+        return;
+      }
+
+      // Authenticate & Sync via PostgreSQL backend API
       const response = await authApi.syncUser({
         firebaseUid: result.user.uid,
-        email: result.user.email!,
+        email,
         fullName: result.user.displayName || 'Google User',
         role: selectedRole,
+        mode: isRegisterMode ? 'register' : 'login',
         authProvider: 'GOOGLE',
       });
 
@@ -245,6 +303,9 @@ export const LoginPage: React.FC = () => {
       redirectUserByRole(user.role);
     } catch (err: any) {
       console.error('[Google Auth Error]:', err);
+
+      await auth.signOut().catch(() => null);
+
       const friendlyMsg = getFriendlyAuthErrorMessage(err);
       setErrorMessage(friendlyMsg);
       toast.error(friendlyMsg);
@@ -278,7 +339,7 @@ export const LoginPage: React.FC = () => {
         <div className="absolute top-10 left-10 w-96 h-96 bg-indigo-400/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Clickable Brand Logo -> Redirects to root http://localhost:5173/ */}
+        {/* Brand Logo */}
         <div className="relative z-10 space-y-3">
           <Link to="/" className="inline-flex items-center gap-3 group">
             <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
@@ -286,7 +347,7 @@ export const LoginPage: React.FC = () => {
             </div>
             <div>
               <span className="font-bold text-xl text-slate-900 tracking-tight block leading-none">SupportFlow</span>
-              <span className="text-[10px] uppercase font-semibold tracking-wider text-indigo-600">Customer Success</span>
+              <span className="text-xs uppercase font-semibold tracking-wider text-indigo-600">Customer Success</span>
             </div>
           </Link>
           <p className="text-sm font-normal text-slate-500">
@@ -313,17 +374,17 @@ export const LoginPage: React.FC = () => {
                   <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
                     Trusted by 50,000+ Teams <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                   </div>
-                  <div className="text-[11px] font-normal text-slate-500">Real-Time Ticket Management & Live Chat</div>
+                  <div className="text-xs font-normal text-slate-500">Real-Time Ticket Management & Live Chat</div>
                 </div>
               </div>
               <div className="flex -space-x-2">
-                <span className="w-7 h-7 rounded-full bg-indigo-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                <span className="w-7 h-7 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center border-2 border-white">
                   A
                 </span>
-                <span className="w-7 h-7 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                <span className="w-7 h-7 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center border-2 border-white">
                   B
                 </span>
-                <span className="w-7 h-7 rounded-full bg-purple-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">
+                <span className="w-7 h-7 rounded-full bg-purple-600 text-white text-xs font-bold flex items-center justify-center border-2 border-white">
                   C
                 </span>
               </div>
@@ -490,7 +551,7 @@ export const LoginPage: React.FC = () => {
             />
 
             <Input
-              label={isRegisterMode ? 'PASSWORD' : 'PASSWORD'}
+              label="PASSWORD"
               type="password"
               placeholder="••••••••"
               leftIcon={<Lock className="w-4 h-4" />}

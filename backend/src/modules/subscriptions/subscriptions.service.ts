@@ -1,7 +1,7 @@
-import Stripe from 'stripe';
+import crypto from 'crypto';
 import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 import { prisma } from '../../utils/prisma';
-import { stripe } from '../../config/stripe';
+import { razorpay } from '../../config/razorpay';
 import { env } from '../../config/env';
 import { ApiError } from '../../common/exceptions/apiError';
 import { AuthenticatedUser } from '../../common/types';
@@ -32,7 +32,8 @@ export class SubscriptionsService {
       prisma.user.count({
         where: {
           businessId,
-          role: { in: ['SUPPORT_AGENT', 'BUSINESS_ADMIN'] },
+          role: 'SUPPORT_AGENT',
+          isActive: true,
         },
       }),
       prisma.ticket.count({
@@ -57,7 +58,7 @@ export class SubscriptionsService {
       plan: business.plan,
       subscriptionStatus: business.subscriptionStatus,
       currentPeriodEnd: business.currentPeriodEnd,
-      stripeCustomerId: business.stripeCustomerId,
+      razorpayCustomerId: business.razorpayCustomerId,
       usage: {
         agents: {
           used: agentCount,
@@ -76,9 +77,9 @@ export class SubscriptionsService {
   }
 
   /**
-   * Create Stripe Checkout Session for Plan Upgrades
+   * Create Razorpay Order for Plan Upgrades
    */
-  static async createCheckoutSession(plan: 'STANDARD' | 'BUSINESS', user: AuthenticatedUser) {
+  static async createRazorpayOrder(plan: 'STANDARD' | 'BUSINESS', user: AuthenticatedUser) {
     if (!user.businessId) {
       throw ApiError.badRequest('You must be associated with a business to upgrade plans.');
     }
@@ -91,155 +92,189 @@ export class SubscriptionsService {
       throw ApiError.notFound('Business profile not found.');
     }
 
-    // Get or Create Stripe Customer ID
-    let customerId = business.stripeCustomerId;
+    const isRealRazorpayKey =
+      env.RAZORPAY.KEY_ID &&
+      env.RAZORPAY.KEY_ID.startsWith('rzp_') &&
+      env.RAZORPAY.KEY_ID !== 'rzp_test_mock';
 
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        name: business.name,
-        metadata: {
-          businessId: business.id,
+    // Development / Test Fallback Mode if real Razorpay keys are not set in backend/.env
+    if (!isRealRazorpayKey) {
+      await prisma.business.update({
+        where: { id: business.id },
+        data: {
+          plan: plan as SubscriptionPlan,
+          subscriptionStatus: SubscriptionStatus.ACTIVE,
         },
       });
 
-      customerId = customer.id;
+      return {
+        isTestMode: true,
+        message: `Plan upgraded to ${plan} in Development Mode. (Configure RAZORPAY_KEY_ID in backend/.env for live Razorpay Checkout)`,
+      };
+    }
+
+    // Determine Amount in INR Paise (₹2,499 = 249900 paise for Standard, ₹6,499 = 649900 paise for Business)
+    const amountInPaise = plan === 'STANDARD' ? 249900 : 649900;
+
+    try {
+      const order = await razorpay.orders.create({
+        amount: amountInPaise,
+        currency: 'INR',
+        receipt: `rcpt_${business.id.slice(0, 8)}_${Date.now()}`,
+        notes: {
+          businessId: business.id,
+          plan,
+          userEmail: user.email,
+        },
+      });
 
       await prisma.business.update({
         where: { id: business.id },
-        data: { stripeCustomerId: customerId },
+        data: { razorpayOrderId: order.id },
       });
-    }
 
-    // Determine Monthly Amount ($29 for Standard, $79 for Business)
-    const unitAmount = plan === 'STANDARD' ? 2900 : 7900;
-    const planName = plan === 'STANDARD' ? 'SupportFlow Standard Plan' : 'SupportFlow Business Plan';
-
-    const session = await stripe.checkout.sessions.create({
-      customer: customerId,
-      mode: 'subscription',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: planName,
-              description:
-                plan === 'STANDARD'
-                  ? 'Includes up to 5 Support Agents & Unlimited Tickets'
-                  : 'Includes up to 20 Support Agents, Analytics & Priority Support',
-            },
-            unit_amount: unitAmount,
-            recurring: {
-              interval: 'month',
-            },
-          },
-          quantity: 1,
-        },
-      ],
-      success_url: `${env.FRONTEND_URL}/business/billing?success=true&plan=${plan}`,
-      cancel_url: `${env.FRONTEND_URL}/business/billing?canceled=true`,
-      metadata: {
-        businessId: business.id,
+      return {
+        orderId: order.id,
+        amount: order.amount,
+        currency: order.currency,
+        keyId: env.RAZORPAY.KEY_ID,
         plan,
-      },
-    });
-
-    return { checkoutUrl: session.url };
+        businessName: business.name,
+        userEmail: user.email,
+      };
+    } catch (err: any) {
+      console.error('[Razorpay Order Creation Error]:', err);
+      throw ApiError.badRequest(err.message || 'Failed to create Razorpay payment order.');
+    }
   }
 
   /**
-   * Create Stripe Customer Billing Portal Session
+   * Verify Razorpay Payment Signature and Upgrade Subscription
    */
-  static async createBillingPortalSession(user: AuthenticatedUser) {
+  static async verifyRazorpayPayment(
+    payload: {
+      razorpay_order_id: string;
+      razorpay_payment_id: string;
+      razorpay_signature: string;
+      plan: 'STANDARD' | 'BUSINESS';
+    },
+    user: AuthenticatedUser
+  ) {
     if (!user.businessId) {
       throw ApiError.badRequest('No business profile found.');
     }
 
-    const business = await prisma.business.findUnique({
-      where: { id: user.businessId },
-    });
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan } = payload;
 
-    if (!business || !business.stripeCustomerId) {
-      throw ApiError.badRequest('No active Stripe customer billing profile found for this business.');
+    // HMAC Signature Validation: razorpay_order_id + '|' + razorpay_payment_id
+    const generatedSignature = crypto
+      .createHmac('sha256', env.RAZORPAY.KEY_SECRET)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest('hex');
+
+    if (generatedSignature !== razorpay_signature) {
+      throw ApiError.badRequest('Invalid Razorpay payment signature verification failed.');
     }
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer: business.stripeCustomerId,
-      return_url: `${env.FRONTEND_URL}/business/billing`,
+    const amountPaid = plan === 'STANDARD' ? 249900 : 649900;
+
+    // Update Business Plan & Subscription Status in DB
+    const business = await prisma.business.update({
+      where: { id: user.businessId },
+      data: {
+        plan: plan as SubscriptionPlan,
+        subscriptionStatus: SubscriptionStatus.ACTIVE,
+        razorpayOrderId: razorpay_order_id,
+      },
     });
 
-    return { portalUrl: session.url };
+    // Record Billing Receipt in BillingHistory
+    await prisma.billingHistory.create({
+      data: {
+        businessId: business.id,
+        razorpayPaymentId: razorpay_payment_id,
+        razorpayOrderId: razorpay_order_id,
+        amountPaid,
+        currency: 'INR',
+        status: 'captured',
+      },
+    }).catch(() => null); // Prevent crash if duplicate
+
+    return {
+      success: true,
+      message: `Payment successful! Business upgraded to ${plan} plan.`,
+      plan: business.plan,
+    };
   }
 
   /**
-   * Process Verified Stripe Webhook Signature Events
+   * Cancel Subscription and Downgrade to Free
    */
-  static async handleStripeWebhook(payload: Buffer, signature: string) {
-    const webhookSecret = env.STRIPE.WEBHOOK_SECRET;
-    let event: Stripe.Event;
-
-    try {
-      event = stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-    } catch (err: any) {
-      console.error('[Stripe Webhook Signature Verification Failed]:', err.message);
-      throw ApiError.badRequest(`Webhook Signature Verification Error: ${err.message}`);
+  static async cancelSubscription(user: AuthenticatedUser) {
+    if (!user.businessId) {
+      throw ApiError.badRequest('No business profile found.');
     }
 
-    console.log(`[Stripe Webhook Received]: Event type ${event.type}`);
+    const business = await prisma.business.update({
+      where: { id: user.businessId },
+      data: {
+        plan: SubscriptionPlan.FREE,
+        subscriptionStatus: SubscriptionStatus.CANCELED,
+      },
+    });
 
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const businessId = session.metadata?.businessId;
-        const plan = session.metadata?.plan as SubscriptionPlan;
+    return {
+      success: true,
+      message: 'Subscription canceled. Business plan downgraded to Free.',
+      plan: business.plan,
+    };
+  }
+
+  /**
+   * Handle Verified Razorpay Webhooks
+   */
+  static async handleRazorpayWebhook(payloadBuffer: Buffer, signature: string) {
+    const webhookSecret = env.RAZORPAY.WEBHOOK_SECRET;
+
+    const expectedSignature = crypto
+      .createHmac('sha256', webhookSecret)
+      .update(payloadBuffer)
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      throw ApiError.badRequest('Razorpay Webhook signature verification failed.');
+    }
+
+    const body = JSON.parse(payloadBuffer.toString());
+    const event = body.event;
+
+    console.log(`[Razorpay Webhook Received]: Event ${event}`);
+
+    switch (event) {
+      case 'order.paid':
+      case 'payment.captured': {
+        const payment = body.payload.payment.entity;
+        const notes = payment.notes || {};
+        const businessId = notes.businessId;
+        const plan = notes.plan as SubscriptionPlan;
 
         if (businessId && plan) {
           await prisma.business.update({
             where: { id: businessId },
             data: {
               plan,
-              stripeSubscriptionId: session.subscription as string,
               subscriptionStatus: SubscriptionStatus.ACTIVE,
             },
           });
-          console.log(`[Stripe Webhook] Business ${businessId} upgraded to ${plan}`);
         }
         break;
       }
 
-      case 'customer.subscription.updated': {
-        const subscription = event.data.object as Stripe.Subscription;
-        const business = await prisma.business.findUnique({
-          where: { stripeSubscriptionId: subscription.id },
-        });
-
-        if (business) {
-          const status =
-            subscription.status === 'active'
-              ? SubscriptionStatus.ACTIVE
-              : subscription.status === 'past_due'
-              ? SubscriptionStatus.PAST_DUE
-              : SubscriptionStatus.CANCELED;
-
-          await prisma.business.update({
-            where: { id: business.id },
-            data: {
-              subscriptionStatus: status,
-              currentPeriodEnd: (subscription as any).current_period_end
-                ? new Date((subscription as any).current_period_end * 1000)
-                : null,
-            },
-          });
-        }
-        break;
-      }
-
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-        const business = await prisma.business.findUnique({
-          where: { stripeSubscriptionId: subscription.id },
+      case 'subscription.cancelled':
+      case 'subscription.halted': {
+        const subscription = body.payload.subscription.entity;
+        const business = await prisma.business.findFirst({
+          where: { razorpaySubscriptionId: subscription.id },
         });
 
         if (business) {
@@ -250,38 +285,14 @@ export class SubscriptionsService {
               subscriptionStatus: SubscriptionStatus.CANCELED,
             },
           });
-          console.log(`[Stripe Webhook] Subscription canceled for Business ${business.id}`);
-        }
-        break;
-      }
-
-      case 'invoice.payment_succeeded': {
-        const invoice = event.data.object as Stripe.Invoice;
-        const customerId = invoice.customer as string;
-
-        const business = await prisma.business.findUnique({
-          where: { stripeCustomerId: customerId },
-        });
-
-        if (business && invoice.id) {
-          await prisma.billingHistory.create({
-            data: {
-              businessId: business.id,
-              stripeInvoiceId: invoice.id,
-              amountPaid: invoice.amount_paid,
-              currency: invoice.currency,
-              status: invoice.status || 'paid',
-              pdfUrl: invoice.hosted_invoice_url || invoice.invoice_pdf || null,
-            },
-          }).catch(() => null); // Prevent duplicate invoice crash if re-sent
         }
         break;
       }
 
       default:
-        console.log(`[Stripe Webhook] Unhandled event type: ${event.type}`);
+        console.log(`[Razorpay Webhook] Unhandled event: ${event}`);
     }
 
-    return { received: true };
+    return { status: 'ok' };
   }
 }

@@ -14,4 +14,22 @@ router.get(
   controller.getBusinessAdminMetrics.bind(controller)
 );
 
+router.get(
+  '/agent',
+  authorize(['SUPPORT_AGENT', 'BUSINESS_ADMIN']),
+  controller.getAgentMetrics.bind(controller)
+);
+
+router.get(
+  '/platform',
+  authorize(['PLATFORM_ADMIN']),
+  controller.getPlatformAdminMetrics.bind(controller)
+);
+
+router.patch(
+  '/platform/businesses/:businessId/toggle-suspend',
+  authorize(['PLATFORM_ADMIN']),
+  controller.toggleBusinessSuspension.bind(controller)
+);
+
 export default router;

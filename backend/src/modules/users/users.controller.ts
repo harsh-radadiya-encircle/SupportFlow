@@ -38,4 +38,34 @@ export class UsersController {
       next(error);
     }
   }
+
+  static async getAllUsers(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const users = await UsersService.getAllUsers();
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: 'Registered platform users retrieved successfully',
+        data: users,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { userId } = req.params;
+      const deletedUser = await UsersService.deleteUser(userId);
+
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: `User account '${deletedUser.email}' has been deleted successfully.`,
+        data: deletedUser,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

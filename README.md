@@ -20,7 +20,7 @@
 - **Database & ORM**: PostgreSQL + Prisma ORM
 - **Real-Time Communication**: Socket.IO (Ticket rooms & presence)
 - **Authentication**: Firebase Admin SDK + JWT token verification
-- **Payments**: Stripe SDK (Checkout, Webhooks, Subscriptions)
+- **Payments**: Razorpay SDK (Checkout Modal, HMAC Webhooks, Subscriptions)
 - **API Documentation**: Swagger / OpenAPI (`http://localhost:5000/api-docs`)
 
 ---

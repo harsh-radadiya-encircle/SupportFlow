@@ -14,13 +14,14 @@ export const env = {
     CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL || '',
     PRIVATE_KEY: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
   },
-  STRIPE: {
-    SECRET_KEY: process.env.STRIPE_SECRET_KEY || 'sk_test_mock',
-    WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock',
+  RAZORPAY: {
+    KEY_ID: process.env.RAZORPAY_KEY_ID || 'rzp_test_mock',
+    KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || 'mock_secret',
+    WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || 'whsec_mock',
     PLANS: {
-      FREE: process.env.STRIPE_FREE_PLAN_PRICE_ID || 'price_free',
-      STANDARD: process.env.STRIPE_STANDARD_PLAN_PRICE_ID || 'price_standard',
-      BUSINESS: process.env.STRIPE_BUSINESS_PLAN_PRICE_ID || 'price_business',
+      FREE: 'plan_free',
+      STANDARD: process.env.RAZORPAY_STANDARD_PLAN_ID || 'plan_standard',
+      BUSINESS: process.env.RAZORPAY_BUSINESS_PLAN_ID || 'plan_business',
     },
   },
   SMTP: {

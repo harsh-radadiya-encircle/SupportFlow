@@ -32,6 +32,38 @@ export class InvitationsController {
     }
   }
 
+  static async toggleAgentActiveStatus(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { agentId } = req.params;
+      const updated = await InvitationsService.toggleAgentActiveStatus(agentId, req.user!);
+
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: `Agent account '${updated.fullName}' has been ${updated.isActive ? 'activated' : 'deactivated'} successfully.`,
+        data: updated,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async deleteInvitation(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const deleted = await InvitationsService.deleteInvitation(id, req.user!);
+
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: `Invitation for '${deleted.email}' has been revoked successfully.`,
+        data: deleted,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async verifyToken(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const token = req.params.token as string;

@@ -4,17 +4,19 @@ import { env } from './env';
 let isFirebaseInitialized = false;
 
 try {
+  const rawKey = env.FIREBASE.PRIVATE_KEY || '';
+  const formattedKey = rawKey.replace(/\\n/g, '\n');
   const hasValidKey =
-    env.FIREBASE.PRIVATE_KEY &&
-    env.FIREBASE.PRIVATE_KEY.includes('BEGIN PRIVATE KEY') &&
-    !env.FIREBASE.PRIVATE_KEY.includes('MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC...');
+    formattedKey &&
+    formattedKey.includes('BEGIN PRIVATE KEY') &&
+    !formattedKey.includes('MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC...');
 
   if (env.FIREBASE.PROJECT_ID && env.FIREBASE.CLIENT_EMAIL && hasValidKey) {
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId: env.FIREBASE.PROJECT_ID,
         clientEmail: env.FIREBASE.CLIENT_EMAIL,
-        privateKey: env.FIREBASE.PRIVATE_KEY,
+        privateKey: formattedKey,
       }),
     });
     isFirebaseInitialized = true;

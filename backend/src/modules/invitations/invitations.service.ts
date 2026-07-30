@@ -50,6 +50,7 @@ export class InvitationsService {
       where: {
         businessId: currentUser.businessId,
         role: Role.SUPPORT_AGENT,
+        isActive: true,
       },
     });
 
@@ -81,7 +82,6 @@ export class InvitationsService {
       where: {
         email: dto.email,
         businessId: currentUser.businessId,
-        isAccepted: false,
       },
     });
 
@@ -114,7 +114,7 @@ export class InvitationsService {
   }
 
   /**
-   * Fetch all invitations and team members for a business
+   * Fetch pending invitations and team members for a business
    */
   static async getBusinessTeamAndInvitations(businessId: string) {
     const [agents, invitations, business] = await Promise.all([
@@ -126,12 +126,13 @@ export class InvitationsService {
           fullName: true,
           role: true,
           authProvider: true,
+          isActive: true,
           createdAt: true,
         },
         orderBy: { createdAt: 'desc' },
       }),
       prisma.invitation.findMany({
-        where: { businessId },
+        where: { businessId, isAccepted: false },
         include: {
           invitedBy: {
             select: { fullName: true, email: true },
@@ -145,7 +146,7 @@ export class InvitationsService {
       }),
     ]);
 
-    const activeAgentCount = agents.filter((a) => a.role === Role.SUPPORT_AGENT).length;
+    const activeAgentCount = agents.filter((a) => a.role === Role.SUPPORT_AGENT && a.isActive).length;
     const maxAgents = PLAN_AGENT_LIMITS[business?.plan || 'FREE'] || 1;
 
     return {
@@ -156,6 +157,63 @@ export class InvitationsService {
       maxAgents,
       remainingSlots: Math.max(0, maxAgents - activeAgentCount),
     };
+  }
+
+  /**
+   * Toggle Support Agent Active / Deactive status (Business Admin only)
+   */
+  static async toggleAgentActiveStatus(agentId: string, currentUser: AuthenticatedUser) {
+    if (!currentUser.businessId) {
+      throw ApiError.forbidden('You must belong to an active business to manage support agents.');
+    }
+
+    const agent = await prisma.user.findFirst({
+      where: {
+        id: agentId,
+        businessId: currentUser.businessId,
+      },
+    });
+
+    if (!agent) {
+      throw ApiError.notFound('Support agent not found in your business team.');
+    }
+
+    if (agent.id === currentUser.id) {
+      throw ApiError.badRequest('You cannot deactivate your own business admin account.');
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: agentId },
+      data: {
+        isActive: !agent.isActive,
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Revoke/Delete a pending invitation (Business Admin only)
+   */
+  static async deleteInvitation(invitationId: string, currentUser: AuthenticatedUser) {
+    if (!currentUser.businessId) {
+      throw ApiError.forbidden('You must belong to an active business to manage invitations.');
+    }
+
+    const invitation = await prisma.invitation.findFirst({
+      where: {
+        id: invitationId,
+        businessId: currentUser.businessId,
+      },
+    });
+
+    if (!invitation) {
+      throw ApiError.notFound('Invitation not found.');
+    }
+
+    return prisma.invitation.delete({
+      where: { id: invitationId },
+    });
   }
 
   /**

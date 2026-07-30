@@ -9,6 +9,10 @@ import { BusinessAdminDashboardPage, PlatformAdminDashboardPage, AgentDashboardP
 import { CustomerTicketListPage, CreateTicketPage, TicketDetailPage } from '../../features/tickets';
 import { AgentManagementPage, AcceptInvitePage } from '../../features/invitations';
 import { BillingManagementPage } from '../../features/subscriptions/pages/BillingManagementPage';
+import { AllBusinessesPage } from '../../features/businesses/pages/AllBusinessesPage';
+import { AllUsersPage } from '../../features/users/pages/AllUsersPage';
+import { ProfilePage } from '../../features/profile';
+import { NotificationsPage } from '../../features/notifications';
 
 export const AppRoutes: React.FC = () => {
   const { isAuthenticated, user } = useAuthStore();
@@ -51,7 +55,8 @@ export const AppRoutes: React.FC = () => {
           {/* Platform Admin */}
           <Route element={<ProtectedRoute allowedRoles={['PLATFORM_ADMIN']} />}>
             <Route path="/admin/dashboard" element={<PlatformAdminDashboardPage />} />
-            <Route path="/admin/businesses" element={<PlatformAdminDashboardPage />} />
+            <Route path="/admin/businesses" element={<AllBusinessesPage />} />
+            <Route path="/admin/users" element={<AllUsersPage />} />
             <Route path="/admin/subscriptions" element={<PlatformAdminDashboardPage />} />
           </Route>
 
@@ -71,6 +76,8 @@ export const AppRoutes: React.FC = () => {
           </Route>
 
           {/* Customer & Shared Ticket Routes */}
+          <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/customer/tickets" element={<CustomerTicketListPage />} />
           <Route path="/customer/tickets/new" element={<CreateTicketPage />} />
           <Route path="/tickets/:id" element={<TicketDetailPage />} />
