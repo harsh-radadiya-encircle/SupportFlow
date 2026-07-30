@@ -42,12 +42,19 @@ export const ForgotPasswordPage: React.FC = () => {
       setIsSubmitted(true);
       toast.success('Password reset email sent! Check your inbox.');
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Failed to send password reset email. Please try again.';
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to send password reset email. Please try again.';
 
       if (msg.includes('Google Sign-In') || msg.includes('Google')) {
         setGoogleNotice(msg);
         toast.error('Google Account detected. Sign in directly with Google!');
-      } else if (err.response?.status === 404 || msg.includes('No registered user account found') || msg.includes('not found')) {
+      } else if (
+        err.response?.status === 404 ||
+        msg.includes('No registered user account found') ||
+        msg.includes('not found')
+      ) {
         const notFoundMsg = 'No registered user account found with this email address.';
         setErrorMessage(notFoundMsg);
         toast.error(notFoundMsg);
@@ -81,7 +88,8 @@ export const ForgotPasswordPage: React.FC = () => {
               </div>
               <h2 className="text-xl font-bold text-slate-900">Check your inbox</h2>
               <p className="text-sm text-slate-600 font-medium leading-relaxed">
-                We have sent an official password reset link to your email address. Please check your inbox and click the link to create your new password.
+                We have sent an official password reset link to your email address. Please check
+                your inbox and click the link to create your new password.
               </p>
 
               <Link to="/login">
@@ -132,14 +140,23 @@ export const ForgotPasswordPage: React.FC = () => {
                     {...register('email')}
                   />
 
-                  <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isSubmitting}>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    size="lg"
+                    className="w-full"
+                    isLoading={isSubmitting}
+                  >
                     Send Password Reset Email
                   </Button>
                 </>
               )}
 
               <div className="text-center pt-2">
-                <Link to="/login" className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors">
+                <Link
+                  to="/login"
+                  className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
+                >
                   <ArrowLeft className="w-3.5 h-3.5" /> Back to Sign In
                 </Link>
               </div>

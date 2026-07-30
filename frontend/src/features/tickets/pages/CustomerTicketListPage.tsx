@@ -144,7 +144,10 @@ export const CustomerTicketListPage: React.FC = () => {
       sortable: true,
       className: 'whitespace-nowrap',
       render: (ticket) => (
-        <Badge variant="ghost" className="text-xs font-semibold text-slate-600 capitalize whitespace-nowrap">
+        <Badge
+          variant="ghost"
+          className="text-xs font-semibold text-slate-600 capitalize whitespace-nowrap"
+        >
           {ticket.category ? ticket.category.toLowerCase().replace('_', ' ') : 'General'}
         </Badge>
       ),
@@ -207,7 +210,9 @@ export const CustomerTicketListPage: React.FC = () => {
           <AlertTriangle className="w-5 h-5" />
           <span>Failed to load support tickets</span>
         </div>
-        <p className="text-xs text-rose-600">{(error as any)?.response?.data?.message || 'An error occurred.'}</p>
+        <p className="text-xs text-rose-600">
+          {(error as any)?.response?.data?.message || 'An error occurred.'}
+        </p>
       </div>
     );
   }
@@ -229,7 +234,10 @@ export const CustomerTicketListPage: React.FC = () => {
         </div>
 
         <Link to="/customer/tickets/new">
-          <Button variant="primary" className="bg-slate-900 hover:bg-slate-800 text-white font-bold shrink-0 shadow-md">
+          <Button
+            variant="primary"
+            className="bg-slate-900 hover:bg-slate-800 text-white font-bold shrink-0 shadow-md"
+          >
             <Plus className="w-4 h-4 mr-1.5" /> Create Support Ticket
           </Button>
         </Link>

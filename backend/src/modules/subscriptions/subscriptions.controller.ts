@@ -8,7 +8,11 @@ export class SubscriptionsController {
   /**
    * GET /api/v1/subscriptions/current
    */
-  static async getCurrentSubscription(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  static async getCurrentSubscription(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ) {
     try {
       const user = req.user;
       if (!user?.businessId) {
@@ -44,7 +48,11 @@ export class SubscriptionsController {
       const user = req.user!;
       const dto = createCheckoutSessionSchema.parse(req.body);
 
-      const result = await SubscriptionsService.createRazorpayOrder(dto.plan, dto.billingCycle, user);
+      const result = await SubscriptionsService.createRazorpayOrder(
+        dto.plan,
+        dto.billingCycle,
+        user
+      );
       res.status(200).json({
         success: true,
         data: result,

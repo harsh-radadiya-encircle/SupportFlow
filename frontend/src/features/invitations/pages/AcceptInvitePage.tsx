@@ -11,7 +11,16 @@ import { useAuthStore } from '../../../shared/store/authStore';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { Card } from '../../../shared/components/ui/Card';
-import { Headset, Mail, Lock, User, CheckCircle2, ShieldCheck, AlertCircle, Building } from 'lucide-react';
+import {
+  Headset,
+  Mail,
+  Lock,
+  User,
+  CheckCircle2,
+  ShieldCheck,
+  AlertCircle,
+  Building,
+} from 'lucide-react';
 
 const acceptSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
@@ -50,7 +59,11 @@ export const AcceptInvitePage: React.FC = () => {
       // 1. Create Firebase Auth user with invited email & password
       let firebaseUser: any = null;
       try {
-        const cred = await createUserWithEmailAndPassword(auth, invitation.email, formData.password);
+        const cred = await createUserWithEmailAndPassword(
+          auth,
+          invitation.email,
+          formData.password
+        );
         firebaseUser = cred.user;
       } catch (fbErr: any) {
         console.warn('[Firebase Auth Agent Register Notice]:', fbErr.message);
@@ -129,10 +142,14 @@ export const AcceptInvitePage: React.FC = () => {
   }
 
   if (isError || !invitation) {
-    const errorMsg = (error as any)?.response?.data?.message || 'Invalid or expired invitation link.';
+    const errorMsg =
+      (error as any)?.response?.data?.message || 'Invalid or expired invitation link.';
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4">
-        <Card glass className="p-8 max-w-md w-full text-center space-y-4 shadow-xl border border-slate-200">
+        <Card
+          glass
+          className="p-8 max-w-md w-full text-center space-y-4 shadow-xl border border-slate-200"
+        >
           <div className="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
             <AlertCircle className="w-6 h-6" />
           </div>
@@ -157,8 +174,12 @@ export const AcceptInvitePage: React.FC = () => {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 mb-2">
             <Headset className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">Join SupportFlow</h1>
-          <p className="text-sm font-medium text-slate-500">Accept team invitation & create your account</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
+            Join SupportFlow
+          </h1>
+          <p className="text-sm font-medium text-slate-500">
+            Accept team invitation & create your account
+          </p>
         </div>
 
         <Card glass className="p-8 shadow-xl border border-slate-200 space-y-5">
@@ -169,8 +190,8 @@ export const AcceptInvitePage: React.FC = () => {
             </div>
             <p className="text-sm font-bold text-indigo-900">{invitation.business?.name}</p>
             <p className="text-xs text-indigo-700">
-              Invited by <span className="font-semibold">{invitation.invitedBy?.fullName}</span> for email{' '}
-              <span className="font-bold">{invitation.email}</span>
+              Invited by <span className="font-semibold">{invitation.invitedBy?.fullName}</span> for
+              email <span className="font-bold">{invitation.email}</span>
             </p>
           </div>
 
@@ -201,7 +222,13 @@ export const AcceptInvitePage: React.FC = () => {
               {...register('password')}
             />
 
-            <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isSubmitting}>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full"
+              isLoading={isSubmitting}
+            >
               Accept & Create Support Agent Account
             </Button>
           </form>

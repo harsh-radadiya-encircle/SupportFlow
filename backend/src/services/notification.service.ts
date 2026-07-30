@@ -7,7 +7,13 @@ export interface SendNotificationOptions {
   ticketId?: string;
   title: string;
   message: string;
-  type?: 'NEW_TICKET' | 'TICKET_ASSIGNED' | 'NEW_MESSAGE' | 'STATUS_CHANGED' | 'TICKET_RESOLVED' | 'SYSTEM';
+  type?:
+    | 'NEW_TICKET'
+    | 'TICKET_ASSIGNED'
+    | 'NEW_MESSAGE'
+    | 'STATUS_CHANGED'
+    | 'TICKET_RESOLVED'
+    | 'SYSTEM';
 }
 
 export class NotificationService {
@@ -51,7 +57,9 @@ export class NotificationService {
         });
 
         if (tokens.length > 0) {
-          console.log(`[FCM Push Notification] Sending push to ${tokens.length} device token(s) for user ${userId}...`);
+          console.log(
+            `[FCM Push Notification] Sending push to ${tokens.length} device token(s) for user ${userId}...`
+          );
 
           for (const t of tokens) {
             try {

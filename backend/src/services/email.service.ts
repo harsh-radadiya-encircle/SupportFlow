@@ -39,15 +39,26 @@ export class EmailService {
   static async sendEmail({ to, toName, subject, htmlContent }: SendEmailOptions): Promise<boolean> {
     const transporter = this.getTransporter();
 
-    const fromEmail = (process.env.SMTP_FROM_EMAIL || env.SMTP.FROM_EMAIL || process.env.SMTP_USER || 'noreply@supportflow.com').trim();
-    const fromName = (process.env.SMTP_FROM_NAME || env.SMTP.FROM_NAME || 'SupportFlow Team').trim();
+    const fromEmail = (
+      process.env.SMTP_FROM_EMAIL ||
+      env.SMTP.FROM_EMAIL ||
+      process.env.SMTP_USER ||
+      'noreply@supportflow.com'
+    ).trim();
+    const fromName = (
+      process.env.SMTP_FROM_NAME ||
+      env.SMTP.FROM_NAME ||
+      'SupportFlow Team'
+    ).trim();
 
     if (!transporter) {
       console.log('\n=================== 📧 DEV EMAIL NOTICE 📧 ===================');
       console.log(`[To]: ${to}`);
       console.log(`[Subject]: ${subject}`);
       console.log('[Notice]: SMTP_USER or SMTP_PASS is missing in backend/.env.');
-      console.log('Action: Configure SMTP_USER and SMTP_PASS in .env to dispatch real SMTP emails.');
+      console.log(
+        'Action: Configure SMTP_USER and SMTP_PASS in .env to dispatch real SMTP emails.'
+      );
       console.log('===============================================================\n');
       return true;
     }
@@ -61,18 +72,24 @@ export class EmailService {
         html: htmlContent,
       });
 
-      console.log(`[Nodemailer SMTP] Email successfully delivered to ${to}. Message ID: ${info.messageId}`);
+      console.log(
+        `[Nodemailer SMTP] Email successfully delivered to ${to}. Message ID: ${info.messageId}`
+      );
       return true;
     } catch (error: any) {
       console.error('[Nodemailer SMTP Error]: Failed to send email via SMTP:', error.message);
-      throw new Error(`SMTP email delivery failed: ${error.message}`);
+      throw new Error(`SMTP email delivery failed: ${error.message}`, { cause: error });
     }
   }
 
   /**
    * Send Password Reset Email via Nodemailer SMTP
    */
-  static async sendPasswordResetEmail(email: string, userName: string, resetUrl: string): Promise<boolean> {
+  static async sendPasswordResetEmail(
+    email: string,
+    userName: string,
+    resetUrl: string
+  ): Promise<boolean> {
     console.log(`\n🔑 [PASSWORD RESET LINK]: ${resetUrl}\n`);
     const subject = '🔒 Reset Your SupportFlow Password';
     const htmlContent = `

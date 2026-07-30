@@ -6,15 +6,7 @@ import { dashboardApi } from '../../dashboard/api/dashboard.api';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
 import { DataTable, Column, FilterOption } from '../../../shared/components/ui/DataTable';
-import {
-  Building2,
-  CheckCircle2,
-  Ban,
-  Users,
-  Ticket,
-  Sparkles,
-  AlertTriangle,
-} from 'lucide-react';
+import { Building2, CheckCircle2, Ban, Users, Ticket, Sparkles, AlertTriangle } from 'lucide-react';
 
 export const AllBusinessesPage: React.FC = () => {
   const queryClient = useQueryClient();
@@ -51,7 +43,9 @@ export const AllBusinessesPage: React.FC = () => {
     const matchesPlan = !planFilter || b.plan === planFilter;
     const matchesStatus =
       !statusFilter ||
-      (statusFilter === 'SUSPENDED' ? b.isSuspended : !b.isSuspended && b.subscriptionStatus === statusFilter);
+      (statusFilter === 'SUSPENDED'
+        ? b.isSuspended
+        : !b.isSuspended && b.subscriptionStatus === statusFilter);
 
     return matchesSearch && matchesPlan && matchesStatus;
   });
@@ -118,7 +112,8 @@ export const AllBusinessesPage: React.FC = () => {
             <span>{b.name}</span>
           </div>
           <div className="text-xs text-slate-500 font-normal">
-            Owner: <strong className="font-semibold text-slate-700">{b.ownerName}</strong> ({b.ownerEmail})
+            Owner: <strong className="font-semibold text-slate-700">{b.ownerName}</strong> (
+            {b.ownerEmail})
           </div>
         </div>
       ),
@@ -223,7 +218,9 @@ export const AllBusinessesPage: React.FC = () => {
           <AlertTriangle className="w-5 h-5" />
           <span>Failed to load registered businesses</span>
         </div>
-        <p className="text-xs text-rose-600">{(error as any)?.response?.data?.message || 'An error occurred.'}</p>
+        <p className="text-xs text-rose-600">
+          {(error as any)?.response?.data?.message || 'An error occurred.'}
+        </p>
       </div>
     );
   }
@@ -234,13 +231,16 @@ export const AllBusinessesPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">All Registered Businesses</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              All Registered Businesses
+            </h1>
             <Badge variant="purple" className="text-xs font-extrabold flex items-center gap-1">
               <Sparkles className="w-3 h-3 fill-white" /> Business Directory
             </Badge>
           </div>
           <p className="text-sm text-slate-500 font-normal">
-            Manage organization accounts, monitor subscription plans, and toggle business suspension status.
+            Manage organization accounts, monitor subscription plans, and toggle business suspension
+            status.
           </p>
         </div>
       </div>

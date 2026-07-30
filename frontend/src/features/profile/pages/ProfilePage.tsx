@@ -56,7 +56,10 @@ export const ProfilePage: React.FC = () => {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const isPasswordConnected = providers.includes('password') || user?.authProvider === 'EMAIL_PASSWORD' || user?.authProvider === 'MULTI_PROVIDER';
+  const isPasswordConnected =
+    providers.includes('password') ||
+    user?.authProvider === 'EMAIL_PASSWORD' ||
+    user?.authProvider === 'MULTI_PROVIDER';
   const isGoogleConnected = providers.includes('google.com');
 
   const handleLinkGoogle = async () => {
@@ -80,7 +83,9 @@ export const ProfilePage: React.FC = () => {
       }
 
       if (!currentUser) {
-        toast.error('Could not authenticate session with Firebase. Please sign out and sign in again.');
+        toast.error(
+          'Could not authenticate session with Firebase. Please sign out and sign in again.'
+        );
         return;
       }
 
@@ -137,7 +142,9 @@ export const ProfilePage: React.FC = () => {
     if (!currentUser) return;
 
     if (providers.length <= 1) {
-      toast.error('Cannot remove Google account. You must have at least one active login provider.');
+      toast.error(
+        'Cannot remove Google account. You must have at least one active login provider.'
+      );
       return;
     }
 
@@ -172,7 +179,8 @@ export const ProfilePage: React.FC = () => {
         </div>
 
         <Badge variant="purple" className="self-start md:self-auto text-xs py-1 px-3">
-          <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-500 fill-amber-500 inline" /> SupportFlow Account
+          <Sparkles className="w-3.5 h-3.5 mr-1 text-amber-500 fill-amber-500 inline" /> SupportFlow
+          Account
         </Badge>
       </div>
 
@@ -211,7 +219,8 @@ export const ProfilePage: React.FC = () => {
             <Link2 className="w-5 h-5 text-indigo-600" /> Connected Accounts & Sign-In Methods
           </h2>
           <p className="text-xs text-slate-500 font-normal mt-1">
-            Link multiple sign-in methods to access your SupportFlow account using Password or Google seamlessly.
+            Link multiple sign-in methods to access your SupportFlow account using Password or
+            Google seamlessly.
           </p>
         </div>
 
@@ -244,7 +253,9 @@ export const ProfilePage: React.FC = () => {
               <div className="p-3 rounded-xl bg-white border border-slate-200/80 text-xs space-y-1">
                 <div className="flex justify-between text-slate-600">
                   <span className="font-semibold text-slate-500">Email:</span>
-                  <span className="font-medium text-slate-900 truncate max-w-[180px]">{user?.email}</span>
+                  <span className="font-medium text-slate-900 truncate max-w-[180px]">
+                    {user?.email}
+                  </span>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span className="font-semibold text-slate-500">Provider ID:</span>
@@ -255,7 +266,8 @@ export const ProfilePage: React.FC = () => {
 
             <div className="pt-2 text-xs text-slate-500">
               <span className="flex items-center gap-1 font-medium text-slate-600">
-                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" /> Standard Email Authentication Active
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" /> Standard Email
+                Authentication Active
               </span>
             </div>
           </div>
@@ -348,7 +360,9 @@ export const ProfilePage: React.FC = () => {
           <div className="space-y-1">
             <h4 className="font-bold">Why link your Google Account?</h4>
             <p className="text-slate-600 font-normal leading-relaxed">
-              Linking Google to your SupportFlow profile allows you to sign in with either your password or 1-click Google Sign-In. Firebase will explicitly link both providers under your single user identity.
+              Linking Google to your SupportFlow profile allows you to sign in with either your
+              password or 1-click Google Sign-In. Firebase will explicitly link both providers under
+              your single user identity.
             </p>
           </div>
         </div>

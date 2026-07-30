@@ -44,7 +44,11 @@ export const AgentDashboardPage: React.FC = () => {
           </p>
         </div>
         <Link to="/agent/tickets">
-          <Button variant="primary" size="md" className="bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-md">
+          <Button
+            variant="primary"
+            size="md"
+            className="bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-md"
+          >
             <Ticket className="w-4 h-4 mr-1.5" />
             View Assigned Queue
           </Button>
@@ -56,13 +60,17 @@ export const AgentDashboardPage: React.FC = () => {
         {/* Assigned Tickets */}
         <Card glass className="p-5 space-y-2 border border-slate-200/80">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Assigned Tickets</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Assigned Tickets
+            </span>
             <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center">
               <Ticket className="w-5 h-5" />
             </div>
           </div>
           <div>
-            <p className="text-3xl font-bold text-slate-900 leading-none">{summary.assignedTickets}</p>
+            <p className="text-3xl font-bold text-slate-900 leading-none">
+              {summary.assignedTickets}
+            </p>
             <p className="text-xs text-slate-500 font-normal mt-1.5">Total tickets in your queue</p>
           </div>
         </Card>
@@ -70,27 +78,35 @@ export const AgentDashboardPage: React.FC = () => {
         {/* Open Tickets */}
         <Card glass className="p-5 space-y-2 border border-slate-200/80">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Open Tickets</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Open Tickets
+            </span>
             <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center">
               <AlertCircle className="w-5 h-5" />
             </div>
           </div>
           <div>
             <p className="text-3xl font-bold text-slate-900 leading-none">{summary.openTickets}</p>
-            <p className="text-xs text-amber-600 font-semibold mt-1.5">Requires immediate agent reply</p>
+            <p className="text-xs text-amber-600 font-semibold mt-1.5">
+              Requires immediate agent reply
+            </p>
           </div>
         </Card>
 
         {/* Waiting Tickets */}
         <Card glass className="p-5 space-y-2 border border-slate-200/80">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Waiting Tickets</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Waiting Tickets
+            </span>
             <div className="w-10 h-10 rounded-2xl bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center">
               <Clock className="w-5 h-5" />
             </div>
           </div>
           <div>
-            <p className="text-3xl font-bold text-slate-900 leading-none">{summary.waitingTickets}</p>
+            <p className="text-3xl font-bold text-slate-900 leading-none">
+              {summary.waitingTickets}
+            </p>
             <p className="text-xs text-sky-600 font-semibold mt-1.5">Pending customer response</p>
           </div>
         </Card>
@@ -98,13 +114,17 @@ export const AgentDashboardPage: React.FC = () => {
         {/* Resolved Tickets */}
         <Card glass className="p-5 space-y-2 border border-slate-200/80">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Resolved Tickets</span>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Resolved Tickets
+            </span>
             <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5" />
             </div>
           </div>
           <div>
-            <p className="text-3xl font-bold text-slate-900 leading-none">{summary.resolvedTickets}</p>
+            <p className="text-3xl font-bold text-slate-900 leading-none">
+              {summary.resolvedTickets}
+            </p>
             <p className="text-xs text-emerald-600 font-semibold mt-1.5">Successfully completed</p>
           </div>
         </Card>
@@ -120,12 +140,15 @@ export const AgentDashboardPage: React.FC = () => {
                 <MessageSquare className="w-5 h-5 text-indigo-600" />
                 <h2 className="text-base font-bold text-slate-900">Recent Messages</h2>
               </div>
-              <Badge variant="info" className="text-[10px]">Live Stream</Badge>
+              <Badge variant="info" className="text-[10px]">
+                Live Stream
+              </Badge>
             </div>
 
             {isLoading ? (
               <div className="py-8 text-center text-xs text-slate-400 font-medium flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> Loading recent messages...
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> Loading recent
+                messages...
               </div>
             ) : recentMessages.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400 font-normal">
@@ -140,7 +163,9 @@ export const AgentDashboardPage: React.FC = () => {
                         <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-[10px]">
                           {msg.sender?.fullName?.charAt(0) || 'U'}
                         </div>
-                        <span className="font-semibold text-slate-900">{msg.sender?.fullName || 'User'}</span>
+                        <span className="font-semibold text-slate-900">
+                          {msg.sender?.fullName || 'User'}
+                        </span>
                         <Badge
                           variant={msg.sender?.role === 'CUSTOMER' ? 'warning' : 'purple'}
                           className="text-[9px] px-1.5 py-0"
@@ -149,7 +174,10 @@ export const AgentDashboardPage: React.FC = () => {
                         </Badge>
                       </div>
                       <span className="text-[10px] text-slate-400">
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {new Date(msg.createdAt).toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </span>
                     </div>
 
@@ -162,7 +190,8 @@ export const AgentDashboardPage: React.FC = () => {
                         to={`/tickets/${msg.ticket?.id}`}
                         className="text-[11px] font-semibold text-indigo-600 hover:underline flex items-center gap-1"
                       >
-                        #{msg.ticket?.ticketNumber || 'Ticket'} — {msg.ticket?.title} <ArrowUpRight className="w-3 h-3" />
+                        #{msg.ticket?.ticketNumber || 'Ticket'} — {msg.ticket?.title}{' '}
+                        <ArrowUpRight className="w-3 h-3" />
                       </Link>
                     </div>
                   </div>
@@ -180,12 +209,15 @@ export const AgentDashboardPage: React.FC = () => {
                 <Bell className="w-5 h-5 text-amber-600" />
                 <h2 className="text-base font-bold text-slate-900">Ticket Notifications</h2>
               </div>
-              <Badge variant="purple" className="text-xs">Activity Feed</Badge>
+              <Badge variant="purple" className="text-xs">
+                Activity Feed
+              </Badge>
             </div>
 
             {isLoading ? (
               <div className="py-8 text-center text-xs text-slate-400 font-medium flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> Loading notifications...
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-600" /> Loading
+                notifications...
               </div>
             ) : notifications.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-400 font-normal">
@@ -197,7 +229,9 @@ export const AgentDashboardPage: React.FC = () => {
                   <div
                     key={n.id}
                     className={`p-3 rounded-xl border transition-colors space-y-1 ${
-                      n.isRead ? 'bg-white border-slate-200/80' : 'bg-indigo-50/50 border-indigo-200'
+                      n.isRead
+                        ? 'bg-white border-slate-200/80'
+                        : 'bg-indigo-50/50 border-indigo-200'
                     }`}
                   >
                     <div className="flex items-center justify-between text-xs">

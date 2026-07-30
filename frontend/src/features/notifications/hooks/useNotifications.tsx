@@ -77,8 +77,12 @@ export const useNotifications = () => {
               🔔
             </div>
             <div className="flex-1 space-y-0.5">
-              <p className="text-xs font-bold text-slate-900">{notification.title || 'New Notification'}</p>
-              <p className="text-xs text-slate-600 font-medium leading-normal">{notification.message}</p>
+              <p className="text-xs font-bold text-slate-900">
+                {notification.title || 'New Notification'}
+              </p>
+              <p className="text-xs text-slate-600 font-medium leading-normal">
+                {notification.message}
+              </p>
             </div>
           </div>
         ),

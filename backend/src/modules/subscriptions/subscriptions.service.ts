@@ -28,7 +28,11 @@ export class SubscriptionsService {
     const now = new Date();
 
     // Auto-Expiry Check: If period has ended and plan is not FREE, auto-revert to FREE plan
-    if (business.currentPeriodEnd && business.currentPeriodEnd < now && business.plan !== SubscriptionPlan.FREE) {
+    if (
+      business.currentPeriodEnd &&
+      business.currentPeriodEnd < now &&
+      business.plan !== SubscriptionPlan.FREE
+    ) {
       business = await prisma.business.update({
         where: { id: businessId },
         data: {
@@ -71,8 +75,12 @@ export class SubscriptionsService {
     const maxAgents = agentLimits[business.plan] || 1;
 
     // Calculate currentPeriodEnd & daysRemaining
-    const currentPeriodEnd = business.currentPeriodEnd || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const daysRemaining = Math.max(0, Math.ceil((currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    const currentPeriodEnd =
+      business.currentPeriodEnd || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const daysRemaining = Math.max(
+      0,
+      Math.ceil((currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    );
 
     return {
       businessId: business.id,
@@ -92,7 +100,9 @@ export class SubscriptionsService {
           used: monthlyTicketCount,
           max: business.plan === 'FREE' ? 25 : 'Unlimited',
           percentage:
-            business.plan === 'FREE' ? Math.min(100, Math.round((monthlyTicketCount / 25) * 100)) : 0,
+            business.plan === 'FREE'
+              ? Math.min(100, Math.round((monthlyTicketCount / 25) * 100))
+              : 0,
         },
       },
       billingHistory: business.billingHistory,
@@ -206,7 +216,13 @@ export class SubscriptionsService {
       throw ApiError.badRequest('No business profile found.');
     }
 
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan, billingCycle = 'monthly' } = payload;
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+      plan,
+      billingCycle = 'monthly',
+    } = payload;
 
     // HMAC Signature Validation
     const generatedSignature = crypto
@@ -240,16 +256,18 @@ export class SubscriptionsService {
     });
 
     // Record Billing Receipt
-    await prisma.billingHistory.create({
-      data: {
-        businessId: business.id,
-        razorpayPaymentId: razorpay_payment_id,
-        razorpayOrderId: razorpay_order_id,
-        amountPaid,
-        currency: 'INR',
-        status: 'captured',
-      },
-    }).catch(() => null);
+    await prisma.billingHistory
+      .create({
+        data: {
+          businessId: business.id,
+          razorpayPaymentId: razorpay_payment_id,
+          razorpayOrderId: razorpay_order_id,
+          amountPaid,
+          currency: 'INR',
+          status: 'captured',
+        },
+      })
+      .catch(() => null);
 
     return {
       success: true,
@@ -276,7 +294,8 @@ export class SubscriptionsService {
 
     return {
       success: true,
-      message: 'Subscription canceled. Access will remain active until current period end date, then re-set to Free plan.',
+      message:
+        'Subscription canceled. Access will remain active until current period end date, then re-set to Free plan.',
       plan: business.plan,
       subscriptionStatus: business.subscriptionStatus,
       currentPeriodEnd: business.currentPeriodEnd?.toISOString(),

@@ -2,7 +2,8 @@ import React from 'react';
 import { cn } from '../../lib/cn';
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info' | 'purple' | 'ghost' | 'secondary';
+  variant?:
+    'default' | 'success' | 'warning' | 'danger' | 'info' | 'purple' | 'ghost' | 'secondary';
   icon?: React.ReactNode;
 }
 

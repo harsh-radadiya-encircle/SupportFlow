@@ -16,7 +16,18 @@ import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { useAuthStore } from '../../../shared/store/authStore';
 import { Role } from '../../../shared/types';
-import { Headset, Mail, Lock, LogIn, AlertCircle, Building, User, CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
+import {
+  Headset,
+  Mail,
+  Lock,
+  LogIn,
+  AlertCircle,
+  Building,
+  User,
+  CheckCircle2,
+  ShieldCheck,
+  Sparkles,
+} from 'lucide-react';
 import { authApi } from '../api/auth.api';
 
 const registerFcmDeviceToken = async (authToken: string) => {
@@ -135,11 +146,16 @@ export const LoginPage: React.FC = () => {
         let firebaseUid: string;
 
         try {
-          const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            data.email,
+            data.password
+          );
           firebaseUid = userCredential.user.uid;
         } catch (firebaseErr: any) {
           if (firebaseErr.code === 'auth/email-already-in-use') {
-            const msg = 'An account with this email address already exists. Please sign in with your password or click Google Sign-In.';
+            const msg =
+              'An account with this email address already exists. Please sign in with your password or click Google Sign-In.';
             setErrorMessage(msg);
             setIsRegisterMode(false);
             toast.error('Email already registered. Switching to Sign In.');
@@ -194,7 +210,10 @@ export const LoginPage: React.FC = () => {
           ) {
             // Attempt automatic backend password sync & restoration via Firebase Admin SDK
             try {
-              const syncRes = await authApi.syncPassword({ email: data.email, password: data.password });
+              const syncRes = await authApi.syncPassword({
+                email: data.email,
+                password: data.password,
+              });
               const syncData = syncRes?.data || syncRes;
 
               if (syncData?.user && syncData?.token) {
@@ -214,7 +233,8 @@ export const LoginPage: React.FC = () => {
                 return;
               }
             } catch (syncErr) {
-              const msg = 'Incorrect password. Please check your password or click "Forgot Password?" to reset it.';
+              const msg =
+                'Incorrect password. Please check your password or click "Forgot Password?" to reset it.';
               setErrorMessage(msg);
               toast.error(msg);
               return;
@@ -346,8 +366,12 @@ export const LoginPage: React.FC = () => {
               <Headset className="w-5 h-5" />
             </div>
             <div>
-              <span className="font-bold text-xl text-slate-900 tracking-tight block leading-none">SupportFlow</span>
-              <span className="text-xs uppercase font-semibold tracking-wider text-indigo-600">Customer Success</span>
+              <span className="font-bold text-xl text-slate-900 tracking-tight block leading-none">
+                SupportFlow
+              </span>
+              <span className="text-xs uppercase font-semibold tracking-wider text-indigo-600">
+                Customer Success
+              </span>
             </div>
           </Link>
           <p className="text-sm font-normal text-slate-500">
@@ -372,9 +396,12 @@ export const LoginPage: React.FC = () => {
                 </div>
                 <div>
                   <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
-                    Trusted by 50,000+ Teams <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                    Trusted by 50,000+ Teams{' '}
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
                   </div>
-                  <div className="text-xs font-normal text-slate-500">Real-Time Ticket Management & Live Chat</div>
+                  <div className="text-xs font-normal text-slate-500">
+                    Real-Time Ticket Management & Live Chat
+                  </div>
                 </div>
               </div>
               <div className="flex -space-x-2">
@@ -494,7 +521,9 @@ export const LoginPage: React.FC = () => {
             {isRegisterMode && (
               <>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-700">Select Account Type</label>
+                  <label className="text-xs font-semibold text-slate-700">
+                    Select Account Type
+                  </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"

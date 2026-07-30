@@ -25,7 +25,9 @@ export const MetricSummaryCard: React.FC<MetricSummaryCardProps> = ({
     <Card glass className={`p-6 space-y-3 border ${borderColor}`}>
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{title}</span>
-        <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center ${iconBgColor} ${iconTextColor}`}>
+        <div
+          className={`w-10 h-10 rounded-2xl border flex items-center justify-center ${iconBgColor} ${iconTextColor}`}
+        >
           <Icon className="w-5 h-5" />
         </div>
       </div>

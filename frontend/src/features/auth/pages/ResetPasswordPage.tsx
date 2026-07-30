@@ -26,7 +26,7 @@ export const ResetPasswordPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const oobCode = searchParams.get('token') || searchParams.get('oobCode');
-  
+
   const [isSuccess, setIsSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -54,7 +54,10 @@ export const ResetPasswordPage: React.FC = () => {
       toast.success('Password updated successfully! Redirecting to sign in...');
       setTimeout(() => navigate('/login'), 2000);
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Failed to reset password. Link may be expired.';
+      const msg =
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to reset password. Link may be expired.';
       setErrorMessage(msg);
       toast.error(msg);
     } finally {
@@ -115,7 +118,13 @@ export const ResetPasswordPage: React.FC = () => {
                 {...register('confirmPassword')}
               />
 
-              <Button type="submit" variant="primary" size="lg" className="w-full" isLoading={isSubmitting}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                className="w-full"
+                isLoading={isSubmitting}
+              >
                 Update Password
               </Button>
             </form>

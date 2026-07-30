@@ -46,7 +46,9 @@ export interface RazorpayOrderResponse {
 }
 
 export const getSubscriptionDetails = async (): Promise<SubscriptionDetailsResponse> => {
-  const response = await apiClient.get<{ success: boolean; data: SubscriptionDetailsResponse }>('/subscriptions/current');
+  const response = await apiClient.get<{ success: boolean; data: SubscriptionDetailsResponse }>(
+    '/subscriptions/current'
+  );
   return response.data.data;
 };
 
@@ -68,11 +70,21 @@ export const verifyRazorpayPayment = async (payload: {
   plan: 'STANDARD' | 'BUSINESS';
   billingCycle?: 'monthly' | 'yearly';
 }): Promise<{ success: boolean; message: string; plan: string }> => {
-  const response = await apiClient.post<{ success: boolean; data: { success: boolean; message: string; plan: string } }>('/subscriptions/verify-payment', payload);
+  const response = await apiClient.post<{
+    success: boolean;
+    data: { success: boolean; message: string; plan: string };
+  }>('/subscriptions/verify-payment', payload);
   return response.data.data;
 };
 
-export const cancelSubscription = async (): Promise<{ success: boolean; message: string; plan: string }> => {
-  const response = await apiClient.post<{ success: boolean; data: { success: boolean; message: string; plan: string } }>('/subscriptions/cancel');
+export const cancelSubscription = async (): Promise<{
+  success: boolean;
+  message: string;
+  plan: string;
+}> => {
+  const response = await apiClient.post<{
+    success: boolean;
+    data: { success: boolean; message: string; plan: string };
+  }>('/subscriptions/cancel');
   return response.data.data;
 };

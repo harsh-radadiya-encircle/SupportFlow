@@ -63,7 +63,11 @@ export class AuthController {
     }
   }
 
-  static async getCustomToken(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getCustomToken(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const result = await AuthService.getCustomToken(req.user!.email);
       sendResponse({
@@ -107,7 +111,11 @@ export class AuthController {
     }
   }
 
-  static async getProfile(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getProfile(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       sendResponse({
         res,

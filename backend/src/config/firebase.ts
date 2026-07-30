@@ -22,7 +22,9 @@ try {
     isFirebaseInitialized = true;
     console.log('[Firebase] Admin SDK initialized successfully.');
   } else {
-    console.log('[Firebase] Development Mock Auth Mode Active (configure real keys in .env when ready).');
+    console.log(
+      '[Firebase] Development Mock Auth Mode Active (configure real keys in .env when ready).'
+    );
   }
 } catch (error) {
   console.warn('[Firebase] Admin initialization notice:', error);

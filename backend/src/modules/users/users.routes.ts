@@ -8,12 +8,7 @@ const router = Router();
 router.get('/businesses', UsersController.getActiveBusinesses);
 router.post('/fcm-token', authenticate, UsersController.saveFcmToken);
 
-router.get(
-  '/admin/all',
-  authenticate,
-  authorize(['PLATFORM_ADMIN']),
-  UsersController.getAllUsers
-);
+router.get('/admin/all', authenticate, authorize(['PLATFORM_ADMIN']), UsersController.getAllUsers);
 
 router.delete(
   '/admin/:userId',

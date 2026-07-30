@@ -62,7 +62,8 @@ export const useUpdateTicketStatus = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => ticketsApi.updateStatus(id, status),
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      ticketsApi.updateStatus(id, status),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['ticket', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['tickets'] });
@@ -97,7 +98,8 @@ export const useAddInternalNote = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, content }: { id: string; content: string }) => ticketsApi.addInternalNote(id, content),
+    mutationFn: ({ id, content }: { id: string; content: string }) =>
+      ticketsApi.addInternalNote(id, content),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['ticket', variables.id] });
       toast.success('Internal note added successfully!');

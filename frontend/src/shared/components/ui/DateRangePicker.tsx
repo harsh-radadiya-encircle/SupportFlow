@@ -1,10 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
-import {
-  getDateRangeForPreset,
-  formatDateRangeLabel,
-  formatDate,
-} from '../../lib/dateUtils';
+import { getDateRangeForPreset, formatDateRangeLabel, formatDate } from '../../lib/dateUtils';
 import { format, addMonths, subMonths, isSameDay, isWithinInterval } from 'date-fns';
 
 export interface DateRange {
@@ -135,8 +131,8 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
             isSelectedStart || isSelectedEnd
               ? 'bg-indigo-600 text-white font-bold shadow-sm'
               : isInRange
-              ? 'bg-indigo-50 text-indigo-900 font-medium'
-              : 'text-slate-700 hover:bg-slate-100'
+                ? 'bg-indigo-50 text-indigo-900 font-medium'
+                : 'text-slate-700 hover:bg-slate-100'
           }`}
         >
           {day}

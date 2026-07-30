@@ -33,3 +33,8 @@ CLAUDE.md
 # Prisma generated & temp
 backend/node_modules/
 frontend/node_modules/
+
+# Local setup and docs
+.husky/
+docs/
+AGENTS.md

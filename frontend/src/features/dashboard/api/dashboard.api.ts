@@ -123,7 +123,10 @@ export interface PlatformAdminMetricsResponse {
 }
 
 export const dashboardApi = {
-  getBusinessMetrics: async (params?: { startDate?: string; endDate?: string }): Promise<DashboardMetricsResponse> => {
+  getBusinessMetrics: async (params?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<DashboardMetricsResponse> => {
     const response = await apiClient.get('/dashboard/business', { params });
     return response.data.data;
   },
@@ -139,7 +142,9 @@ export const dashboardApi = {
   },
 
   toggleBusinessSuspension: async (businessId: string) => {
-    const response = await apiClient.patch(`/dashboard/platform/businesses/${businessId}/toggle-suspend`);
+    const response = await apiClient.patch(
+      `/dashboard/platform/businesses/${businessId}/toggle-suspend`
+    );
     return response.data;
   },
 };

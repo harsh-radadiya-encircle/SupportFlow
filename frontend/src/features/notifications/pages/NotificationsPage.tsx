@@ -111,7 +111,9 @@ export const NotificationsPage: React.FC = () => {
           type="button"
           onClick={() => setActiveTab('UNREAD')}
           className={`pb-3 transition-all relative ${
-            activeTab === 'UNREAD' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+            activeTab === 'UNREAD'
+              ? 'text-indigo-600 font-bold'
+              : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           Unread
@@ -129,7 +131,9 @@ export const NotificationsPage: React.FC = () => {
           type="button"
           onClick={() => setActiveTab('ALL')}
           className={`pb-3 transition-all relative ${
-            activeTab === 'ALL' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+            activeTab === 'ALL'
+              ? 'text-indigo-600 font-bold'
+              : 'text-slate-500 hover:text-slate-900'
           }`}
         >
           All
@@ -180,7 +184,9 @@ export const NotificationsPage: React.FC = () => {
                         </Badge>
                       )}
                     </div>
-                    <p className="text-xs text-slate-600 font-normal leading-relaxed">{item.message}</p>
+                    <p className="text-xs text-slate-600 font-normal leading-relaxed">
+                      {item.message}
+                    </p>
                     <span className="text-[10px] text-slate-400 font-medium block">
                       {formatDateTime(item.createdAt)}
                     </span>

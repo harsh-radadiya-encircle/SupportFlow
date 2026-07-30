@@ -5,7 +5,11 @@ import { AuthenticatedRequest } from '../../common/types';
 import { ApiError } from '../../common/exceptions/apiError';
 
 export class UsersController {
-  static async saveFcmToken(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async saveFcmToken(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       if (!req.user) throw ApiError.unauthorized('User not authenticated');
       const { token, deviceType } = req.body;
@@ -39,7 +43,11 @@ export class UsersController {
     }
   }
 
-  static async getAllUsers(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getAllUsers(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const users = await UsersService.getAllUsers();
       sendResponse({
@@ -53,7 +61,11 @@ export class UsersController {
     }
   }
 
-  static async deleteUser(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async deleteUser(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { userId } = req.params;
       const deletedUser = await UsersService.deleteUser(userId);

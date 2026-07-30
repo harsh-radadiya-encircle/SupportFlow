@@ -29,9 +29,7 @@ export const NotificationBell: React.FC = () => {
 
   // Filter notifications based on active tab
   const filteredNotifications =
-    activeTab === 'UNREAD'
-      ? notifications.filter((item: any) => !item.isRead)
-      : notifications;
+    activeTab === 'UNREAD' ? notifications.filter((item: any) => !item.isRead) : notifications;
 
   // Lock body scroll when drawer is open to prevent page scroll conflict
   useEffect(() => {
@@ -122,7 +120,9 @@ export const NotificationBell: React.FC = () => {
               type="button"
               onClick={() => setActiveTab('UNREAD')}
               className={`relative pb-1 transition-colors ${
-                activeTab === 'UNREAD' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+                activeTab === 'UNREAD'
+                  ? 'text-indigo-600 font-bold'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               Unread
@@ -135,7 +135,9 @@ export const NotificationBell: React.FC = () => {
               type="button"
               onClick={() => setActiveTab('ALL')}
               className={`relative pb-1 transition-colors ${
-                activeTab === 'ALL' ? 'text-indigo-600 font-bold' : 'text-slate-500 hover:text-slate-900'
+                activeTab === 'ALL'
+                  ? 'text-indigo-600 font-bold'
+                  : 'text-slate-500 hover:text-slate-900'
               }`}
             >
               All
@@ -202,14 +204,19 @@ export const NotificationBell: React.FC = () => {
                 <div className="flex-1 space-y-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <h4 className="text-xs font-bold text-slate-900 truncate">{item.title}</h4>
-                    {!item.isRead && <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />}
+                    {!item.isRead && (
+                      <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
+                    )}
                   </div>
                   <p className="text-xs text-slate-600 font-normal leading-relaxed line-clamp-2">
                     {item.message}
                   </p>
                   <span className="text-[10px] text-slate-400 font-medium block pt-0.5">
                     {new Date(item.createdAt).toLocaleDateString()} at{' '}
-                    {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(item.createdAt).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </span>
                 </div>
               </div>

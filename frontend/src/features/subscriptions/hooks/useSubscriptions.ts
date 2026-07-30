@@ -24,8 +24,13 @@ export const useCreateRazorpayOrder = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ plan, billingCycle }: { plan: 'STANDARD' | 'BUSINESS'; billingCycle?: 'monthly' | 'yearly' }) =>
-      createRazorpayOrder(plan, billingCycle),
+    mutationFn: ({
+      plan,
+      billingCycle,
+    }: {
+      plan: 'STANDARD' | 'BUSINESS';
+      billingCycle?: 'monthly' | 'yearly';
+    }) => createRazorpayOrder(plan, billingCycle),
     onSuccess: (data, variables) => {
       if (data?.isTestMode && data?.message) {
         toast.success(data.message);

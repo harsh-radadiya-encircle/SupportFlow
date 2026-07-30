@@ -5,7 +5,12 @@ import { ProtectedRoute } from './ProtectedRoute';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { LandingPage } from '../../features/landing';
 import { LoginPage, ForgotPasswordPage, ResetPasswordPage } from '../../features/auth';
-import { BusinessAdminDashboardPage, PlatformAdminDashboardPage, AgentDashboardPage, ReportsPage } from '../../features/dashboard';
+import {
+  BusinessAdminDashboardPage,
+  PlatformAdminDashboardPage,
+  AgentDashboardPage,
+  ReportsPage,
+} from '../../features/dashboard';
 import { CustomerTicketListPage, CreateTicketPage, TicketDetailPage } from '../../features/tickets';
 import { AgentManagementPage, AcceptInvitePage } from '../../features/invitations';
 import { BillingManagementPage } from '../../features/subscriptions/pages/BillingManagementPage';

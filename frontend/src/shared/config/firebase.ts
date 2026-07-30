@@ -6,7 +6,8 @@ const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyAx0ZBWVYBIiHQ8dpnrcbmIiutx9PPEhpc',
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'supportflow-app-2ce28.firebaseapp.com',
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'supportflow-app-2ce28',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'supportflow-app-2ce28.firebasestorage.app',
+  storageBucket:
+    import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'supportflow-app-2ce28.firebasestorage.app',
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '43565030150',
   appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:43565030150:web:21c3f7eae5f6c9e1bb9c87',
 };

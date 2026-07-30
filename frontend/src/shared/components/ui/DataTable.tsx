@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Loader2,
+} from 'lucide-react';
 import { useDebounce } from '../../hooks/useDebounce';
 import { cn } from '../../lib/cn';
 
@@ -152,12 +160,18 @@ export function DataTable<T extends { id?: string | number }>({
                     key={col.key}
                     className={cn(
                       'py-3.5 px-4 align-middle',
-                      col.sortable && 'cursor-pointer select-none hover:text-slate-900 transition-colors',
+                      col.sortable &&
+                        'cursor-pointer select-none hover:text-slate-900 transition-colors',
                       col.className
                     )}
                     onClick={() => col.sortable && onSortChange && onSortChange(col.key)}
                   >
-                    <div className={cn('flex items-center gap-1.5', col.className?.includes('text-right') && 'justify-end')}>
+                    <div
+                      className={cn(
+                        'flex items-center gap-1.5',
+                        col.className?.includes('text-right') && 'justify-end'
+                      )}
+                    >
                       <span>{col.header}</span>
                       {col.sortable && (
                         <span className="text-slate-400 shrink-0">
@@ -192,19 +206,25 @@ export function DataTable<T extends { id?: string | number }>({
               ) : data.length === 0 ? (
                 // Empty State
                 <tr>
-                  <td colSpan={columns.length} className="py-12 text-center text-slate-400 font-medium text-sm">
+                  <td
+                    colSpan={columns.length}
+                    className="py-12 text-center text-slate-400 font-medium text-sm"
+                  >
                     {emptyMessage}
                   </td>
                 </tr>
               ) : (
                 // Render Actual Rows
                 data.map((item, index) => (
-                  <tr
-                    key={item.id || index}
-                    className="hover:bg-slate-50/70 transition-colors"
-                  >
+                  <tr key={item.id || index} className="hover:bg-slate-50/70 transition-colors">
                     {columns.map((col) => (
-                      <td key={col.key} className={cn('py-4 px-4 align-middle text-slate-800 font-medium text-sm', col.className)}>
+                      <td
+                        key={col.key}
+                        className={cn(
+                          'py-4 px-4 align-middle text-slate-800 font-medium text-sm',
+                          col.className
+                        )}
+                      >
                         {col.render(item, index)}
                       </td>
                     ))}

@@ -52,7 +52,8 @@ export class DashboardService {
         return acc + Math.max(1, Math.round(diffMs / (1000 * 60)));
       }, 0);
       const avgMinutes = Math.round(totalMinutes / respondedTickets.length);
-      avgResponseTimeFormatted = avgMinutes < 60 ? `${avgMinutes} mins` : `${Math.round(avgMinutes / 60)} hrs`;
+      avgResponseTimeFormatted =
+        avgMinutes < 60 ? `${avgMinutes} mins` : `${Math.round(avgMinutes / 60)} hrs`;
     }
 
     // 5. Calculate Dynamic Avg Resolution Time

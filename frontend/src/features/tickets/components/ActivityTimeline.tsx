@@ -14,7 +14,9 @@ export const ActivityTimeline: React.FC = () => {
         <div className="relative">
           <span className="absolute -left-6 top-1 w-3.5 h-3.5 rounded-full bg-purple-600 ring-4 ring-white"></span>
           <p className="text-xs font-bold text-purple-600">Assigned Agent Changed</p>
-          <p className="text-sm font-semibold text-slate-800">Assigned to David Miller (Support Agent)</p>
+          <p className="text-sm font-semibold text-slate-800">
+            Assigned to David Miller (Support Agent)
+          </p>
           <span className="text-[10px] text-slate-400 font-medium">Today at 10:18 AM</span>
         </div>
 

@@ -80,7 +80,9 @@ export const PlatformAdminDashboardPage: React.FC = () => {
     const matchesPlan = !planFilter || b.plan === planFilter;
     const matchesStatus =
       !statusFilter ||
-      (statusFilter === 'SUSPENDED' ? b.isSuspended : !b.isSuspended && b.subscriptionStatus === statusFilter);
+      (statusFilter === 'SUSPENDED'
+        ? b.isSuspended
+        : !b.isSuspended && b.subscriptionStatus === statusFilter);
 
     return matchesSearch && matchesPlan && matchesStatus;
   });
@@ -163,7 +165,8 @@ export const PlatformAdminDashboardPage: React.FC = () => {
             <span>{b.name}</span>
           </div>
           <div className="text-xs text-slate-500 font-normal">
-            Owner: <strong className="font-semibold text-slate-700">{b.ownerName}</strong> ({b.ownerEmail})
+            Owner: <strong className="font-semibold text-slate-700">{b.ownerName}</strong> (
+            {b.ownerEmail})
           </div>
         </div>
       ),
@@ -268,7 +271,9 @@ export const PlatformAdminDashboardPage: React.FC = () => {
           <ShieldAlert className="w-5 h-5" />
           <span>Failed to load platform admin metrics</span>
         </div>
-        <p className="text-xs text-rose-600">{(error as any)?.response?.data?.message || 'An error occurred.'}</p>
+        <p className="text-xs text-rose-600">
+          {(error as any)?.response?.data?.message || 'An error occurred.'}
+        </p>
       </div>
     );
   }
@@ -279,13 +284,16 @@ export const PlatformAdminDashboardPage: React.FC = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Platform Admin Overview</h1>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Platform Admin Overview
+            </h1>
             <Badge variant="purple" className="text-xs font-extrabold flex items-center gap-1">
               <Sparkles className="w-3 h-3 fill-white" /> Global Control
             </Badge>
           </div>
           <p className="text-sm text-slate-500 font-normal">
-            Real-time platform statistics across registered businesses, active subscriptions, revenue, and access control.
+            Real-time platform statistics across registered businesses, active subscriptions,
+            revenue, and access control.
           </p>
         </div>
       </div>
@@ -298,7 +306,9 @@ export const PlatformAdminDashboardPage: React.FC = () => {
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Businesses</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Total Businesses
+            </p>
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin text-indigo-600 mt-1" />
             ) : (
@@ -313,11 +323,15 @@ export const PlatformAdminDashboardPage: React.FC = () => {
             <CreditCard className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Subscriptions</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Active Subscriptions
+            </p>
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mt-1" />
             ) : (
-              <p className="text-2xl font-bold text-slate-900 mt-0.5">{summary.activeSubscriptions}</p>
+              <p className="text-2xl font-bold text-slate-900 mt-0.5">
+                {summary.activeSubscriptions}
+              </p>
             )}
           </div>
         </Card>
@@ -328,7 +342,9 @@ export const PlatformAdminDashboardPage: React.FC = () => {
             <DollarSign className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Monthly Revenue</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Monthly Revenue
+            </p>
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin text-purple-600 mt-1" />
             ) : (
@@ -343,11 +359,15 @@ export const PlatformAdminDashboardPage: React.FC = () => {
             <ShieldAlert className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Suspended Businesses</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Suspended Businesses
+            </p>
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin text-rose-600 mt-1" />
             ) : (
-              <p className="text-2xl font-bold text-slate-900 mt-0.5">{summary.suspendedBusinesses}</p>
+              <p className="text-2xl font-bold text-slate-900 mt-0.5">
+                {summary.suspendedBusinesses}
+              </p>
             )}
           </div>
         </Card>
@@ -362,7 +382,9 @@ export const PlatformAdminDashboardPage: React.FC = () => {
               <PieIcon className="w-5 h-5 text-indigo-600" />
               <h2 className="text-base font-bold text-slate-900">Businesses by Plan</h2>
             </div>
-            <Badge variant="purple" className="text-xs">Subscription Distribution</Badge>
+            <Badge variant="purple" className="text-xs">
+              Subscription Distribution
+            </Badge>
           </div>
 
           {isLoading ? (
@@ -397,7 +419,9 @@ export const PlatformAdminDashboardPage: React.FC = () => {
                   />
                   <Legend
                     wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
-                    formatter={(value) => <span className="text-slate-700 font-medium">{value}</span>}
+                    formatter={(value) => (
+                      <span className="text-slate-700 font-medium">{value}</span>
+                    )}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -410,21 +434,34 @@ export const PlatformAdminDashboardPage: React.FC = () => {
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2.5">
               <BarChart3 className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-base font-bold text-slate-900">Monthly Revenue Contribution (MRR)</h2>
+              <h2 className="text-base font-bold text-slate-900">
+                Monthly Revenue Contribution (MRR)
+              </h2>
             </div>
-            <Badge variant="success" className="text-xs">Revenue Breakdown</Badge>
+            <Badge variant="success" className="text-xs">
+              Revenue Breakdown
+            </Badge>
           </div>
 
           {isLoading ? (
             <div className="h-64 flex items-center justify-center text-xs text-slate-400">
-              <Loader2 className="w-5 h-5 animate-spin mr-2 text-indigo-600" /> Loading revenue chart...
+              <Loader2 className="w-5 h-5 animate-spin mr-2 text-indigo-600" /> Loading revenue
+              chart...
             </div>
           ) : (
             <div className="h-64 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueChartData} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+                <BarChart
+                  data={revenueChartData}
+                  margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+                >
                   <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} />
-                  <YAxis stroke="#64748b" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}`} />
+                  <YAxis
+                    stroke="#64748b"
+                    fontSize={12}
+                    tickLine={false}
+                    tickFormatter={(val) => `$${val}`}
+                  />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#ffffff',

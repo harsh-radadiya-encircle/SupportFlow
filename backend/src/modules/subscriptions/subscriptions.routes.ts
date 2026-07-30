@@ -13,11 +13,7 @@ router.post(
 );
 
 // Protected Route for any Authenticated User (Business Admins & Support Agents)
-router.get(
-  '/current',
-  authenticate as any,
-  SubscriptionsController.getCurrentSubscription as any
-);
+router.get('/current', authenticate as any, SubscriptionsController.getCurrentSubscription as any);
 
 // Protected Business Admin Subscription Management Routes
 router.use(authenticate as any, authorize(['BUSINESS_ADMIN']) as any);

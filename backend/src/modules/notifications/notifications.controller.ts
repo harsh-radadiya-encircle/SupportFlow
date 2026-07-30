@@ -4,7 +4,11 @@ import { sendResponse } from '../../common/responses/apiResponse';
 import { AuthenticatedRequest } from '../../common/types';
 
 export class NotificationsController {
-  static async getUserNotifications(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getUserNotifications(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const result = await NotificationsService.getUserNotifications(req.user!.id);
       sendResponse({
@@ -18,7 +22,11 @@ export class NotificationsController {
     }
   }
 
-  static async markAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async markAsRead(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const notificationId = req.params.id as string;
       const updated = await NotificationsService.markAsRead(notificationId, req.user!.id);
@@ -33,7 +41,11 @@ export class NotificationsController {
     }
   }
 
-  static async markAllAsRead(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async markAllAsRead(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       await NotificationsService.markAllAsRead(req.user!.id);
       sendResponse({

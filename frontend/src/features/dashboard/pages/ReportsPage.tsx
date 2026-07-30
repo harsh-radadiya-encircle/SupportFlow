@@ -3,7 +3,10 @@ import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
 import { MetricSummaryCard } from '../../../shared/components/ui/MetricSummaryCard';
-import { StatusDonutChart, DonutChartItem } from '../../../shared/components/charts/StatusDonutChart';
+import {
+  StatusDonutChart,
+  DonutChartItem,
+} from '../../../shared/components/charts/StatusDonutChart';
 import { PriorityBarChart, BarChartItem } from '../../../shared/components/charts/PriorityBarChart';
 import { TimelineAreaChart } from '../../../shared/components/charts/TimelineAreaChart';
 import { DateRangePicker, DateRange } from '../../../shared/components/ui/DateRangePicker';
@@ -49,7 +52,14 @@ export const ReportsPage: React.FC = () => {
       resolutionRate: 0,
     },
     ticketsByPriority: { URGENT: 0, HIGH: 0, MEDIUM: 0, LOW: 0 },
-    ticketsByStatus: { OPEN: 0, ASSIGNED: 0, IN_PROGRESS: 0, WAITING_FOR_CUSTOMER: 0, RESOLVED: 0, CLOSED: 0 },
+    ticketsByStatus: {
+      OPEN: 0,
+      ASSIGNED: 0,
+      IN_PROGRESS: 0,
+      WAITING_FOR_CUSTOMER: 0,
+      RESOLVED: 0,
+      CLOSED: 0,
+    },
     agentWorkload: [],
     recentTickets: [],
     timeline: [],
@@ -62,7 +72,11 @@ export const ReportsPage: React.FC = () => {
     { name: 'Open', value: ticketsByStatus.OPEN || 0, color: '#6366f1' },
     { name: 'Assigned', value: ticketsByStatus.ASSIGNED || 0, color: '#8b5cf6' },
     { name: 'In Progress', value: ticketsByStatus.IN_PROGRESS || 0, color: '#f59e0b' },
-    { name: 'Waiting Customer', value: ticketsByStatus.WAITING_FOR_CUSTOMER || 0, color: '#f97316' },
+    {
+      name: 'Waiting Customer',
+      value: ticketsByStatus.WAITING_FOR_CUSTOMER || 0,
+      color: '#f97316',
+    },
     { name: 'Resolved', value: ticketsByStatus.RESOLVED || 0, color: '#10b981' },
     { name: 'Closed', value: ticketsByStatus.CLOSED || 0, color: '#64748b' },
   ];
@@ -90,7 +104,10 @@ export const ReportsPage: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `supportflow_reports_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute(
+      'download',
+      `supportflow_reports_${new Date().toISOString().split('T')[0]}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -173,7 +190,11 @@ export const ReportsPage: React.FC = () => {
           </Badge>
         </div>
 
-        <TimelineAreaChart data={timeline || []} isLoading={isLoading} emptyMessage={`No tickets created for ${dateRange.label.toLowerCase()}`} />
+        <TimelineAreaChart
+          data={timeline || []}
+          isLoading={isLoading}
+          emptyMessage={`No tickets created for ${dateRange.label.toLowerCase()}`}
+        />
       </Card>
 
       {/* Visual Analytics Charts Grid using Reusable Shared Primitives */}
@@ -185,10 +206,16 @@ export const ReportsPage: React.FC = () => {
               <PieIcon className="w-5 h-5 text-indigo-600" />
               <h2 className="text-base font-bold text-slate-900">Tickets by Status</h2>
             </div>
-            <Badge variant="info" className="text-xs">Live Distribution</Badge>
+            <Badge variant="info" className="text-xs">
+              Live Distribution
+            </Badge>
           </div>
 
-          <StatusDonutChart data={statusChartData} isLoading={isLoading} emptyMessage={`No tickets found for ${dateRange.label.toLowerCase()}`} />
+          <StatusDonutChart
+            data={statusChartData}
+            isLoading={isLoading}
+            emptyMessage={`No tickets found for ${dateRange.label.toLowerCase()}`}
+          />
         </Card>
 
         {/* 2. Tickets by Priority (Reusable PriorityBarChart) */}
@@ -198,10 +225,16 @@ export const ReportsPage: React.FC = () => {
               <BarChart3 className="w-5 h-5 text-emerald-600" />
               <h2 className="text-base font-bold text-slate-900">Tickets by Priority</h2>
             </div>
-            <Badge variant="warning" className="text-xs">Priority Breakdown</Badge>
+            <Badge variant="warning" className="text-xs">
+              Priority Breakdown
+            </Badge>
           </div>
 
-          <PriorityBarChart data={priorityChartData} isLoading={isLoading} emptyMessage={`No tickets found for ${dateRange.label.toLowerCase()}`} />
+          <PriorityBarChart
+            data={priorityChartData}
+            isLoading={isLoading}
+            emptyMessage={`No tickets found for ${dateRange.label.toLowerCase()}`}
+          />
         </Card>
       </div>
 
@@ -210,14 +243,17 @@ export const ReportsPage: React.FC = () => {
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div className="flex items-center gap-2.5">
             <Award className="w-5 h-5 text-indigo-600" />
-            <h2 className="text-base font-bold text-slate-900">Support Team SLA & Workload Leaderboard</h2>
+            <h2 className="text-base font-bold text-slate-900">
+              Support Team SLA & Workload Leaderboard
+            </h2>
           </div>
           <span className="text-xs font-semibold text-slate-400">Live Team Data</span>
         </div>
 
         {isLoading ? (
           <div className="py-12 flex items-center justify-center text-xs text-slate-400">
-            <Loader2 className="w-5 h-5 animate-spin mr-2 text-indigo-600" /> Loading support team workload...
+            <Loader2 className="w-5 h-5 animate-spin mr-2 text-indigo-600" /> Loading support team
+            workload...
           </div>
         ) : agentWorkload.length === 0 ? (
           <div className="py-10 text-center text-xs text-slate-400 font-normal">
@@ -244,12 +280,16 @@ export const ReportsPage: React.FC = () => {
                       </div>
                       <div>
                         <span>{agent.fullName}</span>
-                        <span className="text-[10px] text-slate-400 block font-normal">{agent.email}</span>
+                        <span className="text-[10px] text-slate-400 block font-normal">
+                          {agent.email}
+                        </span>
                       </div>
                     </td>
                     <td className="py-3 font-bold text-slate-700">{agent.activeTickets}</td>
                     <td className="py-3 font-bold text-emerald-600">{agent.resolvedTickets}</td>
-                    <td className="py-3 text-slate-500 font-medium">{summary.avgResponseTime} (SLA Met)</td>
+                    <td className="py-3 text-slate-500 font-medium">
+                      {summary.avgResponseTime} (SLA Met)
+                    </td>
                     <td className="py-3 text-right font-bold text-amber-500 flex items-center justify-end gap-1">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                       <span>4.9 / 5.0</span>

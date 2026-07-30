@@ -37,7 +37,10 @@ export const DashboardLayout: React.FC = () => {
   // Close profile dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
         setIsHeaderProfileOpen(false);
       }
     };
@@ -149,7 +152,9 @@ export const DashboardLayout: React.FC = () => {
             <Headset className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-bold text-lg tracking-tight text-slate-900 leading-none">SupportFlow</h1>
+            <h1 className="font-bold text-lg tracking-tight text-slate-900 leading-none">
+              SupportFlow
+            </h1>
             <p className="text-xs uppercase font-semibold tracking-wider text-indigo-600 mt-1">
               Customer Success
             </p>
@@ -234,8 +239,12 @@ export const DashboardLayout: React.FC = () => {
           {/* User Business Banner */}
           {user?.business && (
             <div className="m-4 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-              <span className="text-slate-400 block text-xs uppercase font-semibold">Organization</span>
-              <span className="font-bold text-slate-900 block mt-0.5 truncate">{user.business.name}</span>
+              <span className="text-slate-400 block text-xs uppercase font-semibold">
+                Organization
+              </span>
+              <span className="font-bold text-slate-900 block mt-0.5 truncate">
+                {user.business.name}
+              </span>
             </div>
           )}
 
@@ -313,7 +322,10 @@ export const DashboardLayout: React.FC = () => {
                         {user?.email}
                       </p>
                       {user?.role && (
-                        <Badge variant={getRoleBadgeVariant(user.role)} className="mt-2 text-xs font-bold">
+                        <Badge
+                          variant={getRoleBadgeVariant(user.role)}
+                          className="mt-2 text-xs font-bold"
+                        >
                           {formatRoleLabel(user.role)}
                         </Badge>
                       )}

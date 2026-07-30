@@ -1,12 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiError } from '../common/exceptions/apiError';
 
-export const errorHandler = (
-  err: Error,
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
+export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction): void => {
   if (err instanceof ApiError) {
     if (err.statusCode === 401) {
       console.warn(`[Auth Guard] ${req.method} ${req.path} - 401 Unauthorized`);

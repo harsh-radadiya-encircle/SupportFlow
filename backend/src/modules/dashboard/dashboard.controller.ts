@@ -10,12 +10,18 @@ export class DashboardController {
       const user = req.user!;
 
       if (!user.businessId) {
-        res.status(400).json({ success: false, message: 'User is not associated with a business.' });
+        res
+          .status(400)
+          .json({ success: false, message: 'User is not associated with a business.' });
         return;
       }
 
       const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
-      const metrics = await dashboardService.getBusinessAdminMetrics(user.businessId, startDate, endDate);
+      const metrics = await dashboardService.getBusinessAdminMetrics(
+        user.businessId,
+        startDate,
+        endDate
+      );
 
       res.status(200).json({
         success: true,
@@ -23,7 +29,9 @@ export class DashboardController {
       });
     } catch (error: any) {
       console.error('[Dashboard Error]:', error);
-      res.status(500).json({ success: false, message: error.message || 'Failed to fetch dashboard metrics.' });
+      res
+        .status(500)
+        .json({ success: false, message: error.message || 'Failed to fetch dashboard metrics.' });
     }
   }
 
@@ -38,7 +46,9 @@ export class DashboardController {
       });
     } catch (error: any) {
       console.error('[Agent Dashboard Error]:', error);
-      res.status(500).json({ success: false, message: error.message || 'Failed to fetch agent metrics.' });
+      res
+        .status(500)
+        .json({ success: false, message: error.message || 'Failed to fetch agent metrics.' });
     }
   }
 
@@ -52,7 +62,10 @@ export class DashboardController {
       });
     } catch (error: any) {
       console.error('[Platform Admin Dashboard Error]:', error);
-      res.status(500).json({ success: false, message: error.message || 'Failed to fetch platform admin metrics.' });
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to fetch platform admin metrics.',
+      });
     }
   }
 
@@ -68,7 +81,10 @@ export class DashboardController {
       });
     } catch (error: any) {
       console.error('[Toggle Business Suspension Error]:', error);
-      res.status(500).json({ success: false, message: error.message || 'Failed to toggle business suspension.' });
+      res.status(500).json({
+        success: false,
+        message: error.message || 'Failed to toggle business suspension.',
+      });
     }
   }
 }

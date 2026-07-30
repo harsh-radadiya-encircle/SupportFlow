@@ -4,7 +4,11 @@ import { sendResponse } from '../../common/responses/apiResponse';
 import { AuthenticatedRequest } from '../../common/types';
 
 export class InvitationsController {
-  static async inviteAgent(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async inviteAgent(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const result = await InvitationsService.inviteAgent(req.body, req.user!);
       sendResponse({
@@ -18,7 +22,11 @@ export class InvitationsController {
     }
   }
 
-  static async getTeamAndInvitations(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getTeamAndInvitations(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const result = await InvitationsService.getBusinessTeamAndInvitations(req.user!.businessId!);
       sendResponse({
@@ -32,7 +40,11 @@ export class InvitationsController {
     }
   }
 
-  static async toggleAgentActiveStatus(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async toggleAgentActiveStatus(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { agentId } = req.params;
       const updated = await InvitationsService.toggleAgentActiveStatus(agentId, req.user!);
@@ -48,7 +60,11 @@ export class InvitationsController {
     }
   }
 
-  static async deleteInvitation(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async deleteInvitation(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const { id } = req.params;
       const deleted = await InvitationsService.deleteInvitation(id, req.user!);

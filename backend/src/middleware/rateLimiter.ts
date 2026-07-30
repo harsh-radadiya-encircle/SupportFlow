@@ -8,7 +8,8 @@ export const authRateLimiter = rateLimit({
   legacyHeaders: false, // Disable `X-RateLimit-*` headers
   message: {
     success: false,
-    message: 'Too many authentication attempts from this IP address. Please try again after 15 minutes.',
+    message:
+      'Too many authentication attempts from this IP address. Please try again after 15 minutes.',
   },
 });
 

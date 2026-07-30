@@ -48,7 +48,14 @@ export const BillingManagementPage: React.FC = () => {
     billingHistory: [],
   };
 
-  const { plan, subscriptionStatus, currentPeriodEnd, daysRemaining = 30, usage, billingHistory } = subscriptionData;
+  const {
+    plan,
+    subscriptionStatus,
+    currentPeriodEnd,
+    daysRemaining = 30,
+    usage,
+    billingHistory,
+  } = subscriptionData;
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -131,9 +138,13 @@ export const BillingManagementPage: React.FC = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Billing & Subscriptions</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+                Billing & Subscriptions
+              </h1>
               <Badge
-                variant={plan === 'BUSINESS' ? 'purple' : plan === 'STANDARD' ? 'info' : 'secondary'}
+                variant={
+                  plan === 'BUSINESS' ? 'purple' : plan === 'STANDARD' ? 'info' : 'secondary'
+                }
                 className="text-xs font-bold uppercase tracking-wider"
               >
                 {plan} PLAN
@@ -239,7 +250,9 @@ export const BillingManagementPage: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-semibold text-slate-900">Monthly Ticket Quota</h3>
-                <p className="text-xs text-slate-500 font-normal">Support requests raised this month</p>
+                <p className="text-xs text-slate-500 font-normal">
+                  Support requests raised this month
+                </p>
               </div>
             </div>
             <span className="text-sm font-bold text-slate-900 bg-slate-100 px-3 py-1 rounded-xl">
@@ -256,7 +269,9 @@ export const BillingManagementPage: React.FC = () => {
               />
             </div>
             <div className="flex justify-between text-xs text-slate-500 font-medium">
-              <span>{plan === 'FREE' ? `${usage.tickets.percentage}% Used` : 'Unlimited Volume'}</span>
+              <span>
+                {plan === 'FREE' ? `${usage.tickets.percentage}% Used` : 'Unlimited Volume'}
+              </span>
               <span>{plan === 'FREE' ? 'Resets on 1st of month' : 'No ticket limits'}</span>
             </div>
           </div>
@@ -268,7 +283,9 @@ export const BillingManagementPage: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <h2 className="text-xl font-bold text-slate-900 tracking-tight">Razorpay Subscription Plans</h2>
+              <h2 className="text-xl font-bold text-slate-900 tracking-tight">
+                Razorpay Subscription Plans
+              </h2>
               <Sparkles className="w-4 h-4 text-amber-500" />
             </div>
             <p className="text-xs text-slate-500 font-normal mt-0.5">
@@ -307,7 +324,9 @@ export const BillingManagementPage: React.FC = () => {
           <Card
             glass
             className={`p-6 space-y-6 flex flex-col justify-between border ${
-              plan === 'FREE' ? 'border-slate-900 ring-2 ring-slate-900 shadow-md bg-white' : 'border-slate-200/80 bg-white/80'
+              plan === 'FREE'
+                ? 'border-slate-900 ring-2 ring-slate-900 shadow-md bg-white'
+                : 'border-slate-200/80 bg-white/80'
             }`}
           >
             <div className="space-y-4">
@@ -327,7 +346,9 @@ export const BillingManagementPage: React.FC = () => {
               <ul className="space-y-2.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span><strong>1 Support Agent Seat</strong></span>
+                  <span>
+                    <strong>1 Support Agent Seat</strong>
+                  </span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -383,11 +404,15 @@ export const BillingManagementPage: React.FC = () => {
               <ul className="space-y-2.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span><strong>Up to 5 Support Agent Seats</strong></span>
+                  <span>
+                    <strong>Up to 5 Support Agent Seats</strong>
+                  </span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span><strong>Unlimited Monthly Tickets</strong></span>
+                  <span>
+                    <strong>Unlimited Monthly Tickets</strong>
+                  </span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -452,11 +477,15 @@ export const BillingManagementPage: React.FC = () => {
               <ul className="space-y-2.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span><strong>Up to 20 Support Agent Seats</strong></span>
+                  <span>
+                    <strong>Up to 20 Support Agent Seats</strong>
+                  </span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span><strong>Unlimited Tickets & Storage</strong></span>
+                  <span>
+                    <strong>Unlimited Tickets & Storage</strong>
+                  </span>
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="w-4 h-4 text-emerald-500 shrink-0" />
@@ -521,7 +550,9 @@ export const BillingManagementPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
                   {billingHistory.map((item: any) => (
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 px-4 font-bold text-slate-900">{item.razorpayPaymentId}</td>
+                      <td className="py-3 px-4 font-bold text-slate-900">
+                        {item.razorpayPaymentId}
+                      </td>
                       <td className="py-3 px-4 text-slate-500">{item.razorpayOrderId || 'N/A'}</td>
                       <td className="py-3 px-4 font-bold text-slate-900">
                         ₹{(item.amountPaid / 100).toLocaleString('en-IN')} {item.currency}

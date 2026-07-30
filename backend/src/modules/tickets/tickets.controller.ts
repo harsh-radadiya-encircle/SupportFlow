@@ -4,7 +4,11 @@ import { sendResponse } from '../../common/responses/apiResponse';
 import { AuthenticatedRequest } from '../../common/types';
 
 export class TicketsController {
-  static async createTicket(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async createTicket(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const ticket = await TicketsService.createTicket(req.body, req.user!);
       sendResponse({
@@ -18,7 +22,11 @@ export class TicketsController {
     }
   }
 
-  static async getTickets(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getTickets(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const result = await TicketsService.getTickets(req.user!, req.query as any);
       sendResponse({
@@ -33,7 +41,11 @@ export class TicketsController {
     }
   }
 
-  static async getTicketById(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async getTicketById(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const ticketId = req.params.id as string;
       const ticket = await TicketsService.getTicketById(ticketId, req.user!);
@@ -48,7 +60,11 @@ export class TicketsController {
     }
   }
 
-  static async updateStatus(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async updateStatus(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const ticketId = req.params.id as string;
       const { status } = req.body;
@@ -64,7 +80,11 @@ export class TicketsController {
     }
   }
 
-  static async assignAgent(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async assignAgent(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const ticketId = req.params.id as string;
       const { assignedAgentId } = req.body;
@@ -80,7 +100,11 @@ export class TicketsController {
     }
   }
 
-  static async addInternalNote(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  static async addInternalNote(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
     try {
       const ticketId = req.params.id as string;
       const { content } = req.body;

@@ -74,8 +74,22 @@ export const TimelineAreaChart: React.FC<TimelineAreaChartProps> = ({
             }}
           />
           <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-          <Area type="monotone" dataKey="Created" stroke="#6366f1" strokeWidth={2} fillOpacity={1} fill="url(#colorCreated)" />
-          <Area type="monotone" dataKey="Resolved" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorResolved)" />
+          <Area
+            type="monotone"
+            dataKey="Created"
+            stroke="#6366f1"
+            strokeWidth={2}
+            fillOpacity={1}
+            fill="url(#colorCreated)"
+          />
+          <Area
+            type="monotone"
+            dataKey="Resolved"
+            stroke="#10b981"
+            strokeWidth={2}
+            fillOpacity={1}
+            fill="url(#colorResolved)"
+          />
         </AreaChart>
       </ResponsiveContainer>
     </div>

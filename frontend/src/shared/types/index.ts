@@ -7,19 +7,10 @@ export type SubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING'
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 
 export type TicketStatus =
-  | 'OPEN'
-  | 'ASSIGNED'
-  | 'IN_PROGRESS'
-  | 'WAITING_FOR_CUSTOMER'
-  | 'RESOLVED'
-  | 'CLOSED';
+  'OPEN' | 'ASSIGNED' | 'IN_PROGRESS' | 'WAITING_FOR_CUSTOMER' | 'RESOLVED' | 'CLOSED';
 
 export type TicketCategory =
-  | 'GENERAL_INQUIRY'
-  | 'TECHNICAL_ISSUE'
-  | 'BILLING'
-  | 'FEATURE_REQUEST'
-  | 'BUG_REPORT';
+  'GENERAL_INQUIRY' | 'TECHNICAL_ISSUE' | 'BILLING' | 'FEATURE_REQUEST' | 'BUG_REPORT';
 
 export interface User {
   id: string;

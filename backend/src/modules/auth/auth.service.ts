@@ -57,7 +57,9 @@ export class AuthService {
 
     // 2. If in LOGIN mode and user does NOT exist in PostgreSQL DB
     if (isLoginMode && !existingUser && dto.authProvider !== 'GOOGLE') {
-      throw ApiError.notFound('No account found for this email address. Please click "Create account" below to sign up first.');
+      throw ApiError.notFound(
+        'No account found for this email address. Please click "Create account" below to sign up first.'
+      );
     }
 
     // 3. Multi-Provider Seamless Synchronization for existing users
@@ -231,14 +233,18 @@ export class AuthService {
       throw ApiError.notFound('No registered user account found with this email address.');
     }
 
-    const resetToken = jwt.sign({ id: user.id, email: user.email }, env.JWT_SECRET, { expiresIn: '15m' });
+    const resetToken = jwt.sign({ id: user.id, email: user.email }, env.JWT_SECRET, {
+      expiresIn: '15m',
+    });
     const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
     // Send transactional HTML password reset email via Brevo
     try {
       await EmailService.sendPasswordResetEmail(user.email, user.fullName, resetUrl);
     } catch (emailErr: any) {
-      throw ApiError.badRequest(emailErr.message || 'Failed to dispatch password reset email via Brevo.');
+      throw ApiError.badRequest(
+        emailErr.message || 'Failed to dispatch password reset email via Brevo.'
+      );
     }
 
     return {

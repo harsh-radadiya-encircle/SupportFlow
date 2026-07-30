@@ -2,7 +2,10 @@ import React from 'react';
 import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
-import { StatusDonutChart, DonutChartItem } from '../../../shared/components/charts/StatusDonutChart';
+import {
+  StatusDonutChart,
+  DonutChartItem,
+} from '../../../shared/components/charts/StatusDonutChart';
 import { PriorityBarChart, BarChartItem } from '../../../shared/components/charts/PriorityBarChart';
 import { useBusinessDashboard } from '../hooks/useDashboard';
 import {
@@ -34,7 +37,14 @@ export const BusinessAdminDashboardPage: React.FC = () => {
       resolutionRate: 0,
     },
     ticketsByPriority: { URGENT: 0, HIGH: 0, MEDIUM: 0, LOW: 0 },
-    ticketsByStatus: { OPEN: 0, ASSIGNED: 0, IN_PROGRESS: 0, WAITING_FOR_CUSTOMER: 0, RESOLVED: 0, CLOSED: 0 },
+    ticketsByStatus: {
+      OPEN: 0,
+      ASSIGNED: 0,
+      IN_PROGRESS: 0,
+      WAITING_FOR_CUSTOMER: 0,
+      RESOLVED: 0,
+      CLOSED: 0,
+    },
     agentWorkload: [],
     recentTickets: [],
   };
@@ -45,7 +55,11 @@ export const BusinessAdminDashboardPage: React.FC = () => {
     { name: 'Open', value: ticketsByStatus.OPEN || 0, color: '#6366f1' },
     { name: 'Assigned', value: ticketsByStatus.ASSIGNED || 0, color: '#8b5cf6' },
     { name: 'In Progress', value: ticketsByStatus.IN_PROGRESS || 0, color: '#f59e0b' },
-    { name: 'Waiting Customer', value: ticketsByStatus.WAITING_FOR_CUSTOMER || 0, color: '#f97316' },
+    {
+      name: 'Waiting Customer',
+      value: ticketsByStatus.WAITING_FOR_CUSTOMER || 0,
+      color: '#f97316',
+    },
     { name: 'Resolved', value: ticketsByStatus.RESOLVED || 0, color: '#10b981' },
     { name: 'Closed', value: ticketsByStatus.CLOSED || 0, color: '#64748b' },
   ];
@@ -95,7 +109,9 @@ export const BusinessAdminDashboardPage: React.FC = () => {
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Business Admin Dashboard</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            Business Admin Dashboard
+          </h1>
           <p className="text-sm font-normal text-slate-500">
             Real-time analytics, agent workloads, and ticket status breakdowns
           </p>
@@ -108,7 +124,11 @@ export const BusinessAdminDashboardPage: React.FC = () => {
             </Button>
           </Link>
           <Link to="/customer/tickets/new">
-            <Button variant="primary" size="md" className="bg-slate-900 hover:bg-slate-800 text-white font-semibold">
+            <Button
+              variant="primary"
+              size="md"
+              className="bg-slate-900 hover:bg-slate-800 text-white font-semibold"
+            >
               <Plus className="w-4 h-4 mr-1.5" />
               New Ticket
             </Button>
@@ -124,8 +144,12 @@ export const BusinessAdminDashboardPage: React.FC = () => {
             <Ticket className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Tickets</p>
-            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">{summary.totalTickets}</p>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Total Tickets
+            </p>
+            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">
+              {summary.totalTickets}
+            </p>
             <span className="text-xs text-emerald-600 font-semibold flex items-center gap-0.5 mt-1">
               <TrendingUp className="w-3 h-3" /> Live Ticket Volume
             </span>
@@ -138,9 +162,15 @@ export const BusinessAdminDashboardPage: React.FC = () => {
             <AlertTriangle className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Open Tickets</p>
-            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">{summary.openTickets}</p>
-            <span className="text-xs text-amber-600 font-semibold mt-1 block">Requires agent action</span>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Open Tickets
+            </p>
+            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">
+              {summary.openTickets}
+            </p>
+            <span className="text-xs text-amber-600 font-semibold mt-1 block">
+              Requires agent action
+            </span>
           </div>
         </Card>
 
@@ -150,9 +180,15 @@ export const BusinessAdminDashboardPage: React.FC = () => {
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Resolved Tickets</p>
-            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">{summary.resolvedTickets}</p>
-            <span className="text-xs text-emerald-600 font-semibold mt-1 block">{summary.resolutionRate}% resolution rate</span>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Resolved Tickets
+            </p>
+            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">
+              {summary.resolvedTickets}
+            </p>
+            <span className="text-xs text-emerald-600 font-semibold mt-1 block">
+              {summary.resolutionRate}% resolution rate
+            </span>
           </div>
         </Card>
 
@@ -162,9 +198,15 @@ export const BusinessAdminDashboardPage: React.FC = () => {
             <Clock className="w-6 h-6" />
           </div>
           <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Average Response Time</p>
-            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">{summary.avgResponseTime}</p>
-            <span className="text-xs text-purple-600 font-semibold mt-1 block">Target: &lt; 30 mins</span>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Average Response Time
+            </p>
+            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">
+              {summary.avgResponseTime}
+            </p>
+            <span className="text-xs text-purple-600 font-semibold mt-1 block">
+              Target: &lt; 30 mins
+            </span>
           </div>
         </Card>
       </div>
@@ -179,7 +221,12 @@ export const BusinessAdminDashboardPage: React.FC = () => {
             </div>
             <span className="text-xs font-semibold text-slate-400">Live Breakdown</span>
           </div>
-          <PriorityBarChart data={priorityChartData} isLoading={isLoading} emptyMessage="No tickets found" height={220} />
+          <PriorityBarChart
+            data={priorityChartData}
+            isLoading={isLoading}
+            emptyMessage="No tickets found"
+            height={220}
+          />
         </Card>
 
         <Card glass className="p-6 space-y-4 border border-slate-200/80">
@@ -190,7 +237,12 @@ export const BusinessAdminDashboardPage: React.FC = () => {
             </div>
             <span className="text-xs font-semibold text-slate-400">Live Status</span>
           </div>
-          <StatusDonutChart data={statusChartData} isLoading={isLoading} emptyMessage="No tickets found" height={220} />
+          <StatusDonutChart
+            data={statusChartData}
+            isLoading={isLoading}
+            emptyMessage="No tickets found"
+            height={220}
+          />
         </Card>
       </div>
 
@@ -201,7 +253,10 @@ export const BusinessAdminDashboardPage: React.FC = () => {
             <UserCheck className="w-5 h-5 text-indigo-600" />
             <h2 className="text-base font-bold text-slate-900">Agent Workload Overview</h2>
           </div>
-          <Link to="/business/team" className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center">
+          <Link
+            to="/business/team"
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center"
+          >
             Manage Team <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
           </Link>
         </div>
@@ -213,7 +268,10 @@ export const BusinessAdminDashboardPage: React.FC = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {agentWorkload.map((agent) => (
-              <div key={agent.id} className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+              <div
+                key={agent.id}
+                className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2"
+              >
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs">
                     {agent.fullName[0]}
@@ -224,8 +282,12 @@ export const BusinessAdminDashboardPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="flex justify-between text-xs pt-1 border-t border-slate-200/60">
-                  <span className="text-slate-500 font-medium">Active: <b className="text-indigo-600">{agent.activeTickets}</b></span>
-                  <span className="text-slate-500 font-medium">Resolved: <b className="text-emerald-600">{agent.resolvedTickets}</b></span>
+                  <span className="text-slate-500 font-medium">
+                    Active: <b className="text-indigo-600">{agent.activeTickets}</b>
+                  </span>
+                  <span className="text-slate-500 font-medium">
+                    Resolved: <b className="text-emerald-600">{agent.resolvedTickets}</b>
+                  </span>
                 </div>
               </div>
             ))}
@@ -237,7 +299,10 @@ export const BusinessAdminDashboardPage: React.FC = () => {
       <Card glass className="p-6 space-y-4 border border-slate-200/80">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h2 className="text-base font-bold text-slate-900">Recent Customer Tickets</h2>
-          <Link to="/business/tickets" className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center">
+          <Link
+            to="/business/tickets"
+            className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center"
+          >
             View All Tickets <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
           </Link>
         </div>
@@ -259,7 +324,9 @@ export const BusinessAdminDashboardPage: React.FC = () => {
               <tbody className="divide-y divide-slate-100">
                 {recentTickets.map((t) => (
                   <tr key={t.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 font-bold text-indigo-600">#{t.ticketNumber || t.id.slice(0, 6)}</td>
+                    <td className="py-3 font-bold text-indigo-600">
+                      #{t.ticketNumber || t.id.slice(0, 6)}
+                    </td>
                     <td className="py-3 font-semibold text-slate-900">{t.title}</td>
                     <td className="py-3 text-slate-600">{t.customer?.fullName || 'Anonymous'}</td>
                     <td className="py-3">{getStatusBadge(t.status)}</td>

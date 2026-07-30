@@ -25,7 +25,10 @@ export interface DateRangePreset {
 /**
  * Formats a date into standard human readable date (e.g. "30 Jul 2026")
  */
-export const formatDate = (dateInput?: Date | string | null, formatStr: string = 'dd MMM yyyy'): string => {
+export const formatDate = (
+  dateInput?: Date | string | null,
+  formatStr: string = 'dd MMM yyyy'
+): string => {
   if (!dateInput) return '';
   const date = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
   if (!isValid(date)) return '';
@@ -65,7 +68,10 @@ export const formatTimeAgo = (dateInput?: Date | string | null): string => {
 /**
  * Dynamically computes dynamic Date Range for any preset ID using current date
  */
-export const getDateRangeForPreset = (presetId: string, baseDate: Date = new Date()): { startDate: Date | null; endDate: Date | null } => {
+export const getDateRangeForPreset = (
+  presetId: string,
+  baseDate: Date = new Date()
+): { startDate: Date | null; endDate: Date | null } => {
   const now = baseDate;
 
   switch (presetId) {
@@ -129,9 +135,14 @@ export const getDateRangeForPreset = (presetId: string, baseDate: Date = new Dat
 /**
  * Formats a Date Range for display (e.g. "01/08/2026 — 12/08/2026")
  */
-export const formatDateRangeLabel = (startDate: Date | null, endDate: Date | null, defaultLabel: string = 'All time'): string => {
+export const formatDateRangeLabel = (
+  startDate: Date | null,
+  endDate: Date | null,
+  defaultLabel: string = 'All time'
+): string => {
   if (!startDate && !endDate) return defaultLabel;
   if (startDate && !endDate) return `${format(startDate, 'dd/MM/yyyy')} — Present`;
-  if (startDate && endDate) return `${format(startDate, 'dd/MM/yyyy')} — ${format(endDate, 'dd/MM/yyyy')}`;
+  if (startDate && endDate)
+    return `${format(startDate, 'dd/MM/yyyy')} — ${format(endDate, 'dd/MM/yyyy')}`;
   return defaultLabel;
 };

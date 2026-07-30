@@ -42,7 +42,9 @@ export class InvitationsService {
     }
 
     if (business.isSuspended) {
-      throw ApiError.forbidden('Your business account is suspended. Please contact platform administration.');
+      throw ApiError.forbidden(
+        'Your business account is suspended. Please contact platform administration.'
+      );
     }
 
     // 1. Enforce Subscription Plan Agent Limits
@@ -68,9 +70,13 @@ export class InvitationsService {
 
     if (existingUser) {
       if (existingUser.businessId === currentUser.businessId) {
-        throw ApiError.badRequest('A user with this email address is already a member of your business team.');
+        throw ApiError.badRequest(
+          'A user with this email address is already a member of your business team.'
+        );
       }
-      throw ApiError.badRequest('An account with this email address already exists in SupportFlow.');
+      throw ApiError.badRequest(
+        'An account with this email address already exists in SupportFlow.'
+      );
     }
 
     // 3. Generate unique single-use 7-day token
@@ -105,7 +111,12 @@ export class InvitationsService {
     const inviteUrl = `${env.FRONTEND_URL}/accept-invite?token=${token}`;
 
     // Dispatch Agent Invitation Email via Nodemailer SMTP (or log in dev mode)
-    await EmailService.sendAgentInvitationEmail(dto.email, currentUser.fullName, business.name, inviteUrl);
+    await EmailService.sendAgentInvitationEmail(
+      dto.email,
+      currentUser.fullName,
+      business.name,
+      inviteUrl
+    );
 
     return {
       invitation,
@@ -146,7 +157,9 @@ export class InvitationsService {
       }),
     ]);
 
-    const activeAgentCount = agents.filter((a) => a.role === Role.SUPPORT_AGENT && a.isActive).length;
+    const activeAgentCount = agents.filter(
+      (a) => a.role === Role.SUPPORT_AGENT && a.isActive
+    ).length;
     const maxAgents = PLAN_AGENT_LIMITS[business?.plan || 'FREE'] || 1;
 
     return {
@@ -229,15 +242,21 @@ export class InvitationsService {
     });
 
     if (!invitation) {
-      throw ApiError.notFound('Invalid invitation link. Please request a new invitation from your business admin.');
+      throw ApiError.notFound(
+        'Invalid invitation link. Please request a new invitation from your business admin.'
+      );
     }
 
     if (invitation.isAccepted) {
-      throw ApiError.badRequest('This invitation has already been accepted. Please sign in to your account.');
+      throw ApiError.badRequest(
+        'This invitation has already been accepted. Please sign in to your account.'
+      );
     }
 
     if (invitation.expiresAt < new Date()) {
-      throw ApiError.badRequest('This invitation link has expired. Please request a new invitation.');
+      throw ApiError.badRequest(
+        'This invitation link has expired. Please request a new invitation.'
+      );
     }
 
     return invitation;

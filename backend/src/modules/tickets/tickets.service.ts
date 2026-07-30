@@ -245,7 +245,9 @@ export class TicketsService {
       (user.role === Role.SUPPORT_AGENT || user.role === Role.BUSINESS_ADMIN) &&
       ticket.businessId !== user.businessId
     ) {
-      throw ApiError.forbidden('You do not have permission to access tickets for another business.');
+      throw ApiError.forbidden(
+        'You do not have permission to access tickets for another business.'
+      );
     }
 
     // Role Security Guard: Strip internal notes for CUSTOMER role
@@ -424,4 +426,3 @@ export class TicketsService {
     return note;
   }
 }
-

@@ -25,7 +25,12 @@ export const AllUsersPage: React.FC = () => {
   const [sortColumn, setSortColumn] = useState('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  const { data: users = [], isLoading, isError, error } = useQuery({
+  const {
+    data: users = [],
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ['users', 'all'],
     queryFn: () => usersApi.getAllUsers(),
   });
@@ -43,7 +48,11 @@ export const AllUsersPage: React.FC = () => {
   });
 
   const handleDeleteClick = (userItem: UserItem) => {
-    if (window.confirm(`Are you sure you want to permanently delete user account "${userItem.fullName}" (${userItem.email})?`)) {
+    if (
+      window.confirm(
+        `Are you sure you want to permanently delete user account "${userItem.fullName}" (${userItem.email})?`
+      )
+    ) {
       deleteUserMutation.mutate(userItem.id);
     }
   };
@@ -194,7 +203,9 @@ export const AllUsersPage: React.FC = () => {
           <AlertTriangle className="w-5 h-5" />
           <span>Failed to load registered platform users</span>
         </div>
-        <p className="text-xs text-rose-600">{(error as any)?.response?.data?.message || 'An error occurred.'}</p>
+        <p className="text-xs text-rose-600">
+          {(error as any)?.response?.data?.message || 'An error occurred.'}
+        </p>
       </div>
     );
   }
@@ -211,7 +222,8 @@ export const AllUsersPage: React.FC = () => {
             </Badge>
           </div>
           <p className="text-sm text-slate-500 font-normal">
-            Manage all registered users across customers, support agents, business owners, and platform administrators.
+            Manage all registered users across customers, support agents, business owners, and
+            platform administrators.
           </p>
         </div>
       </div>

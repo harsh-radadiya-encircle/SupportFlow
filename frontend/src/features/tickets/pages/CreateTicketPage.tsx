@@ -12,7 +12,13 @@ import { Ticket, ArrowLeft, Send, Building, Layers, HelpCircle } from 'lucide-re
 const createTicketSchema = z.object({
   title: z.string().min(3, 'Ticket title must be at least 3 characters'),
   description: z.string().min(10, 'Ticket description must be at least 10 characters'),
-  category: z.enum(['GENERAL_INQUIRY', 'TECHNICAL_ISSUE', 'BILLING', 'FEATURE_REQUEST', 'BUG_REPORT']),
+  category: z.enum([
+    'GENERAL_INQUIRY',
+    'TECHNICAL_ISSUE',
+    'BILLING',
+    'FEATURE_REQUEST',
+    'BUG_REPORT',
+  ]),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']),
   businessId: z.string().optional(),
 });
@@ -94,7 +100,9 @@ export const CreateTicketPage: React.FC = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Category</label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Category
+              </label>
               <select
                 {...register('category')}
                 className="w-full px-3 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white"
@@ -106,12 +114,16 @@ export const CreateTicketPage: React.FC = () => {
                 <option value="BUG_REPORT">Bug Report</option>
               </select>
               {errors.category?.message && (
-                <p className="text-xs font-semibold text-rose-600 mt-1">{errors.category.message}</p>
+                <p className="text-xs font-semibold text-rose-600 mt-1">
+                  {errors.category.message}
+                </p>
               )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Priority Level</label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                Priority Level
+              </label>
               <select
                 {...register('priority')}
                 className="w-full px-3 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white"
@@ -122,13 +134,17 @@ export const CreateTicketPage: React.FC = () => {
                 <option value="URGENT">Urgent - Service Disruption</option>
               </select>
               {errors.priority?.message && (
-                <p className="text-xs font-semibold text-rose-600 mt-1">{errors.priority.message}</p>
+                <p className="text-xs font-semibold text-rose-600 mt-1">
+                  {errors.priority.message}
+                </p>
               )}
             </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Detailed Description</label>
+            <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+              Detailed Description
+            </label>
             <textarea
               rows={6}
               placeholder="Please provide details about the issue you are experiencing..."
@@ -136,7 +152,9 @@ export const CreateTicketPage: React.FC = () => {
               className="w-full p-3.5 text-xs font-medium border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white leading-relaxed resize-y"
             />
             {errors.description?.message && (
-              <p className="text-xs font-semibold text-rose-600 mt-1">{errors.description.message}</p>
+              <p className="text-xs font-semibold text-rose-600 mt-1">
+                {errors.description.message}
+              </p>
             )}
           </div>
 

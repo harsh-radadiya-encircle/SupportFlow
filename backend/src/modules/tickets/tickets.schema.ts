@@ -3,7 +3,10 @@ import { z } from 'zod';
 export const createTicketSchema = z.object({
   title: z.string().min(3, 'Ticket title must be at least 3 characters'),
   description: z.string().min(10, 'Ticket description must be at least 10 characters'),
-  category: z.enum(['GENERAL_INQUIRY', 'TECHNICAL_ISSUE', 'BILLING', 'FEATURE_REQUEST', 'BUG_REPORT']).optional().default('GENERAL_INQUIRY'),
+  category: z
+    .enum(['GENERAL_INQUIRY', 'TECHNICAL_ISSUE', 'BILLING', 'FEATURE_REQUEST', 'BUG_REPORT'])
+    .optional()
+    .default('GENERAL_INQUIRY'),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional().default('MEDIUM'),
   businessId: z.string().optional(),
 });

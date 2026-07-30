@@ -36,51 +36,54 @@ export const initSocketServer = (httpServer: HttpServer): SocketIOServer => {
     });
 
     // Send Real-Time Chat Message & Trigger NEW_MESSAGE Notification
-    socket.on('send_message', async (data: { ticketId: string; senderId: string; content: string }) => {
-      try {
-        if (!data.ticketId || !data.senderId || !data.content?.trim()) return;
+    socket.on(
+      'send_message',
+      async (data: { ticketId: string; senderId: string; content: string }) => {
+        try {
+          if (!data.ticketId || !data.senderId || !data.content?.trim()) return;
 
-        const message = await prisma.message.create({
-          data: {
-            ticketId: data.ticketId,
-            senderId: data.senderId,
-            content: data.content.trim(),
-          },
-          include: {
-            sender: { select: { id: true, fullName: true, role: true, avatarUrl: true } },
-          },
-        });
-
-        // Update Ticket last update timestamp
-        const ticket = await prisma.ticket.update({
-          where: { id: data.ticketId },
-          data: { updatedAt: new Date() },
-          select: { ticketNumber: true, title: true, customerId: true, assignedAgentId: true },
-        });
-
-        // Broadcast message to ticket room
-        io?.to(`ticket:${data.ticketId}`).emit('receive_message', message);
-
-        // Determine recipient for NEW_MESSAGE Notification
-        if (ticket) {
-          const isCustomerSender = data.senderId === ticket.customerId;
-          const recipientId = isCustomerSender ? ticket.assignedAgentId : ticket.customerId;
-
-          if (recipientId) {
-            const { NotificationService } = await import('../services/notification.service');
-            NotificationService.sendNotification({
-              userId: recipientId,
+          const message = await prisma.message.create({
+            data: {
               ticketId: data.ticketId,
-              title: '💬 New Reply Message',
-              message: `${message.sender.fullName}: "${data.content.trim().substring(0, 45)}..."`,
-              type: 'NEW_MESSAGE',
-            }).catch(() => null);
+              senderId: data.senderId,
+              content: data.content.trim(),
+            },
+            include: {
+              sender: { select: { id: true, fullName: true, role: true, avatarUrl: true } },
+            },
+          });
+
+          // Update Ticket last update timestamp
+          const ticket = await prisma.ticket.update({
+            where: { id: data.ticketId },
+            data: { updatedAt: new Date() },
+            select: { ticketNumber: true, title: true, customerId: true, assignedAgentId: true },
+          });
+
+          // Broadcast message to ticket room
+          io?.to(`ticket:${data.ticketId}`).emit('receive_message', message);
+
+          // Determine recipient for NEW_MESSAGE Notification
+          if (ticket) {
+            const isCustomerSender = data.senderId === ticket.customerId;
+            const recipientId = isCustomerSender ? ticket.assignedAgentId : ticket.customerId;
+
+            if (recipientId) {
+              const { NotificationService } = await import('../services/notification.service');
+              NotificationService.sendNotification({
+                userId: recipientId,
+                ticketId: data.ticketId,
+                title: '💬 New Reply Message',
+                message: `${message.sender.fullName}: "${data.content.trim().substring(0, 45)}..."`,
+                type: 'NEW_MESSAGE',
+              }).catch(() => null);
+            }
           }
+        } catch (err: any) {
+          console.error('[Socket.IO Send Message Error]:', err.message);
         }
-      } catch (err: any) {
-        console.error('[Socket.IO Send Message Error]:', err.message);
       }
-    });
+    );
 
     // Typing Indicators
     socket.on('typing_start', ({ ticketId, userName }: { ticketId: string; userName: string }) => {

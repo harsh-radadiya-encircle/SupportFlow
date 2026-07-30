@@ -32,12 +32,18 @@ apiClient.interceptors.response.use(
     const statusCode = error.response?.status;
 
     if (statusCode === 500) {
-      toast.error(`Server Error (500): ${backendMessage || 'An unexpected internal server error occurred.'}`);
+      toast.error(
+        `Server Error (500): ${backendMessage || 'An unexpected internal server error occurred.'}`
+      );
     } else if (statusCode === 401) {
       localStorage.removeItem('supportflow_token');
       localStorage.removeItem('supportflow_user');
 
-      if (!isRedirectingToLogin && window.location.pathname !== '/login' && window.location.pathname !== '/') {
+      if (
+        !isRedirectingToLogin &&
+        window.location.pathname !== '/login' &&
+        window.location.pathname !== '/'
+      ) {
         isRedirectingToLogin = true;
         useAuthStore.getState().clearAuth();
         toast.error('Session expired. Please log in again.');
