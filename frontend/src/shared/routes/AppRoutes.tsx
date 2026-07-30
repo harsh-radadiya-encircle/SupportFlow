@@ -14,6 +14,7 @@ import {
 import { CustomerTicketListPage, CreateTicketPage, TicketDetailPage } from '../../features/tickets';
 import { AgentManagementPage, AcceptInvitePage } from '../../features/invitations';
 import { BillingManagementPage } from '../../features/subscriptions/pages/BillingManagementPage';
+import { AdminSubscriptionsPage } from '../../features/subscriptions/pages/AdminSubscriptionsPage';
 import { AllBusinessesPage } from '../../features/businesses/pages/AllBusinessesPage';
 import { AllUsersPage } from '../../features/users/pages/AllUsersPage';
 import { ProfilePage } from '../../features/profile';
@@ -62,7 +63,7 @@ export const AppRoutes: React.FC = () => {
             <Route path="/admin/dashboard" element={<PlatformAdminDashboardPage />} />
             <Route path="/admin/businesses" element={<AllBusinessesPage />} />
             <Route path="/admin/users" element={<AllUsersPage />} />
-            <Route path="/admin/subscriptions" element={<PlatformAdminDashboardPage />} />
+            <Route path="/admin/subscriptions" element={<AdminSubscriptionsPage />} />
           </Route>
 
           {/* Business Admin */}

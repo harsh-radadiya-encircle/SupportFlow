@@ -7,7 +7,13 @@ export const env = {
   PORT: process.env.PORT || '5000',
   NODE_ENV: process.env.NODE_ENV || 'development',
   DATABASE_URL: process.env.DATABASE_URL || '',
-  JWT_SECRET: process.env.JWT_SECRET || 'fallback-jwt-secret-supportflow',
+  JWT_SECRET: (() => {
+    const secret = process.env.JWT_SECRET;
+    if (!secret && process.env.NODE_ENV === 'production') {
+      throw new Error('FATAL: JWT_SECRET environment variable is required in production.');
+    }
+    return secret || 'fallback-jwt-secret-supportflow-dev-only';
+  })(),
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:5173',
   FIREBASE: {
     PROJECT_ID: process.env.FIREBASE_PROJECT_ID || 'supportflow-demo',

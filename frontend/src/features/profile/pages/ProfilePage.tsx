@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { linkWithPopup, unlink, signInWithCustomToken, User as FirebaseUser } from 'firebase/auth';
+import React, { useState } from 'react';
+import { signInWithPopup } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { auth, googleProvider } from '../../../shared/config/firebase';
 import { useAuthStore } from '../../../shared/store/authStore';
@@ -14,7 +14,6 @@ import {
   Building,
   Key,
   Link2,
-  Unlink,
   CheckCircle2,
   AlertCircle,
   Sparkles,
@@ -22,30 +21,7 @@ import {
 
 export const ProfilePage: React.FC = () => {
   const { user, setAuth } = useAuthStore();
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(auth.currentUser);
-  const [providers, setProviders] = useState<string[]>([]);
   const [isLinkingGoogle, setIsLinkingGoogle] = useState<boolean>(false);
-  const [isUnlinkingGoogle, setIsUnlinkingGoogle] = useState<boolean>(false);
-
-  // Sync Firebase currentUser live state
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((fbUser) => {
-      setFirebaseUser(fbUser);
-      if (fbUser) {
-        const activeProviders = fbUser.providerData.map((p) => p.providerId);
-        setProviders(activeProviders);
-      } else {
-        setProviders([]);
-      }
-    });
-
-    if (auth.currentUser) {
-      const activeProviders = auth.currentUser.providerData.map((p) => p.providerId);
-      setProviders(activeProviders);
-    }
-
-    return () => unsubscribe();
-  }, []);
 
   const getInitials = (name?: string) => {
     if (!name) return 'U';
@@ -56,112 +32,81 @@ export const ProfilePage: React.FC = () => {
     return name.substring(0, 2).toUpperCase();
   };
 
+  // Use PostgreSQL DB (via Zustand store) as single source of truth for provider status.
+  // Firebase client-side auth.currentUser is null when using backend JWT sessions.
   const isPasswordConnected =
-    providers.includes('password') ||
-    user?.authProvider === 'EMAIL_PASSWORD' ||
-    user?.authProvider === 'MULTI_PROVIDER';
-  const isGoogleConnected = providers.includes('google.com');
+    user?.authProvider === 'EMAIL_PASSWORD' || user?.authProvider === 'MULTI_PROVIDER';
+  const isGoogleConnected =
+    user?.authProvider === 'GOOGLE' || user?.authProvider === 'MULTI_PROVIDER';
 
+  /**
+   * Connect Google Account via signInWithPopup.
+   * Does NOT use linkWithPopup / auth.currentUser — those require a live Firebase session
+   * which we don't have since we store backend JWTs, not Firebase ID tokens.
+   *
+   * Flow:
+   * 1. Open Google popup to get the user's Google credentials.
+   * 2. Verify the Google email matches the currently logged-in user email.
+   * 3. Call backend syncUser with MULTI_PROVIDER to update PostgreSQL.
+   * 4. Sign out the transient Google Firebase session (we use backend JWTs).
+   */
   const handleLinkGoogle = async () => {
     setIsLinkingGoogle(true);
 
     try {
-      let currentUser = auth.currentUser;
+      // Open Google sign-in popup
+      const result = await signInWithPopup(auth, googleProvider);
+      const googleEmail = result.user.email;
 
-      // If Firebase Auth currentUser is null, auto-authenticate using backend Firebase Custom Token
-      if (!currentUser) {
-        try {
-          const tokenRes = await authApi.getCustomToken();
-          const customToken = tokenRes?.data?.firebaseCustomToken || tokenRes?.firebaseCustomToken;
-          if (customToken) {
-            const userCred = await signInWithCustomToken(auth, customToken);
-            currentUser = userCred.user;
-          }
-        } catch (tokenErr) {
-          console.warn('[Custom Token Fetch Notice]:', tokenErr);
-        }
-      }
-
-      if (!currentUser) {
+      // Security check: the Google account email must match the logged-in user email
+      if (googleEmail?.toLowerCase() !== user?.email?.toLowerCase()) {
+        await auth.signOut().catch(() => null);
         toast.error(
-          'Could not authenticate session with Firebase. Please sign out and sign in again.'
+          `Google account mismatch. Please sign in with your account email (${user?.email}) to link it.`
         );
         return;
       }
 
-      // Firebase standard API: linkWithPopup
-      const result = await linkWithPopup(currentUser, googleProvider);
-      const updatedUser = result.user;
+      // Sync the MULTI_PROVIDER upgrade with PostgreSQL backend
+      const syncResponse = await authApi.syncUser({
+        firebaseUid: result.user.uid,
+        email: googleEmail || user?.email || '',
+        fullName: user?.fullName || result.user.displayName || 'User',
+        role: user?.role,
+        mode: 'login',
+        authProvider: 'MULTI_PROVIDER',
+      });
 
-      const activeProviders = updatedUser.providerData.map((p) => p.providerId);
-      setProviders(activeProviders);
-      setFirebaseUser(updatedUser);
-
-      // Sync multi-provider status with backend database
-      try {
-        const idToken = await updatedUser.getIdToken();
-        const syncResponse = await authApi.syncUser({
-          firebaseUid: updatedUser.uid,
-          email: updatedUser.email || user?.email || '',
-          fullName: user?.fullName || 'User',
-          role: user?.role,
-          mode: 'login',
-          authProvider: 'MULTI_PROVIDER',
-        });
-
-        const syncData = syncResponse?.data || syncResponse;
-        if (syncData?.user) {
-          const sessionToken = syncData.token || idToken;
-          setAuth(syncData.user, sessionToken);
-        }
-      } catch (dbErr) {
-        console.warn('[Backend Multi-Provider Sync Notice]:', dbErr);
+      const syncData = syncResponse?.data || syncResponse;
+      if (syncData?.user && syncData?.token) {
+        // Update Zustand store with the new session token & updated user record
+        localStorage.setItem('supportflow_token', syncData.token);
+        setAuth(syncData.user, syncData.token);
       }
+
+      // Sign out the transient Google Firebase session — we use backend JWTs exclusively
+      await auth.signOut().catch(() => null);
 
       toast.success('Google account successfully connected to your profile!');
     } catch (err: any) {
       console.error('[Link Google Error]:', err);
-      const code = err?.code || '';
 
-      if (code === 'auth/credential-already-in-use') {
-        toast.error('This Google account is already linked to a different SupportFlow user.');
-      } else if (code === 'auth/provider-already-linked') {
-        toast('Google account is already linked to your profile.', { icon: 'ℹ️' });
-      } else if (code === 'auth/popup-closed-by-user') {
-        toast.error('Google sign-in popup was closed before completing linking.');
+      // Always clean up transient Firebase session on error
+      await auth.signOut().catch(() => null);
+
+      const code = err?.code || '';
+      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
+        toast('Google connection cancelled.', { icon: 'ℹ️' });
+      } else if (code === 'auth/account-exists-with-different-credential') {
+        toast.error(
+          'This Google account is already associated with a different SupportFlow user.'
+        );
       } else {
-        toast.error(err?.message || 'Failed to link Google account. Please try again.');
+        const serverMsg = err?.response?.data?.message;
+        toast.error(serverMsg || err?.message || 'Failed to connect Google account. Please try again.');
       }
     } finally {
       setIsLinkingGoogle(false);
-    }
-  };
-
-  const handleUnlinkGoogle = async () => {
-    const currentUser = auth.currentUser;
-    if (!currentUser) return;
-
-    if (providers.length <= 1) {
-      toast.error(
-        'Cannot remove Google account. You must have at least one active login provider.'
-      );
-      return;
-    }
-
-    setIsUnlinkingGoogle(true);
-
-    try {
-      const updatedUser = await unlink(currentUser, 'google.com');
-      const activeProviders = updatedUser.providerData.map((p) => p.providerId);
-      setProviders(activeProviders);
-      setFirebaseUser(updatedUser);
-
-      toast.success('Google account unlinked successfully.');
-    } catch (err: any) {
-      console.error('[Unlink Google Error]:', err);
-      toast.error(err?.message || 'Failed to unlink Google account.');
-    } finally {
-      setIsUnlinkingGoogle(false);
     }
   };
 
@@ -330,15 +275,12 @@ export const ProfilePage: React.FC = () => {
 
             <div className="pt-2">
               {isGoogleConnected ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleUnlinkGoogle}
-                  isLoading={isUnlinkingGoogle}
-                  className="w-full text-rose-600 border-rose-200 hover:bg-rose-50 text-xs font-semibold"
-                >
-                  <Unlink className="w-3.5 h-3.5 mr-1" /> Unlink Google Account
-                </Button>
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <p className="text-xs text-emerald-800 font-semibold">
+                    Google account is linked. You can sign in with Google or Email & Password.
+                  </p>
+                </div>
               ) : (
                 <Button
                   variant="primary"

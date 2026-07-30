@@ -100,13 +100,33 @@ export interface PlatformAdminMetricsResponse {
     activeSubscriptions: number;
     monthlyRevenue: string;
     mrrNumber: number;
+    yearlyRevenue: string;
+    arrNumber: number;
     suspendedBusinesses: number;
+    newBusinessesThisMonth: number;
+    totalUsers: number;
+    totalSupportAgents: number;
+    totalCustomers: number;
+    newUsersThisMonth: number;
+    totalTickets: number;
+    openTickets: number;
+    resolvedTickets: number;
+    newTicketsThisMonth: number;
+    newTicketsThisYear: number;
+    platformResolutionRate: number;
   };
   businessesByPlan: {
     FREE: number;
     STANDARD: number;
     BUSINESS: number;
   };
+  subscriptionsByStatus: Record<string, number>;
+  monthlyGrowth: Array<{
+    month: string;
+    Businesses: number;
+    Users: number;
+    Tickets: number;
+  }>;
   businesses: Array<{
     id: string;
     name: string;

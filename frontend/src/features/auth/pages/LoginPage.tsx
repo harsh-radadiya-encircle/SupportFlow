@@ -8,7 +8,6 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   signInWithCustomToken,
-  fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { auth, googleProvider, requestFcmToken } from '../../../shared/config/firebase';
@@ -244,6 +243,8 @@ export const LoginPage: React.FC = () => {
         }
 
         // Authenticate via PostgreSQL DB sync API
+        // Note: do NOT hardcode authProvider as EMAIL_PASSWORD here.
+        // The backend will determine the correct provider from what's stored.
         const response = await authApi.syncUser({
           firebaseUid: userUid,
           email: userEmail,
@@ -253,7 +254,8 @@ export const LoginPage: React.FC = () => {
 
         const syncData = response?.data || response;
         const user = syncData.user;
-        const sessionToken = syncData.token || idToken;
+        // Always use backend JWT — never store a raw Firebase ID token in localStorage
+        const sessionToken = syncData.token;
 
         localStorage.setItem('supportflow_token', sessionToken);
         await registerFcmDeviceToken(sessionToken);
@@ -278,54 +280,77 @@ export const LoginPage: React.FC = () => {
     setInfoMessage(null);
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
+      // Step 1: Attempt Google popup sign-in
+      // This may throw auth/account-exists-with-different-credential
+      // if the same email is registered under email/password in Firebase.
+      let result;
+      try {
+        result = await signInWithPopup(auth, googleProvider);
+      } catch (popupErr: any) {
+        // Firebase explicitly tells us this email belongs to a different provider.
+        // Show a clear message and abort — do NOT overwrite the existing account.
+        if (
+          popupErr.code === 'auth/account-exists-with-different-credential' ||
+          popupErr.code === 'auth/credential-already-in-use'
+        ) {
+          await auth.signOut().catch(() => null);
+          const msg =
+            'This email is already registered using Email & Password. Please sign in with your password. You can then link Google in My Profile → Connected Accounts.';
+          setErrorMessage(msg);
+          toast.error(msg);
+          return;
+        }
+        throw popupErr;
+      }
+
       const email = result.user.email!;
-      const idToken = await result.user.getIdToken();
 
-      // Check if account already exists in DB registered via Email & Password
+      // Step 2: Check what provider this email is stored under in our PostgreSQL DB.
+      // This is the authoritative check — Firebase providerData is unreliable after
+      // account linking because Google popup can succeed but the DB still has
+      // EMAIL_PASSWORD stored.
       const checkRes = await authApi.checkProvider(email).catch(() => null);
-      const isExistingPasswordAccount =
-        checkRes?.data?.exists && checkRes?.data?.authProvider === 'EMAIL_PASSWORD';
+      const storedProvider = checkRes?.data?.authProvider as string | undefined;
 
-      // Check if Firebase Auth has explicitly linked 'password' provider to this user
-      const hasPasswordProvider = result.user.providerData.some((p) => p.providerId === 'password');
-
-      if (isExistingPasswordAccount && !hasPasswordProvider) {
-        // Sign out transient Google session without modifying or overwriting the password account
+      if (checkRes?.data?.exists && storedProvider === 'EMAIL_PASSWORD') {
+        // This user registered with email/password. Block Google login to prevent
+        // overwriting their firebaseUid with the Google UID in PostgreSQL.
         await auth.signOut().catch(() => null);
-
         const msg =
-          'This email is already registered using Email & Password. Please sign in with your password first. After signing in, link your Google account under My Profile -> Connected Accounts.';
+          'This email is registered with Email & Password. Please sign in with your password. You can link your Google account under My Profile → Connected Accounts after signing in.';
         setErrorMessage(msg);
         toast.error(msg);
         return;
       }
 
-      // Authenticate & Sync via PostgreSQL backend API
+      // Step 3: Sync with PostgreSQL — backend will auto-provision new Google users
+      // or allow existing GOOGLE / MULTI_PROVIDER users through.
       const response = await authApi.syncUser({
         firebaseUid: result.user.uid,
         email,
         fullName: result.user.displayName || 'Google User',
         role: selectedRole,
-        mode: isRegisterMode ? 'register' : 'login',
+        // In login mode for new Google users, backend auto-provisions them.
+        // In register mode, backend creates with GOOGLE provider.
+        mode: checkRes?.data?.exists ? 'login' : (isRegisterMode ? 'register' : 'login'),
         authProvider: 'GOOGLE',
       });
 
       const syncData = response?.data || response;
       const user = syncData.user;
-      const sessionToken = syncData.token || idToken;
+      // Always use the backend JWT — never store a raw Firebase ID token
+      const sessionToken = syncData.token;
 
       localStorage.setItem('supportflow_token', sessionToken);
       await registerFcmDeviceToken(sessionToken);
 
       setAuth(user, sessionToken);
-      toast.success(`Welcome back, ${user.fullName}!`);
+      toast.success(`Welcome, ${user.fullName}!`);
       redirectUserByRole(user.role);
     } catch (err: any) {
       console.error('[Google Auth Error]:', err);
-
+      // Always sign out from Firebase on any error to avoid stale Google sessions
       await auth.signOut().catch(() => null);
-
       const friendlyMsg = getFriendlyAuthErrorMessage(err);
       setErrorMessage(friendlyMsg);
       toast.error(friendlyMsg);

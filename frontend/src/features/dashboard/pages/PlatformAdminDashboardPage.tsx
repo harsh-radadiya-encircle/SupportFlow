@@ -1,24 +1,22 @@
-import React, { useState } from 'react';
-import { useQueryClient, useMutation } from '@tanstack/react-query';
-import toast from 'react-hot-toast';
+import React from 'react';
 import {
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
   PieChart,
   Pie,
   Cell,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   Tooltip,
+  ResponsiveContainer,
   Legend,
 } from 'recharts';
+import { Link } from 'react-router-dom';
 import { usePlatformDashboard } from '../hooks/useDashboard';
-import { dashboardApi } from '../api/dashboard.api';
 import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
-import { Button } from '../../../shared/components/ui/Button';
-import { DataTable, Column, FilterOption } from '../../../shared/components/ui/DataTable';
 import {
   Building2,
   CreditCard,
@@ -29,247 +27,96 @@ import {
   Ban,
   Users,
   Ticket,
-  PieChart as PieIcon,
+  TrendingUp,
+  TrendingDown,
+  UserCheck,
+  UserX,
+  ArrowRight,
   BarChart3,
+  Globe,
   Sparkles,
+  PieChart as PieIcon,
+  Activity,
 } from 'lucide-react';
 
+const StatCard: React.FC<{
+  title: string;
+  value: string | number;
+  sub?: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  isLoading?: boolean;
+  trend?: { value: string; positive: boolean };
+  link?: { label: string; to: string };
+}> = ({ title, value, sub, icon, iconBg, isLoading, trend, link }) => (
+  <Card glass className="p-5 border border-slate-200/80 shadow-sm space-y-3">
+    <div className="flex items-start justify-between">
+      <div className={`w-11 h-11 rounded-2xl ${iconBg} flex items-center justify-center shrink-0`}>
+        {icon}
+      </div>
+      {trend && (
+        <div
+          className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg ${
+            trend.positive
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-rose-50 text-rose-700'
+          }`}
+        >
+          {trend.positive ? (
+            <TrendingUp className="w-3 h-3" />
+          ) : (
+            <TrendingDown className="w-3 h-3" />
+          )}
+          {trend.value}
+        </div>
+      )}
+    </div>
+    <div>
+      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</p>
+      {isLoading ? (
+        <Loader2 className="w-5 h-5 animate-spin text-indigo-500 mt-1.5" />
+      ) : (
+        <p className="text-2xl font-extrabold text-slate-900 mt-0.5 leading-tight">{value}</p>
+      )}
+      {sub && !isLoading && <p className="text-[11px] text-slate-400 font-medium mt-0.5">{sub}</p>}
+    </div>
+    {link && (
+      <Link
+        to={link.to}
+        className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 pt-1 border-t border-slate-100"
+      >
+        {link.label} <ArrowRight className="w-3.5 h-3.5" />
+      </Link>
+    )}
+  </Card>
+);
+
 export const PlatformAdminDashboardPage: React.FC = () => {
-  const queryClient = useQueryClient();
   const { data, isLoading, isError, error } = usePlatformDashboard();
 
-  const [searchTerm, setSearchTerm] = useState('');
-  const [planFilter, setPlanFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [sortColumn, setSortColumn] = useState('createdAt');
-  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
-
-  // Mutation for toggling business suspension
-  const toggleSuspendMutation = useMutation({
-    mutationFn: (businessId: string) => dashboardApi.toggleBusinessSuspension(businessId),
-    onSuccess: (res) => {
-      toast.success(res.message || 'Business status updated.');
-      queryClient.invalidateQueries({ queryKey: ['dashboard', 'platform'] });
-    },
-    onError: (err: any) => {
-      toast.error(err?.response?.data?.message || 'Failed to update business status.');
-    },
-  });
-
-  const summary = data?.summary || {
-    totalBusinesses: 0,
-    activeSubscriptions: 0,
-    monthlyRevenue: '$0',
-    mrrNumber: 0,
-    suspendedBusinesses: 0,
-  };
-
+  const s = data?.summary;
   const planCounts = data?.businessesByPlan || { FREE: 0, STANDARD: 0, BUSINESS: 0 };
-  const allBusinesses = data?.businesses || [];
+  const subStatus = data?.subscriptionsByStatus || {};
+  const growth = data?.monthlyGrowth || [];
 
-  // Filter & Search Logic for Local Data Table
-  const filteredBusinesses = allBusinesses.filter((b) => {
-    const matchesSearch =
-      !searchTerm ||
-      b.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.ownerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.ownerEmail.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesPlan = !planFilter || b.plan === planFilter;
-    const matchesStatus =
-      !statusFilter ||
-      (statusFilter === 'SUSPENDED'
-        ? b.isSuspended
-        : !b.isSuspended && b.subscriptionStatus === statusFilter);
-
-    return matchesSearch && matchesPlan && matchesStatus;
-  });
-
-  // Sort Logic
-  const sortedBusinesses = [...filteredBusinesses].sort((a, b) => {
-    let aVal: any = a[sortColumn as keyof typeof a];
-    let bVal: any = b[sortColumn as keyof typeof b];
-
-    if (sortColumn === 'createdAt') {
-      aVal = new Date(a.createdAt).getTime();
-      bVal = new Date(b.createdAt).getTime();
-    }
-
-    if (aVal < bVal) return sortDirection === 'asc' ? -1 : 1;
-    if (aVal > bVal) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
-
-  // Paginated View
-  const paginatedBusinesses = sortedBusinesses.slice((page - 1) * limit, page * limit);
-  const totalPages = Math.ceil(sortedBusinesses.length / limit) || 1;
-
-  // Chart 1: Businesses by Plan Data
   const planChartData = [
-    { name: 'Free Plan', value: planCounts.FREE, color: '#94a3b8' },
-    { name: 'Standard ($49/m)', value: planCounts.STANDARD, color: '#6366f1' },
-    { name: 'Business ($149/m)', value: planCounts.BUSINESS, color: '#a855f7' },
+    { name: 'Free', value: planCounts.FREE, color: '#94a3b8' },
+    { name: 'Standard', value: planCounts.STANDARD, color: '#6366f1' },
+    { name: 'Business', value: planCounts.BUSINESS, color: '#a855f7' },
   ];
 
-  // Chart 2: Revenue Distribution Data
-  const revenueChartData = [
-    { name: 'Free Plan', MRR: 0 },
-    { name: 'Standard Plan', MRR: planCounts.STANDARD * 49 },
-    { name: 'Business Plan', MRR: planCounts.BUSINESS * 149 },
-  ];
-
-  const filterOptions: FilterOption[] = [
-    {
-      key: 'plan',
-      label: 'All Subscription Plans',
-      value: planFilter,
-      onChange: (val) => {
-        setPlanFilter(val);
-        setPage(1);
-      },
-      options: [
-        { label: 'All Plans', value: '' },
-        { label: 'Free Plan', value: 'FREE' },
-        { label: 'Standard Plan', value: 'STANDARD' },
-        { label: 'Business Plan', value: 'BUSINESS' },
-      ],
-    },
-    {
-      key: 'status',
-      label: 'All Statuses',
-      value: statusFilter,
-      onChange: (val) => {
-        setStatusFilter(val);
-        setPage(1);
-      },
-      options: [
-        { label: 'All Statuses', value: '' },
-        { label: 'Active', value: 'ACTIVE' },
-        { label: 'Suspended', value: 'SUSPENDED' },
-      ],
-    },
-  ];
-
-  const columns: Column<any>[] = [
-    {
-      key: 'name',
-      header: 'Business Name & Owner',
-      sortable: true,
-      className: 'w-2/5 min-w-[240px]',
-      render: (b) => (
-        <div className="space-y-0.5">
-          <div className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-            <Building2 className="w-4 h-4 text-indigo-600 shrink-0" />
-            <span>{b.name}</span>
-          </div>
-          <div className="text-xs text-slate-500 font-normal">
-            Owner: <strong className="font-semibold text-slate-700">{b.ownerName}</strong> (
-            {b.ownerEmail})
-          </div>
-        </div>
-      ),
-    },
-    {
-      key: 'plan',
-      header: 'Subscription Plan',
-      sortable: true,
-      className: 'whitespace-nowrap',
-      render: (b) => (
-        <Badge
-          variant={b.plan === 'BUSINESS' ? 'purple' : b.plan === 'STANDARD' ? 'info' : 'secondary'}
-          className="text-xs font-semibold uppercase"
-        >
-          {b.plan}
-        </Badge>
-      ),
-    },
-    {
-      key: 'isSuspended',
-      header: 'Status',
-      sortable: true,
-      className: 'whitespace-nowrap',
-      render: (b) =>
-        b.isSuspended ? (
-          <Badge variant="danger" className="text-xs font-semibold flex items-center gap-1">
-            <Ban className="w-3 h-3" /> Suspended
-          </Badge>
-        ) : (
-          <Badge variant="success" className="text-xs font-semibold flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" /> Active
-          </Badge>
-        ),
-    },
-    {
-      key: 'usersCount',
-      header: 'Team Members',
-      className: 'whitespace-nowrap text-center',
-      render: (b) => (
-        <div className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
-          <Users className="w-3.5 h-3.5 text-slate-500" />
-          <span>{b.usersCount} users</span>
-        </div>
-      ),
-    },
-    {
-      key: 'ticketsCount',
-      header: 'Total Tickets',
-      className: 'whitespace-nowrap text-center',
-      render: (b) => (
-        <div className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-lg">
-          <Ticket className="w-3.5 h-3.5 text-slate-500" />
-          <span>{b.ticketsCount} tickets</span>
-        </div>
-      ),
-    },
-    {
-      key: 'createdAt',
-      header: 'Joined Date',
-      sortable: true,
-      className: 'whitespace-nowrap',
-      render: (b) => (
-        <span className="text-sm text-slate-600 font-normal">
-          {new Date(b.createdAt).toLocaleDateString()}
-        </span>
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Actions',
-      className: 'text-right whitespace-nowrap',
-      render: (b) => (
-        <Button
-          variant={b.isSuspended ? 'success' : 'outline'}
-          size="sm"
-          className={
-            b.isSuspended
-              ? 'bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs'
-              : 'border-rose-200 text-rose-700 hover:bg-rose-50 font-semibold text-xs'
-          }
-          isLoading={toggleSuspendMutation.isPending && toggleSuspendMutation.variables === b.id}
-          onClick={() => toggleSuspendMutation.mutate(b.id)}
-        >
-          {b.isSuspended ? (
-            <>
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Activate
-            </>
-          ) : (
-            <>
-              <Ban className="w-3.5 h-3.5 mr-1" /> Suspend
-            </>
-          )}
-        </Button>
-      ),
-    },
+  const subStatusData = [
+    { name: 'Active', value: subStatus.ACTIVE || 0, color: '#10b981' },
+    { name: 'Cancelled', value: subStatus.CANCELLED || 0, color: '#f59e0b' },
+    { name: 'Expired', value: subStatus.EXPIRED || 0, color: '#64748b' },
+    { name: 'Past Due', value: subStatus.PAST_DUE || 0, color: '#ef4444' },
   ];
 
   if (isError) {
     return (
       <div className="p-6 bg-rose-50 border border-rose-200 rounded-2xl text-rose-800 space-y-2">
-        <div className="flex items-center gap-2 font-bold text-rose-700">
-          <ShieldAlert className="w-5 h-5" />
-          <span>Failed to load platform admin metrics</span>
+        <div className="flex items-center gap-2 font-bold">
+          <ShieldAlert className="w-5 h-5" /> Failed to load platform metrics
         </div>
         <p className="text-xs text-rose-600">
           {(error as any)?.response?.data?.message || 'An error occurred.'}
@@ -280,243 +127,362 @@ export const PlatformAdminDashboardPage: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans">
-      {/* Header Banner */}
+      {/* ── PAGE HEADER ───────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-              Platform Admin Overview
-            </h1>
+            <Globe className="w-6 h-6 text-indigo-600" />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Platform Admin Overview</h1>
             <Badge variant="purple" className="text-xs font-extrabold flex items-center gap-1">
-              <Sparkles className="w-3 h-3 fill-white" /> Global Control
+              <Sparkles className="w-3 h-3 mr-1 inline" /> Global Control
             </Badge>
           </div>
           <p className="text-sm text-slate-500 font-normal">
-            Real-time platform statistics across registered businesses, active subscriptions,
-            revenue, and access control.
+            Real-time platform statistics — businesses, users, revenue, tickets, and growth trends.
           </p>
+        </div>
+        <div className="flex gap-3">
+          <Link
+            to="/admin/businesses"
+            className="bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
+          >
+            <Building2 className="w-3.5 h-3.5 text-slate-500" /> Manage Businesses
+          </Link>
+          <Link
+            to="/admin/subscriptions"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-all flex items-center gap-1.5 shadow-sm"
+          >
+            <CreditCard className="w-3.5 h-3.5" /> Subscriptions
+          </Link>
         </div>
       </div>
 
-      {/* 4 DYNAMIC REAL METRICS CARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 1. Total Businesses */}
-        <Card glass className="p-5 flex items-center gap-4 border border-slate-200/80 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 shadow-2xs">
-            <Building2 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Total Businesses
-            </p>
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-indigo-600 mt-1" />
-            ) : (
-              <p className="text-2xl font-bold text-slate-900 mt-0.5">{summary.totalBusinesses}</p>
-            )}
-          </div>
-        </Card>
-
-        {/* 2. Active Subscriptions */}
-        <Card glass className="p-5 flex items-center gap-4 border border-slate-200/80 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-2xs">
-            <CreditCard className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Active Subscriptions
-            </p>
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-emerald-600 mt-1" />
-            ) : (
-              <p className="text-2xl font-bold text-slate-900 mt-0.5">
-                {summary.activeSubscriptions}
-              </p>
-            )}
-          </div>
-        </Card>
-
-        {/* 3. Monthly Revenue (MRR) */}
-        <Card glass className="p-5 flex items-center gap-4 border border-slate-200/80 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0 shadow-2xs">
-            <DollarSign className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Monthly Revenue
-            </p>
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-purple-600 mt-1" />
-            ) : (
-              <p className="text-2xl font-bold text-slate-900 mt-0.5">{summary.monthlyRevenue}</p>
-            )}
-          </div>
-        </Card>
-
-        {/* 4. Suspended Businesses */}
-        <Card glass className="p-5 flex items-center gap-4 border border-slate-200/80 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center shrink-0 shadow-2xs">
-            <ShieldAlert className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Suspended Businesses
-            </p>
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin text-rose-600 mt-1" />
-            ) : (
-              <p className="text-2xl font-bold text-slate-900 mt-0.5">
-                {summary.suspendedBusinesses}
-              </p>
-            )}
-          </div>
-        </Card>
+      {/* ── SECTION 1: BUSINESS METRICS ──────────────────────────────────────── */}
+      <div>
+        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-indigo-500" /> Business Overview
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Businesses"
+            value={s?.totalBusinesses ?? '—'}
+            sub="All registered businesses"
+            icon={<Building2 className="w-5 h-5 text-indigo-600" />}
+            iconBg="bg-indigo-50 border border-indigo-100"
+            isLoading={isLoading}
+            trend={{ value: `+${s?.newBusinessesThisMonth ?? 0} this month`, positive: true }}
+            link={{ label: 'View all businesses', to: '/admin/businesses' }}
+          />
+          <StatCard
+            title="Active Subscriptions"
+            value={s?.activeSubscriptions ?? '—'}
+            sub="Paying & active businesses"
+            icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+            iconBg="bg-emerald-50 border border-emerald-100"
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="Suspended"
+            value={s?.suspendedBusinesses ?? '—'}
+            sub="Businesses with restricted access"
+            icon={<Ban className="w-5 h-5 text-rose-600" />}
+            iconBg="bg-rose-50 border border-rose-100"
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="New This Month"
+            value={s?.newBusinessesThisMonth ?? '—'}
+            sub="Businesses joined this month"
+            icon={<TrendingUp className="w-5 h-5 text-purple-600" />}
+            iconBg="bg-purple-50 border border-purple-100"
+            isLoading={isLoading}
+          />
+        </div>
       </div>
 
-      {/* PLATFORM CHARTS SECTION */}
+      {/* ── SECTION 2: REVENUE METRICS ────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <DollarSign className="w-4 h-4 text-emerald-500" /> Revenue
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Monthly Revenue (MRR)"
+            value={s?.monthlyRevenue ?? '₹0'}
+            sub="From paid subscriptions this month"
+            icon={<DollarSign className="w-5 h-5 text-emerald-600" />}
+            iconBg="bg-emerald-50 border border-emerald-100"
+            isLoading={isLoading}
+            link={{ label: 'View subscriptions', to: '/admin/subscriptions' }}
+          />
+          <StatCard
+            title="Yearly Revenue (ARR)"
+            value={s?.yearlyRevenue ?? '₹0'}
+            sub="Projected annual recurring revenue"
+            icon={<TrendingUp className="w-5 h-5 text-indigo-600" />}
+            iconBg="bg-indigo-50 border border-indigo-100"
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="Standard Plans"
+            value={planCounts.STANDARD}
+            sub={`₹${(planCounts.STANDARD * 2499).toLocaleString('en-IN')}/mo contribution`}
+            icon={<CreditCard className="w-5 h-5 text-blue-600" />}
+            iconBg="bg-blue-50 border border-blue-100"
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="Business Plans"
+            value={planCounts.BUSINESS}
+            sub={`₹${(planCounts.BUSINESS * 6499).toLocaleString('en-IN')}/mo contribution`}
+            icon={<Sparkles className="w-5 h-5 text-amber-600" />}
+            iconBg="bg-amber-50 border border-amber-100"
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      {/* ── SECTION 3: USER METRICS ───────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Users className="w-4 h-4 text-blue-500" /> Users Across Platform
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Users"
+            value={s?.totalUsers ?? '—'}
+            sub="All roles combined"
+            icon={<Users className="w-5 h-5 text-slate-600" />}
+            iconBg="bg-slate-100 border border-slate-200"
+            isLoading={isLoading}
+            trend={{ value: `+${s?.newUsersThisMonth ?? 0} this month`, positive: true }}
+            link={{ label: 'View all users', to: '/admin/users' }}
+          />
+          <StatCard
+            title="Business Admins"
+            value={data?.businessesByPlan ? (planCounts.FREE + planCounts.STANDARD + planCounts.BUSINESS) : '—'}
+            sub="Business account owners"
+            icon={<UserCheck className="w-5 h-5 text-indigo-600" />}
+            iconBg="bg-indigo-50 border border-indigo-100"
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="Support Agents"
+            value={s?.totalSupportAgents ?? '—'}
+            sub="Active agents on the platform"
+            icon={<UserCheck className="w-5 h-5 text-emerald-600" />}
+            iconBg="bg-emerald-50 border border-emerald-100"
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="Customers"
+            value={s?.totalCustomers ?? '—'}
+            sub="End users raising tickets"
+            icon={<UserX className="w-5 h-5 text-purple-600" />}
+            iconBg="bg-purple-50 border border-purple-100"
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      {/* ── SECTION 4: TICKET METRICS ─────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <Ticket className="w-4 h-4 text-amber-500" /> Platform Tickets
+        </h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard
+            title="Total Tickets"
+            value={s?.totalTickets ?? '—'}
+            sub="All-time platform tickets"
+            icon={<Ticket className="w-5 h-5 text-slate-600" />}
+            iconBg="bg-slate-100 border border-slate-200"
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="Open / In Progress"
+            value={s?.openTickets ?? '—'}
+            sub="Currently active tickets"
+            icon={<Activity className="w-5 h-5 text-amber-600" />}
+            iconBg="bg-amber-50 border border-amber-100"
+            isLoading={isLoading}
+          />
+          <StatCard
+            title="Resolved / Closed"
+            value={s?.resolvedTickets ?? '—'}
+            sub={`${s?.platformResolutionRate ?? 0}% platform resolution rate`}
+            icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+            iconBg="bg-emerald-50 border border-emerald-100"
+            isLoading={isLoading}
+            trend={{ value: `${s?.platformResolutionRate ?? 0}% rate`, positive: (s?.platformResolutionRate ?? 0) >= 70 }}
+          />
+          <StatCard
+            title="This Year"
+            value={s?.newTicketsThisYear ?? '—'}
+            sub={`+${s?.newTicketsThisMonth ?? 0} new this month`}
+            icon={<TrendingUp className="w-5 h-5 text-indigo-600" />}
+            iconBg="bg-indigo-50 border border-indigo-100"
+            isLoading={isLoading}
+          />
+        </div>
+      </div>
+
+      {/* ── SECTION 5: CHARTS ROW ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* 1. Businesses by Plan (Donut Chart) */}
-        <Card glass className="lg:col-span-5 p-6 space-y-4 border border-slate-200/80 shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2.5">
-              <PieIcon className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-base font-bold text-slate-900">Businesses by Plan</h2>
-            </div>
-            <Badge variant="purple" className="text-xs">
-              Subscription Distribution
-            </Badge>
-          </div>
-
-          {isLoading ? (
-            <div className="h-64 flex items-center justify-center text-xs text-slate-400">
-              <Loader2 className="w-5 h-5 animate-spin mr-2 text-indigo-600" /> Loading plan data...
-            </div>
-          ) : (
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={planChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={4}
-                    dataKey="value"
-                  >
-                    {planChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      borderRadius: '12px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                    }}
-                  />
-                  <Legend
-                    wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }}
-                    formatter={(value) => (
-                      <span className="text-slate-700 font-medium">{value}</span>
-                    )}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </Card>
-
-        {/* 2. Platform Revenue Breakdown (Bar Chart) */}
+        {/* 6-Month Growth Area Chart */}
         <Card glass className="lg:col-span-7 p-6 space-y-4 border border-slate-200/80 shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div className="flex items-center gap-2.5">
-              <BarChart3 className="w-5 h-5 text-emerald-600" />
-              <h2 className="text-base font-bold text-slate-900">
-                Monthly Revenue Contribution (MRR)
-              </h2>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-base font-bold text-slate-900">6-Month Growth Trend</h2>
             </div>
-            <Badge variant="success" className="text-xs">
-              Revenue Breakdown
-            </Badge>
+            <Badge variant="info" className="text-xs">Businesses · Users · Tickets</Badge>
           </div>
-
           {isLoading ? (
-            <div className="h-64 flex items-center justify-center text-xs text-slate-400">
-              <Loader2 className="w-5 h-5 animate-spin mr-2 text-indigo-600" /> Loading revenue
-              chart...
+            <div className="h-56 flex items-center justify-center text-xs text-slate-400">
+              <Loader2 className="w-5 h-5 animate-spin mr-2 text-indigo-500" /> Loading growth data...
             </div>
           ) : (
-            <div className="h-64 w-full">
+            <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={revenueChartData}
-                  margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
-                >
-                  <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} />
-                  <YAxis
-                    stroke="#64748b"
-                    fontSize={12}
-                    tickLine={false}
-                    tickFormatter={(val) => `$${val}`}
-                  />
+                <AreaChart data={growth} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorBiz" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#6366f1" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="colorTickets" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} />
+                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} allowDecimals={false} />
                   <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#ffffff',
-                      borderRadius: '12px',
-                      border: '1px solid #cbd5e1',
-                      fontSize: '12px',
-                      fontWeight: '600',
-                    }}
-                    formatter={(val: any) => [`$${val}`, 'Monthly MRR']}
+                    contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '12px', fontWeight: '600' }}
                   />
-                  <Bar dataKey="MRR" fill="#10b981" radius={[8, 8, 0, 0]} />
-                </BarChart>
+                  <Legend wrapperStyle={{ fontSize: '12px', paddingTop: '8px' }} />
+                  <Area type="monotone" dataKey="Businesses" stroke="#6366f1" strokeWidth={2} fill="url(#colorBiz)" dot={{ r: 3 }} />
+                  <Area type="monotone" dataKey="Users" stroke="#10b981" strokeWidth={2} fill="url(#colorUsers)" dot={{ r: 3 }} />
+                  <Area type="monotone" dataKey="Tickets" stroke="#f59e0b" strokeWidth={2} fill="url(#colorTickets)" dot={{ r: 3 }} />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           )}
         </Card>
+
+        {/* Right Column: Plan Distribution + Subscription Status */}
+        <div className="lg:col-span-5 space-y-5">
+          {/* Businesses by Plan Donut */}
+          <Card glass className="p-5 space-y-3 border border-slate-200/80 shadow-sm">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              <PieIcon className="w-4 h-4 text-indigo-600" />
+              <h2 className="text-sm font-bold text-slate-900">Businesses by Plan</h2>
+            </div>
+            {isLoading ? (
+              <div className="h-36 flex items-center justify-center text-xs text-slate-400">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading...
+              </div>
+            ) : (
+              <div className="h-36 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={planChartData} cx="50%" cy="50%" innerRadius={40} outerRadius={58} paddingAngle={4} dataKey="value">
+                      {planChartData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: '10px', fontSize: '12px', fontWeight: '600' }} />
+                    <Legend wrapperStyle={{ fontSize: '11px' }} formatter={(v) => <span className="text-slate-600">{v}</span>} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+
+          {/* Subscription Status Breakdown */}
+          <Card glass className="p-5 space-y-3 border border-slate-200/80 shadow-sm">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              <CreditCard className="w-4 h-4 text-emerald-600" />
+              <h2 className="text-sm font-bold text-slate-900">Subscription Status</h2>
+            </div>
+            {isLoading ? (
+              <div className="h-36 flex items-center justify-center text-xs text-slate-400">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading...
+              </div>
+            ) : (
+              <div className="h-36 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={subStatusData} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
+                    <XAxis dataKey="name" stroke="#94a3b8" fontSize={10} tickLine={false} />
+                    <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} allowDecimals={false} />
+                    <Tooltip contentStyle={{ borderRadius: '10px', fontSize: '12px', fontWeight: '600' }} />
+                    <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                      {subStatusData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+        </div>
       </div>
 
-      {/* REGISTERED BUSINESSES DATA TABLE SECTION */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-bold text-slate-900">Registered Platform Businesses</h2>
-
-        <DataTable
-          title="Registered Businesses"
-          totalCount={sortedBusinesses.length}
-          data={paginatedBusinesses}
-          columns={columns}
-          isLoading={isLoading}
-          searchPlaceholder="Search business name, owner name, or owner email..."
-          onSearchChange={(val) => {
-            setSearchTerm(val);
-            setPage(1);
-          }}
-          filterOptions={filterOptions}
-          sortColumn={sortColumn}
-          sortDirection={sortDirection}
-          onSortChange={(key) => {
-            if (sortColumn === key) {
-              setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-            } else {
-              setSortColumn(key);
-              setSortDirection('desc');
-            }
-          }}
-          page={page}
-          limit={limit}
-          total={sortedBusinesses.length}
-          totalPages={totalPages}
-          onPageChange={(newPage) => setPage(newPage)}
-          onLimitChange={(newLimit) => {
-            setLimit(newLimit);
-            setPage(1);
-          }}
-          emptyMessage="No businesses match your search or filter criteria."
-        />
+      {/* ── SECTION 6: QUICK NAVIGATION CARDS ─────────────────────────────────── */}
+      <div>
+        <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">
+          Quick Navigation
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[
+            {
+              to: '/admin/businesses',
+              icon: <Building2 className="w-5 h-5 text-indigo-600" />,
+              bg: 'bg-indigo-50 border-indigo-100',
+              label: 'Manage Businesses',
+              sub: 'View, search, suspend or activate any registered business',
+            },
+            {
+              to: '/admin/subscriptions',
+              icon: <CreditCard className="w-5 h-5 text-emerald-600" />,
+              bg: 'bg-emerald-50 border-emerald-100',
+              label: 'Subscription Management',
+              sub: 'Manage plans, subscription statuses, and revenue per business',
+            },
+            {
+              to: '/admin/users',
+              icon: <Users className="w-5 h-5 text-purple-600" />,
+              bg: 'bg-purple-50 border-purple-100',
+              label: 'All Users',
+              sub: 'View every user across all businesses and roles',
+            },
+          ].map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className="p-5 rounded-2xl border bg-white hover:shadow-md transition-all group flex items-start gap-4"
+            >
+              <div className={`w-10 h-10 rounded-xl border ${item.bg} flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform`}>
+                {item.icon}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                  {item.label}
+                </p>
+                <p className="text-xs text-slate-500 font-normal mt-0.5 leading-relaxed">
+                  {item.sub}
+                </p>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-500 transition-colors shrink-0 mt-1" />
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
