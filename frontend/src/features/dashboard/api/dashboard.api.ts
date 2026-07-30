@@ -23,6 +23,13 @@ export interface DashboardMetricsResponse {
     RESOLVED: number;
     CLOSED: number;
   };
+  ticketsByCategory?: {
+    GENERAL_INQUIRY: number;
+    TECHNICAL_ISSUE: number;
+    BILLING: number;
+    FEATURE_REQUEST: number;
+    BUG_REPORT: number;
+  };
   agentWorkload: Array<{
     id: string;
     fullName: string;
@@ -47,6 +54,11 @@ export interface DashboardMetricsResponse {
       id: string;
       fullName: string;
     };
+  }>;
+  timeline?: Array<{
+    date: string;
+    Created: number;
+    Resolved: number;
   }>;
 }
 
@@ -111,8 +123,8 @@ export interface PlatformAdminMetricsResponse {
 }
 
 export const dashboardApi = {
-  getBusinessMetrics: async (): Promise<DashboardMetricsResponse> => {
-    const response = await apiClient.get('/dashboard/business');
+  getBusinessMetrics: async (params?: { startDate?: string; endDate?: string }): Promise<DashboardMetricsResponse> => {
+    const response = await apiClient.get('/dashboard/business', { params });
     return response.data.data;
   },
 

@@ -14,7 +14,8 @@ export class DashboardController {
         return;
       }
 
-      const metrics = await dashboardService.getBusinessAdminMetrics(user.businessId);
+      const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+      const metrics = await dashboardService.getBusinessAdminMetrics(user.businessId, startDate, endDate);
 
       res.status(200).json({
         success: true,

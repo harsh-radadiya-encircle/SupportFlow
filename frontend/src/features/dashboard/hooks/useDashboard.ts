@@ -2,12 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '../api/dashboard.api';
 import { useAuthStore } from '../../../shared/store/authStore';
 
-export const useBusinessDashboard = () => {
+export const useBusinessDashboard = (params?: { startDate?: string; endDate?: string }) => {
   const { user, token } = useAuthStore();
 
   return useQuery({
-    queryKey: ['dashboard', 'business'],
-    queryFn: () => dashboardApi.getBusinessMetrics(),
+    queryKey: ['dashboard', 'business', params],
+    queryFn: () => dashboardApi.getBusinessMetrics(params),
     enabled: Boolean(user) && Boolean(token),
     retry: 1,
     refetchInterval: (q) => (q.state.status === 'error' ? false : 30000),

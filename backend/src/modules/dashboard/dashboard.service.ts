@@ -4,16 +4,23 @@ export class DashboardService {
   /**
    * Get comprehensive Analytics Metrics for Business Admin Dashboard & Reports
    */
-  async getBusinessAdminMetrics(businessId: string) {
+  async getBusinessAdminMetrics(businessId: string, startDateStr?: string, endDateStr?: string) {
+    const whereClause: any = { businessId };
+    if (startDateStr || endDateStr) {
+      whereClause.createdAt = {};
+      if (startDateStr) whereClause.createdAt.gte = new Date(startDateStr);
+      if (endDateStr) whereClause.createdAt.lte = new Date(endDateStr);
+    }
+
     // 1. Total Tickets
     const totalTickets = await prisma.ticket.count({
-      where: { businessId },
+      where: whereClause,
     });
 
     // 2. Open Tickets (OPEN, ASSIGNED, IN_PROGRESS, WAITING_FOR_CUSTOMER)
     const openTickets = await prisma.ticket.count({
       where: {
-        businessId,
+        ...whereClause,
         status: { in: ['OPEN', 'ASSIGNED', 'IN_PROGRESS', 'WAITING_FOR_CUSTOMER'] },
       },
     });
@@ -21,7 +28,7 @@ export class DashboardService {
     // 3. Ticket Resolution Count (RESOLVED, CLOSED)
     const resolvedTickets = await prisma.ticket.count({
       where: {
-        businessId,
+        ...whereClause,
         status: { in: ['RESOLVED', 'CLOSED'] },
       },
     });
@@ -29,7 +36,7 @@ export class DashboardService {
     // 4. Calculate Dynamic Avg First Response Time
     const respondedTickets = await prisma.ticket.findMany({
       where: {
-        businessId,
+        ...whereClause,
         firstResponseAt: { not: null },
       },
       select: {
@@ -51,7 +58,7 @@ export class DashboardService {
     // 5. Calculate Dynamic Avg Resolution Time
     const resolvedList = await prisma.ticket.findMany({
       where: {
-        businessId,
+        ...whereClause,
         status: { in: ['RESOLVED', 'CLOSED'] },
       },
       select: {
@@ -73,7 +80,7 @@ export class DashboardService {
     // 6. Tickets by Priority Breakdown
     const priorityGroup = await prisma.ticket.groupBy({
       by: ['priority'],
-      where: { businessId },
+      where: whereClause,
       _count: { id: true },
     });
 
@@ -92,7 +99,7 @@ export class DashboardService {
     // 7. Tickets by Status Breakdown
     const statusGroup = await prisma.ticket.groupBy({
       by: ['status'],
-      where: { businessId },
+      where: whereClause,
       _count: { id: true },
     });
 
@@ -110,7 +117,27 @@ export class DashboardService {
       }
     });
 
-    // 8. Agent Workload Breakdown
+    // 8. Tickets by Category Breakdown
+    const categoryGroup = await prisma.ticket.groupBy({
+      by: ['category'],
+      where: whereClause,
+      _count: { id: true },
+    });
+
+    const ticketsByCategory = {
+      GENERAL_INQUIRY: 0,
+      TECHNICAL_ISSUE: 0,
+      BILLING: 0,
+      FEATURE_REQUEST: 0,
+      BUG_REPORT: 0,
+    };
+    categoryGroup.forEach((item) => {
+      if (item.category in ticketsByCategory) {
+        ticketsByCategory[item.category as keyof typeof ticketsByCategory] = item._count.id;
+      }
+    });
+
+    // 9. Agent Workload Breakdown
     const agents = await prisma.user.findMany({
       where: {
         businessId,
@@ -124,6 +151,7 @@ export class DashboardService {
           select: {
             id: true,
             status: true,
+            createdAt: true,
           },
         },
       },
@@ -147,9 +175,9 @@ export class DashboardService {
       };
     });
 
-    // 9. Recent Tickets (Top 5)
+    // 10. Recent Tickets (Top 5)
     const recentTickets = await prisma.ticket.findMany({
-      where: { businessId },
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
       take: 5,
       select: {
@@ -175,6 +203,41 @@ export class DashboardService {
       },
     });
 
+    // 11. Dynamic Ticket Volume Timeline for last 7 days
+    const daysList = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d;
+    });
+
+    const allRangeTickets = await prisma.ticket.findMany({
+      where: { businessId },
+      select: { createdAt: true, status: true },
+    });
+
+    const timeline = daysList.map((d) => {
+      const dateLabel = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+      const dayEnd = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+
+      const createdCount = allRangeTickets.filter(
+        (t) => new Date(t.createdAt) >= dayStart && new Date(t.createdAt) <= dayEnd
+      ).length;
+
+      const resolvedCount = allRangeTickets.filter(
+        (t) =>
+          (t.status === 'RESOLVED' || t.status === 'CLOSED') &&
+          new Date(t.createdAt) >= dayStart &&
+          new Date(t.createdAt) <= dayEnd
+      ).length;
+
+      return {
+        date: dateLabel,
+        Created: createdCount,
+        Resolved: resolvedCount,
+      };
+    });
+
     return {
       summary: {
         totalTickets,
@@ -186,8 +249,10 @@ export class DashboardService {
       },
       ticketsByPriority,
       ticketsByStatus,
+      ticketsByCategory,
       agentWorkload,
       recentTickets,
+      timeline,
     };
   }
 
@@ -220,7 +285,6 @@ export class DashboardService {
       },
     });
 
-    // Recent Messages on tickets assigned to the agent
     const recentMessages = await prisma.message.findMany({
       where: {
         ticket: {
@@ -250,7 +314,6 @@ export class DashboardService {
       },
     });
 
-    // Recent Notifications for this Agent
     const notifications = await prisma.notification.findMany({
       where: { userId: agentId },
       orderBy: { createdAt: 'desc' },
@@ -308,8 +371,7 @@ export class DashboardService {
       }
     });
 
-    // Monthly Recurring Revenue calculation ($49 for STANDARD, $149 for BUSINESS)
-    const monthlyRevenue = businessesByPlan.STANDARD * 49 + businessesByPlan.BUSINESS * 149;
+    const monthlyRevenue = businessesByPlan.STANDARD * 2499 + businessesByPlan.BUSINESS * 6499;
 
     const businesses = await prisma.business.findMany({
       orderBy: { createdAt: 'desc' },
@@ -357,7 +419,7 @@ export class DashboardService {
       summary: {
         totalBusinesses,
         activeSubscriptions,
-        monthlyRevenue: `$${monthlyRevenue.toLocaleString()}`,
+        monthlyRevenue: `₹${monthlyRevenue.toLocaleString('en-IN')}`,
         mrrNumber: monthlyRevenue,
         suspendedBusinesses,
       },
