@@ -20,6 +20,10 @@ import {
   Sparkles,
   ShieldCheck,
   XCircle,
+  Clock,
+  Calendar,
+  Check,
+  Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -34,6 +38,8 @@ export const BillingManagementPage: React.FC = () => {
   const subscriptionData = data || {
     plan: 'FREE',
     subscriptionStatus: 'ACTIVE',
+    currentPeriodEnd: null,
+    daysRemaining: 30,
     razorpayCustomerId: null,
     usage: {
       agents: { used: 1, max: 1, percentage: 100 },
@@ -42,7 +48,7 @@ export const BillingManagementPage: React.FC = () => {
     billingHistory: [],
   };
 
-  const { plan, usage, billingHistory } = subscriptionData;
+  const { plan, subscriptionStatus, currentPeriodEnd, daysRemaining = 30, usage, billingHistory } = subscriptionData;
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -57,7 +63,7 @@ export const BillingManagementPage: React.FC = () => {
 
   const handleUpgradePlan = async (targetPlan: 'STANDARD' | 'BUSINESS') => {
     try {
-      const orderData = await orderMutation.mutateAsync(targetPlan);
+      const orderData = await orderMutation.mutateAsync({ plan: targetPlan, billingCycle });
 
       if (orderData.isTestMode) {
         return;
@@ -75,7 +81,7 @@ export const BillingManagementPage: React.FC = () => {
           amount: orderData.amount,
           currency: orderData.currency || 'INR',
           name: 'SupportFlow',
-          description: `Upgrade to ${targetPlan} Plan`,
+          description: `${targetPlan} Plan (${billingCycle})`,
           image: 'https://supportflow.com/logo.png',
           order_id: orderData.orderId,
           prefill: {
@@ -91,6 +97,7 @@ export const BillingManagementPage: React.FC = () => {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               plan: targetPlan,
+              billingCycle,
             });
           },
           modal: {
@@ -104,44 +111,83 @@ export const BillingManagementPage: React.FC = () => {
         rzp.open();
       }
     } catch (err: any) {
-      // Error handles in onError toast
+      // Handled in mutation onError toast
     }
+  };
+
+  const formatDate = (dateStr?: string | null) => {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
   };
 
   return (
     <div className="space-y-8 font-sans pb-12 max-w-6xl mx-auto">
-      {/* Workspace Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Billing & Subscriptions</h1>
-            <Badge
-              variant={plan === 'BUSINESS' ? 'purple' : plan === 'STANDARD' ? 'info' : 'secondary'}
-              className="text-xs font-bold uppercase tracking-wider"
-            >
-              {plan} PLAN
-            </Badge>
+      {/* Workspace Header Banner with Expiry Timeline */}
+      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">Billing & Subscriptions</h1>
+              <Badge
+                variant={plan === 'BUSINESS' ? 'purple' : plan === 'STANDARD' ? 'info' : 'secondary'}
+                className="text-xs font-bold uppercase tracking-wider"
+              >
+                {plan} PLAN
+              </Badge>
+              {subscriptionStatus === 'CANCELED' ? (
+                <Badge variant="warning" className="text-xs font-bold">
+                  CANCELED (Access Active)
+                </Badge>
+              ) : (
+                <Badge variant="success" className="text-xs font-bold">
+                  ACTIVE
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-slate-500 font-normal">
+              Manage your Razorpay subscription plans, agent seat allocations, and invoices
+            </p>
           </div>
-          <p className="text-sm text-slate-500 font-normal">
-            Manage your Razorpay subscription plans, agent seat allocations, and invoices
-          </p>
+
+          {plan !== 'FREE' && (
+            <Button
+              variant="outline"
+              onClick={() => cancelMutation.mutate()}
+              disabled={cancelMutation.isPending}
+              className="font-semibold border-rose-200 text-rose-600 hover:bg-rose-50 shrink-0 shadow-2xs"
+            >
+              {cancelMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="w-4 h-4 mr-2 text-rose-500" />
+              )}
+              {subscriptionStatus === 'CANCELED' ? 'Downgrade to Free' : 'Cancel Subscription'}
+            </Button>
+          )}
         </div>
 
-        {plan !== 'FREE' && (
-          <Button
-            variant="outline"
-            onClick={() => cancelMutation.mutate()}
-            disabled={cancelMutation.isPending}
-            className="font-semibold border-rose-200 text-rose-600 hover:bg-rose-50 shrink-0 shadow-2xs"
-          >
-            {cancelMutation.isPending ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <XCircle className="w-4 h-4 mr-2 text-rose-500" />
-            )}
-            Cancel Subscription
-          </Button>
-        )}
+        {/* Expiry Date & Days Remaining Timeline Alert Bar */}
+        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          <div className="flex items-center gap-2 text-slate-700 font-semibold">
+            <Calendar className="w-4 h-4 text-indigo-600 shrink-0" />
+            <span>
+              {subscriptionStatus === 'CANCELED'
+                ? `Current Plan Expires On: ${formatDate(currentPeriodEnd)}`
+                : `Current Period Renews On: ${formatDate(currentPeriodEnd)}`}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              {daysRemaining} day(s) remaining in cycle
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Quota Usage Cards */}
@@ -226,15 +272,15 @@ export const BillingManagementPage: React.FC = () => {
               <Sparkles className="w-4 h-4 text-amber-500" />
             </div>
             <p className="text-xs text-slate-500 font-normal mt-0.5">
-              Instant activation via Razorpay Checkout Modal
+              Upgrade or change plans instantly via Razorpay Checkout Modal
             </p>
           </div>
 
-          {/* Billing Cycle Selector */}
+          {/* Monthly / Yearly Billing Cycle Selector */}
           <div className="bg-slate-100 p-1 rounded-xl flex items-center shrink-0 self-start sm:self-auto border border-slate-200">
             <button
               onClick={() => setBillingCycle('monthly')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all ${
                 billingCycle === 'monthly'
                   ? 'bg-white text-slate-900 shadow-sm'
                   : 'text-slate-500 hover:text-slate-900'
@@ -244,250 +290,256 @@ export const BillingManagementPage: React.FC = () => {
             </button>
             <button
               onClick={() => setBillingCycle('yearly')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-1 ${
+              className={`px-3.5 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
                 billingCycle === 'yearly'
-                  ? 'bg-white text-slate-900 shadow-sm'
+                  ? 'bg-indigo-600 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-900'
               }`}
             >
-              Yearly <span className="text-[10px] font-bold text-emerald-600 uppercase">Save 20%</span>
+              <Zap className="w-3.5 h-3.5 fill-current" /> Yearly (2 Months Free!)
             </button>
           </div>
         </div>
 
-        {/* 3-Tier Pricing Plan Grid */}
+        {/* 3 Tier Pricing Cards Matrix */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* FREE STARTER PLAN */}
+          {/* TIER 1: FREE PLAN */}
           <Card
             glass
-            className={`p-6 space-y-6 relative flex flex-col justify-between border transition-all duration-200 ${
-              plan === 'FREE' ? 'border-slate-900 shadow-md ring-2 ring-slate-900/10' : 'border-slate-200/80 hover:border-slate-300'
+            className={`p-6 space-y-6 flex flex-col justify-between border ${
+              plan === 'FREE' ? 'border-slate-900 ring-2 ring-slate-900 shadow-md bg-white' : 'border-slate-200/80 bg-white/80'
             }`}
           >
-            {plan === 'FREE' && (
-              <Badge variant="purple" className="absolute top-4 right-4 text-[10px] font-bold">
-                CURRENT PLAN
-              </Badge>
-            )}
-
             <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Free Starter</h3>
-                <p className="text-xs text-slate-500 font-normal">Ideal for small teams starting out</p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Free Tier</h3>
+                  <p className="text-xs text-slate-500">For small teams getting started</p>
+                </div>
+                {plan === 'FREE' && <Badge variant="secondary">CURRENT PLAN</Badge>}
               </div>
 
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-slate-900">₹0</span>
-                <span className="text-xs text-slate-500 font-semibold">/ month</span>
+              <div className="space-y-1">
+                <span className="text-3xl font-extrabold text-slate-900">₹0</span>
+                <span className="text-xs text-slate-500 font-medium"> / forever</span>
               </div>
 
-              <ul className="space-y-3 text-xs text-slate-600 font-normal pt-2 divide-y divide-slate-100">
-                <li className="flex items-center gap-2.5 pt-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span><strong>1 Support Agent</strong> seat</span>
+              <ul className="space-y-2.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span><strong>1 Support Agent Seat</strong></span>
                 </li>
-                <li className="flex items-center gap-2.5 pt-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Up to <strong>25 Tickets</strong> / month</span>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Max 25 Tickets / Month</span>
                 </li>
-                <li className="flex items-center gap-2.5 pt-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Real-Time Live Chat</span>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Basic Email Support</span>
                 </li>
-                <li className="flex items-center gap-2.5 pt-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Push Notifications</span>
-                </li>
-              </ul>
-            </div>
-
-            <Button disabled variant="outline" className="w-full font-semibold text-xs bg-slate-50 border-slate-200 text-slate-500">
-              {plan === 'FREE' ? 'Active Plan' : 'Free Included'}
-            </Button>
-          </Card>
-
-          {/* STANDARD PLAN */}
-          <Card
-            glass
-            className={`p-6 space-y-6 relative flex flex-col justify-between border transition-all duration-200 ${
-              plan === 'STANDARD'
-                ? 'border-indigo-600 shadow-xl ring-2 ring-indigo-600/20'
-                : 'border-slate-200/80 hover:border-slate-300'
-            }`}
-          >
-            {plan === 'STANDARD' ? (
-              <Badge variant="purple" className="absolute top-4 right-4 text-[10px] font-bold">
-                CURRENT PLAN
-              </Badge>
-            ) : (
-              <Badge variant="info" className="absolute top-4 right-4 text-[10px] font-bold uppercase">
-                POPULAR
-              </Badge>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Standard Plan</h3>
-                <p className="text-xs text-slate-500 font-normal">For growing support operations</p>
-              </div>
-
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-slate-900">
-                  ₹{billingCycle === 'monthly' ? '2,499' : '1,999'}
-                </span>
-                <span className="text-xs text-slate-500 font-semibold">/ month</span>
-              </div>
-
-              <ul className="space-y-3 text-xs text-slate-600 font-normal pt-2 divide-y divide-slate-100">
-                <li className="flex items-center gap-2.5 pt-2 font-semibold text-slate-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Up to <strong>5 Support Agent</strong> seats</span>
-                </li>
-                <li className="flex items-center gap-2.5 pt-2 font-semibold text-slate-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span><strong>Unlimited</strong> Monthly Tickets</span>
-                </li>
-                <li className="flex items-center gap-2.5 pt-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Real-Time Socket Chat & Typing</span>
-                </li>
-                <li className="flex items-center gap-2.5 pt-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Private Agent Internal Notes</span>
+                <li className="flex items-center gap-2 text-slate-400">
+                  <Check className="w-4 h-4 text-slate-300 shrink-0" />
+                  <span>Real-Time Socket Chat</span>
                 </li>
               </ul>
             </div>
 
             <Button
-              disabled={plan === 'STANDARD' || orderMutation.isPending || verifyMutation.isPending}
-              onClick={() => handleUpgradePlan('STANDARD')}
-              variant="primary"
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-md py-2.5"
+              variant="outline"
+              disabled={plan === 'FREE'}
+              className="w-full font-bold mt-4 border-slate-200"
             >
-              {orderMutation.isPending && orderMutation.variables === 'STANDARD' ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+              {plan === 'FREE' ? 'Active Plan' : 'Revert to Free'}
+            </Button>
+          </Card>
+
+          {/* TIER 2: STANDARD PLAN */}
+          <Card
+            glass
+            className={`p-6 space-y-6 flex flex-col justify-between border relative ${
+              plan === 'STANDARD'
+                ? 'border-indigo-600 ring-2 ring-indigo-600 shadow-lg bg-white'
+                : 'border-indigo-200 bg-white'
+            }`}
+          >
+            <div className="space-y-4">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Standard Plan</h3>
+                  <p className="text-xs text-slate-500">For growing customer support teams</p>
+                </div>
+                {plan === 'STANDARD' && <Badge variant="info">CURRENT PLAN</Badge>}
+              </div>
+
+              <div className="space-y-1">
+                <span className="text-3xl font-extrabold text-indigo-600">
+                  {billingCycle === 'yearly' ? '₹24,990' : '₹2,499'}
+                </span>
+                <span className="text-xs text-slate-500 font-medium">
+                  {billingCycle === 'yearly' ? ' / year (Save ₹4,998)' : ' / month'}
+                </span>
+              </div>
+
+              <ul className="space-y-2.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span><strong>Up to 5 Support Agent Seats</strong></span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span><strong>Unlimited Monthly Tickets</strong></span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Socket.IO Real-Time Chat</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Reports & Analytics Dashboard</span>
+                </li>
+              </ul>
+            </div>
+
+            <Button
+              variant={plan === 'STANDARD' ? 'outline' : 'primary'}
+              onClick={() => handleUpgradePlan('STANDARD')}
+              disabled={orderMutation.isPending || verifyMutation.isPending || plan === 'STANDARD'}
+              className="w-full font-bold mt-4 bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
+            >
+              {orderMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : plan === 'STANDARD' ? (
-                'Active Plan'
+                'Current Plan'
               ) : (
-                'Upgrade via Razorpay (₹2,499/mo)'
+                `Select Standard (${billingCycle})`
               )}
             </Button>
           </Card>
 
-          {/* BUSINESS PLAN */}
+          {/* TIER 3: BUSINESS PLAN */}
           <Card
             glass
-            className={`p-6 space-y-6 relative flex flex-col justify-between border transition-all duration-200 ${
+            className={`p-6 space-y-6 flex flex-col justify-between border relative ${
               plan === 'BUSINESS'
-                ? 'border-purple-600 shadow-xl ring-2 ring-purple-600/20'
-                : 'border-slate-200/80 hover:border-slate-300'
+                ? 'border-purple-600 ring-2 ring-purple-600 shadow-xl bg-white'
+                : 'border-purple-200 bg-white'
             }`}
           >
-            {plan === 'BUSINESS' && (
-              <Badge variant="purple" className="absolute top-4 right-4 text-[10px] font-bold">
-                CURRENT PLAN
-              </Badge>
-            )}
-
             <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Business Plan</h3>
-                <p className="text-xs text-slate-500 font-normal">For established enterprises</p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Business Plan</h3>
+                  <p className="text-xs text-slate-500">For enterprise scale operations</p>
+                </div>
+                {plan === 'BUSINESS' ? (
+                  <Badge variant="purple">CURRENT PLAN</Badge>
+                ) : (
+                  <Badge variant="purple" className="text-[10px] uppercase font-bold">
+                    MOST POPULAR
+                  </Badge>
+                )}
               </div>
 
-              <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-bold text-slate-900">
-                  ₹{billingCycle === 'monthly' ? '6,499' : '5,199'}
+              <div className="space-y-1">
+                <span className="text-3xl font-extrabold text-purple-700">
+                  {billingCycle === 'yearly' ? '₹64,990' : '₹6,499'}
                 </span>
-                <span className="text-xs text-slate-500 font-semibold">/ month</span>
+                <span className="text-xs text-slate-500 font-medium">
+                  {billingCycle === 'yearly' ? ' / year (Save ₹12,998)' : ' / month'}
+                </span>
               </div>
 
-              <ul className="space-y-3 text-xs text-slate-600 font-normal pt-2 divide-y divide-slate-100">
-                <li className="flex items-center gap-2.5 pt-2 font-semibold text-slate-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Up to <strong>20 Support Agent</strong> seats</span>
+              <ul className="space-y-2.5 text-xs text-slate-600 pt-2 border-t border-slate-100">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span><strong>Up to 20 Support Agent Seats</strong></span>
                 </li>
-                <li className="flex items-center gap-2.5 pt-2 font-semibold text-slate-900">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span><strong>Unlimited</strong> Monthly Tickets</span>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span><strong>Unlimited Tickets & Storage</strong></span>
                 </li>
-                <li className="flex items-center gap-2.5 pt-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Advanced Performance Reports</span>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Priority SLA Support</span>
                 </li>
-                <li className="flex items-center gap-2.5 pt-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Priority 24/7 Dedicated Support</span>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span>Full Analytics & Date Filtering</span>
                 </li>
               </ul>
             </div>
 
             <Button
-              disabled={plan === 'BUSINESS' || orderMutation.isPending || verifyMutation.isPending}
+              variant={plan === 'BUSINESS' ? 'outline' : 'primary'}
               onClick={() => handleUpgradePlan('BUSINESS')}
-              variant="primary"
-              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-md py-2.5"
+              disabled={orderMutation.isPending || verifyMutation.isPending || plan === 'BUSINESS'}
+              className="w-full font-bold mt-4 bg-purple-700 hover:bg-purple-800 text-white border-purple-700"
             >
-              {orderMutation.isPending && orderMutation.variables === 'BUSINESS' ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
+              {orderMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
               ) : plan === 'BUSINESS' ? (
-                'Active Plan'
+                'Current Plan'
               ) : (
-                'Upgrade via Razorpay (₹6,499/mo)'
+                `Select Business (${billingCycle})`
               )}
             </Button>
           </Card>
         </div>
       </div>
 
-      {/* Razorpay Billing Invoice History */}
-      <Card glass className="p-6 space-y-4 border border-slate-200/80">
+      {/* Invoice & Billing Receipts History Table */}
+      <div className="space-y-4 pt-4 border-t border-slate-200">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <CreditCard className="w-5 h-5 text-slate-700" />
-            <h3 className="text-base font-bold text-slate-900">Razorpay Payment Receipts</h3>
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight flex items-center gap-2">
+              <FileText className="w-5 h-5 text-indigo-600" /> Razorpay Payment & Invoice Receipts
+            </h2>
+            <p className="text-xs text-slate-500 font-normal">
+              Official payment logs and billing audit history
+            </p>
           </div>
         </div>
 
-        {billingHistory.length === 0 ? (
-          <div className="p-8 text-center text-xs text-slate-400 font-normal">
-            No payment receipts recorded yet.
-          </div>
-        ) : (
-          <div className="divide-y divide-slate-100 overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="text-slate-400 uppercase font-semibold border-b border-slate-100 text-[10px]">
-                  <th className="pb-3">Razorpay Payment ID</th>
-                  <th className="pb-3">Order ID</th>
-                  <th className="pb-3">Amount</th>
-                  <th className="pb-3">Status</th>
-                  <th className="pb-3">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {billingHistory.map((invoice: any) => (
-                  <tr key={invoice.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 font-mono font-semibold text-indigo-600">{invoice.razorpayPaymentId}</td>
-                    <td className="py-3 font-mono text-slate-500">{invoice.razorpayOrderId || 'N/A'}</td>
-                    <td className="py-3 font-bold text-slate-900">
-                      ₹{(invoice.amountPaid / 100).toLocaleString('en-IN')} {invoice.currency.toUpperCase()}
-                    </td>
-                    <td className="py-3">
-                      <Badge variant="success" className="text-[10px]">
-                        {invoice.status}
-                      </Badge>
-                    </td>
-                    <td className="py-3 text-slate-500 font-normal">
-                      {new Date(invoice.createdAt).toLocaleDateString()}
-                    </td>
+        <Card glass className="overflow-hidden border border-slate-200/80 p-0">
+          {billingHistory.length === 0 ? (
+            <div className="p-12 text-center text-xs text-slate-400 space-y-2">
+              <CreditCard className="w-8 h-8 text-slate-300 mx-auto" />
+              <p>No billing invoices recorded yet. Active plan is on standard billing cycle.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3 px-4">Payment ID</th>
+                    <th className="py-3 px-4">Order ID</th>
+                    <th className="py-3 px-4">Amount</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Card>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-medium text-slate-700">
+                  {billingHistory.map((item: any) => (
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="py-3 px-4 font-bold text-slate-900">{item.razorpayPaymentId}</td>
+                      <td className="py-3 px-4 text-slate-500">{item.razorpayOrderId || 'N/A'}</td>
+                      <td className="py-3 px-4 font-bold text-slate-900">
+                        ₹{(item.amountPaid / 100).toLocaleString('en-IN')} {item.currency}
+                      </td>
+                      <td className="py-3 px-4">
+                        <Badge variant="success" className="text-[10px] uppercase">
+                          {item.status}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-4 text-slate-500">{formatDate(item.createdAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+      </div>
     </div>
   );
 };

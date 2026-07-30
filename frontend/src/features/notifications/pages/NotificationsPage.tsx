@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '../hooks/useNotifications';
+import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '../hooks/useNotifications.tsx';
 import { DateRangePicker, DateRange } from '../../../shared/components/ui/DateRangePicker';
 import { formatDateTime } from '../../../shared/lib/dateUtils';
 import { Button } from '../../../shared/components/ui/Button';
@@ -143,7 +143,7 @@ export const NotificationsPage: React.FC = () => {
       </div>
 
       {/* Notification Cards Container matching input_file_1.png */}
-      <Card variant="default" className="min-h-[360px] p-6 flex flex-col justify-between">
+      <Card className="min-h-[360px] p-6 flex flex-col justify-between">
         {filteredNotifications.length === 0 ? (
           <div className="my-auto flex flex-col items-center justify-center text-center p-8">
             <div className="w-16 h-16 rounded-3xl bg-slate-50 text-slate-400 flex items-center justify-center mb-3 shadow-xs border border-slate-200/80">

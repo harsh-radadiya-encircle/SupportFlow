@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   useTicketDetail,
   useUpdateTicketStatus,
@@ -22,6 +24,13 @@ import {
   Shield,
   AlertTriangle,
   Headset,
+  Paperclip,
+  Image as ImageIcon,
+  FileText,
+  X,
+  Eye,
+  MessageSquare,
+  Download,
 } from 'lucide-react';
 
 export const TicketDetailPage: React.FC = () => {
@@ -43,7 +52,25 @@ export const TicketDetailPage: React.FC = () => {
 
   const [chatInput, setChatInput] = useState('');
   const [noteInput, setNoteInput] = useState('');
+  const [isNoteMode, setIsNoteMode] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
+  const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
   const [activeRightTab, setActiveRightTab] = useState<'notes' | 'timeline'>('notes');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Lock body scroll when modal is active
+  useEffect(() => {
+    if (previewModalUrl) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [previewModalUrl]);
 
   const ticket = data?.data;
   const agentsList = teamQuery.data?.data?.agents || [];
@@ -57,11 +84,63 @@ export const TicketDetailPage: React.FC = () => {
     }
   });
 
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('File size must be under 10MB');
+      return;
+    }
+
+    setSelectedFile(file);
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setFileDataUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setFileDataUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSendChat = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
-    sendMessage(chatInput.trim());
-    setChatInput('');
+    if (!chatInput.trim() && !fileDataUrl) return;
+
+    if (isAgentOrAdmin && isNoteMode) {
+      // Send as Private Internal Note
+      const noteContent = fileDataUrl
+        ? `${chatInput.trim()}\n\n[Attached File: ${selectedFile?.name}]`
+        : chatInput.trim();
+
+      addNoteMutation.mutate(
+        { id: ticketId, content: noteContent },
+        {
+          onSuccess: () => {
+            setChatInput('');
+            handleRemoveFile();
+            toast.success('Private internal note saved');
+          },
+        }
+      );
+    } else {
+      // Send as Public Chat Message
+      let contentToSend = chatInput.trim();
+      if (fileDataUrl) {
+        contentToSend = `${contentToSend} ${fileDataUrl}`.trim();
+      }
+
+      sendMessage(contentToSend);
+      setChatInput('');
+      handleRemoveFile();
+    }
   };
 
   const handleAddNote = (e: React.FormEvent) => {
@@ -135,7 +214,7 @@ export const TicketDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="space-y-6 font-sans pb-12">
       {/* Top Header Banner Card */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -176,7 +255,7 @@ export const TicketDetailPage: React.FC = () => {
       {/* Main Workspace Grid: Chat (8 cols) & Side Controls (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* LEFT / MAIN COLUMN: Light-Themed Real-Time Support Chat */}
-        <div className="lg:col-span-8 flex flex-col bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden h-[580px]">
+        <div className="lg:col-span-8 flex flex-col bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden h-[620px]">
           {/* Light Slate Chat Header */}
           <div className="p-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
@@ -205,6 +284,17 @@ export const TicketDetailPage: React.FC = () => {
                 const isMe = msg.senderId === user?.id;
                 const isAgent = msg.sender?.role === 'SUPPORT_AGENT' || msg.sender?.role === 'BUSINESS_ADMIN';
 
+                // Check if message content contains an embedded image dataUrl
+                const hasImageAttachment = typeof msg.content === 'string' && msg.content.includes('data:image');
+                let textContent = msg.content;
+                let imageUrl = '';
+
+                if (hasImageAttachment) {
+                  const parts = msg.content.split('data:image');
+                  textContent = parts[0];
+                  imageUrl = `data:image${parts[1]}`;
+                }
+
                 return (
                   <div key={msg.id || idx} className={`flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                     {/* User Avatar Circle */}
@@ -232,13 +322,28 @@ export const TicketDetailPage: React.FC = () => {
                       </div>
 
                       <div
-                        className={`p-4 rounded-2xl text-sm font-medium leading-relaxed shadow-2xs ${
+                        className={`p-4 rounded-2xl text-sm font-medium leading-relaxed shadow-2xs space-y-2 ${
                           isMe
                             ? 'bg-indigo-50 border border-indigo-100 text-indigo-950 rounded-tr-none'
                             : 'bg-white text-slate-900 border border-slate-200/80 rounded-tl-none'
                         }`}
                       >
-                        {msg.content}
+                        {textContent && <p>{textContent}</p>}
+
+                        {/* Embedded Image Attachment Card */}
+                        {imageUrl && (
+                          <div className="pt-1">
+                            <div
+                              onClick={() => setPreviewModalUrl(imageUrl)}
+                              className="relative group cursor-pointer rounded-xl overflow-hidden border border-slate-200/80 max-w-xs shadow-sm"
+                            >
+                              <img src={imageUrl} alt="Chat attachment" className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300" />
+                              <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
+                                <Eye className="w-4 h-4" /> Click to Expand
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -254,27 +359,100 @@ export const TicketDetailPage: React.FC = () => {
             )}
           </div>
 
+          {/* Attachment Preview Chip */}
+          {selectedFile && (
+            <div className="px-4 py-2 bg-indigo-50/80 border-t border-indigo-100 flex items-center justify-between text-xs font-semibold text-indigo-900 shrink-0">
+              <div className="flex items-center gap-2 truncate">
+                {selectedFile.type.startsWith('image/') ? (
+                  <ImageIcon className="w-4 h-4 text-indigo-600 shrink-0" />
+                ) : (
+                  <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                )}
+                <span className="truncate">{selectedFile.name}</span>
+                <span className="text-[10px] text-indigo-500 font-normal">({(selectedFile.size / 1024).toFixed(1)} KB)</span>
+              </div>
+              <button onClick={handleRemoveFile} className="p-1 hover:bg-indigo-100 rounded-lg text-indigo-600">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
           {/* Chat Composer Input */}
-          <form onSubmit={handleSendChat} className="p-4 bg-white border-t border-slate-200 flex items-center gap-3 shrink-0">
-            <input
-              type="text"
-              placeholder="Type your message..."
-              value={chatInput}
-              onChange={(e) => {
-                setChatInput(e.target.value);
-                emitTyping(true);
-              }}
-              onBlur={() => emitTyping(false)}
-              className="flex-1 px-4 py-3 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 bg-white font-medium shadow-2xs"
-            />
-            <Button
-              type="submit"
-              variant="outline"
-              size="md"
-              className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200 font-bold py-3 px-5 rounded-xl shadow-2xs shrink-0 transition-all"
-            >
-              <Send className="w-4 h-4 mr-1.5" /> Send
-            </Button>
+          <form onSubmit={handleSendChat} className="p-4 bg-white border-t border-slate-200 flex flex-col gap-2 shrink-0">
+            {/* Mode Switcher for Agents & Admins */}
+            {isAgentOrAdmin && (
+              <div className="flex items-center gap-2 pb-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setIsNoteMode(false)}
+                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all ${
+                    !isNoteMode ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <MessageSquare className="w-3 h-3" /> Public Reply
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsNoteMode(true)}
+                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all ${
+                    isNoteMode ? 'bg-amber-500 text-white shadow-2xs' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <Lock className="w-3 h-3" /> Private Note
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2">
+              {/* Hidden File Input */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileSelect}
+                accept="image/*,application/pdf"
+                className="hidden"
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                size="md"
+                onClick={() => fileInputRef.current?.click()}
+                className="bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200 font-semibold p-3 rounded-xl shrink-0"
+                title="Attach file or image"
+              >
+                <Paperclip className="w-4 h-4" />
+              </Button>
+
+              <input
+                type="text"
+                placeholder={isNoteMode ? 'Write private internal note for team...' : 'Type public reply to customer...'}
+                value={chatInput}
+                onChange={(e) => {
+                  setChatInput(e.target.value);
+                  emitTyping(true);
+                }}
+                onBlur={() => emitTyping(false)}
+                className={`flex-1 px-4 py-3 text-sm border rounded-xl focus:outline-none focus:ring-1 font-medium shadow-2xs ${
+                  isNoteMode
+                    ? 'border-amber-200 focus:border-amber-500 focus:ring-amber-500 bg-amber-50/40'
+                    : 'border-slate-200 focus:border-indigo-600 focus:ring-indigo-600 bg-white'
+                }`}
+              />
+
+              <Button
+                type="submit"
+                variant="outline"
+                size="md"
+                className={`font-bold py-3 px-5 rounded-xl shadow-2xs shrink-0 transition-all ${
+                  isNoteMode
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
+                    : 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600'
+                }`}
+              >
+                <Send className="w-4 h-4 mr-1.5" /> {isNoteMode ? 'Save Note' : 'Send'}
+              </Button>
+            </div>
           </form>
         </div>
 
@@ -442,6 +620,65 @@ export const TicketDetailPage: React.FC = () => {
           </Card>
         </div>
       </div>
+
+      {/* Premium Glassmorphism Image Lightbox Modal via React Portal */}
+      {previewModalUrl &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
+            onClick={() => setPreviewModalUrl(null)}
+          >
+            {/* Main Glass Card Container */}
+            <div
+              className="relative max-w-5xl w-full bg-slate-900/95 rounded-3xl border border-white/15 p-4 sm:p-6 shadow-2xl space-y-4 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Top Modal Header */}
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shadow-inner">
+                    <ImageIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white tracking-wide">Attachment Preview</h3>
+                    <p className="text-[11px] text-slate-400 font-medium">Click download or press escape to close</p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2">
+                  <a
+                    href={previewModalUrl}
+                    download="supportflow_attachment.png"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold flex items-center gap-1.5 border border-white/10 transition-all shadow-sm"
+                  >
+                    <Download className="w-4 h-4 text-indigo-400" /> Download
+                  </a>
+
+                  <button
+                    onClick={() => setPreviewModalUrl(null)}
+                    className="w-9 h-9 rounded-xl bg-white/10 hover:bg-rose-500/80 text-white flex items-center justify-center border border-white/10 transition-all duration-200 hover:rotate-90"
+                    title="Close Modal"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Image Box Container */}
+              <div className="flex items-center justify-center p-2 rounded-2xl bg-black/40 border border-white/5 max-h-[75vh] overflow-hidden">
+                <img
+                  src={previewModalUrl}
+                  alt="Attachment High-Res Preview"
+                  className="max-w-full max-h-[72vh] object-contain rounded-xl shadow-2xl transition-transform duration-300 hover:scale-[1.01]"
+                />
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

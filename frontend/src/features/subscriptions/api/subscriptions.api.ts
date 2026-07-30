@@ -6,6 +6,7 @@ export interface SubscriptionDetailsResponse {
   plan: 'FREE' | 'STANDARD' | 'BUSINESS';
   subscriptionStatus: string;
   currentPeriodEnd: string | null;
+  daysRemaining?: number;
   razorpayCustomerId: string | null;
   usage: {
     agents: {
@@ -39,6 +40,7 @@ export interface RazorpayOrderResponse {
   currency?: string;
   keyId?: string;
   plan?: 'STANDARD' | 'BUSINESS';
+  billingCycle?: 'monthly' | 'yearly';
   businessName?: string;
   userEmail?: string;
 }
@@ -48,8 +50,14 @@ export const getSubscriptionDetails = async (): Promise<SubscriptionDetailsRespo
   return response.data.data;
 };
 
-export const createRazorpayOrder = async (plan: 'STANDARD' | 'BUSINESS'): Promise<RazorpayOrderResponse> => {
-  const response = await apiClient.post<{ success: boolean; data: RazorpayOrderResponse }>('/subscriptions/razorpay-order', { plan });
+export const createRazorpayOrder = async (
+  plan: 'STANDARD' | 'BUSINESS',
+  billingCycle: 'monthly' | 'yearly' = 'monthly'
+): Promise<RazorpayOrderResponse> => {
+  const response = await apiClient.post<{ success: boolean; data: RazorpayOrderResponse }>(
+    '/subscriptions/razorpay-order',
+    { plan, billingCycle }
+  );
   return response.data.data;
 };
 
@@ -58,6 +66,7 @@ export const verifyRazorpayPayment = async (payload: {
   razorpay_payment_id: string;
   razorpay_signature: string;
   plan: 'STANDARD' | 'BUSINESS';
+  billingCycle?: 'monthly' | 'yearly';
 }): Promise<{ success: boolean; message: string; plan: string }> => {
   const response = await apiClient.post<{ success: boolean; data: { success: boolean; message: string; plan: string } }>('/subscriptions/verify-payment', payload);
   return response.data.data;

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { formatFullDate, formatTimeAgo } from '../../../shared/lib/dateUtils';
-import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '../hooks/useNotifications';
+import { useNotifications, useMarkAsRead, useMarkAllAsRead } from '../hooks/useNotifications.tsx';
 import {
   Bell,
   CheckCheck,

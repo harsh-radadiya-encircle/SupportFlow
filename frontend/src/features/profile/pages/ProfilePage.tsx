@@ -121,7 +121,7 @@ export const ProfilePage: React.FC = () => {
       if (code === 'auth/credential-already-in-use') {
         toast.error('This Google account is already linked to a different SupportFlow user.');
       } else if (code === 'auth/provider-already-linked') {
-        toast.info('Google account is already linked to your profile.');
+        toast('Google account is already linked to your profile.', { icon: 'ℹ️' });
       } else if (code === 'auth/popup-closed-by-user') {
         toast.error('Google sign-in popup was closed before completing linking.');
       } else {
@@ -177,7 +177,7 @@ export const ProfilePage: React.FC = () => {
       </div>
 
       {/* User Info Overview Card */}
-      <Card variant="default" className="p-6">
+      <Card className="p-6">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
           <div className="w-20 h-20 rounded-full bg-indigo-600 text-white font-extrabold text-2xl flex items-center justify-center shadow-lg ring-4 ring-indigo-50 shrink-0">
             {getInitials(user?.fullName)}
@@ -205,7 +205,7 @@ export const ProfilePage: React.FC = () => {
       </Card>
 
       {/* Connected Accounts & Authentication Section */}
-      <Card variant="default" className="p-6 space-y-6">
+      <Card className="p-6 space-y-6">
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Link2 className="w-5 h-5 text-indigo-600" /> Connected Accounts & Sign-In Methods

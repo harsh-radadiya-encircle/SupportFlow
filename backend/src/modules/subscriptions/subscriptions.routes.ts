@@ -12,10 +12,16 @@ router.post(
   SubscriptionsController.handleWebhook as any
 );
 
-// Protected Business Admin Subscription Routes
+// Protected Route for any Authenticated User (Business Admins & Support Agents)
+router.get(
+  '/current',
+  authenticate as any,
+  SubscriptionsController.getCurrentSubscription as any
+);
+
+// Protected Business Admin Subscription Management Routes
 router.use(authenticate as any, authorize(['BUSINESS_ADMIN']) as any);
 
-router.get('/current', SubscriptionsController.getCurrentSubscription as any);
 router.post('/razorpay-order', SubscriptionsController.createRazorpayOrder as any);
 router.post('/verify-payment', SubscriptionsController.verifyPayment as any);
 router.post('/cancel', SubscriptionsController.cancelSubscription as any);

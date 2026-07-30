@@ -8,10 +8,10 @@ import { AuthenticatedUser } from '../../common/types';
 
 export class SubscriptionsService {
   /**
-   * Get subscription details, seat usage, monthly ticket quota, and invoice history
+   * Get subscription details, seat usage, monthly ticket quota, current period end & days remaining
    */
   static async getSubscriptionDetails(businessId: string) {
-    const business = await prisma.business.findUnique({
+    let business = await prisma.business.findUnique({
       where: { id: businessId },
       include: {
         billingHistory: {
@@ -26,6 +26,24 @@ export class SubscriptionsService {
     }
 
     const now = new Date();
+
+    // Auto-Expiry Check: If period has ended and plan is not FREE, auto-revert to FREE plan
+    if (business.currentPeriodEnd && business.currentPeriodEnd < now && business.plan !== SubscriptionPlan.FREE) {
+      business = await prisma.business.update({
+        where: { id: businessId },
+        data: {
+          plan: SubscriptionPlan.FREE,
+          subscriptionStatus: SubscriptionStatus.CANCELED,
+        },
+        include: {
+          billingHistory: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          },
+        },
+      });
+    }
+
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
     const [agentCount, monthlyTicketCount] = await Promise.all([
@@ -52,12 +70,17 @@ export class SubscriptionsService {
 
     const maxAgents = agentLimits[business.plan] || 1;
 
+    // Calculate currentPeriodEnd & daysRemaining
+    const currentPeriodEnd = business.currentPeriodEnd || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const daysRemaining = Math.max(0, Math.ceil((currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+
     return {
       businessId: business.id,
       name: business.name,
       plan: business.plan,
       subscriptionStatus: business.subscriptionStatus,
-      currentPeriodEnd: business.currentPeriodEnd,
+      currentPeriodEnd: currentPeriodEnd.toISOString(),
+      daysRemaining,
       razorpayCustomerId: business.razorpayCustomerId,
       usage: {
         agents: {
@@ -77,11 +100,15 @@ export class SubscriptionsService {
   }
 
   /**
-   * Create Razorpay Order for Plan Upgrades
+   * Create Razorpay Order for Plan Upgrades & Downgrades (Monthly & Yearly)
    */
-  static async createRazorpayOrder(plan: 'STANDARD' | 'BUSINESS', user: AuthenticatedUser) {
+  static async createRazorpayOrder(
+    plan: 'STANDARD' | 'BUSINESS',
+    billingCycle: 'monthly' | 'yearly' = 'monthly',
+    user: AuthenticatedUser
+  ) {
     if (!user.businessId) {
-      throw ApiError.badRequest('You must be associated with a business to upgrade plans.');
+      throw ApiError.badRequest('You must be associated with a business to manage plans.');
     }
 
     const business = await prisma.business.findUnique({
@@ -97,24 +124,36 @@ export class SubscriptionsService {
       env.RAZORPAY.KEY_ID.startsWith('rzp_') &&
       env.RAZORPAY.KEY_ID !== 'rzp_test_mock';
 
-    // Development / Test Fallback Mode if real Razorpay keys are not set in backend/.env
+    const durationDays = billingCycle === 'yearly' ? 365 : 30;
+    const currentPeriodEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+
+    // Development / Test Fallback Mode
     if (!isRealRazorpayKey) {
       await prisma.business.update({
         where: { id: business.id },
         data: {
           plan: plan as SubscriptionPlan,
           subscriptionStatus: SubscriptionStatus.ACTIVE,
+          currentPeriodEnd,
         },
       });
 
       return {
         isTestMode: true,
-        message: `Plan upgraded to ${plan} in Development Mode. (Configure RAZORPAY_KEY_ID in backend/.env for live Razorpay Checkout)`,
+        message: `Plan updated to ${plan} (${billingCycle}) in Test Mode. (Access valid until ${currentPeriodEnd.toLocaleDateString()})`,
+        plan,
+        currentPeriodEnd: currentPeriodEnd.toISOString(),
       };
     }
 
-    // Determine Amount in INR Paise (₹2,499 = 249900 paise for Standard, ₹6,499 = 649900 paise for Business)
-    const amountInPaise = plan === 'STANDARD' ? 249900 : 649900;
+    // Determine Amount in INR Paise
+    // Standard: ₹2,499/mo (₹24,990/yr) | Business: ₹6,499/mo (₹64,990/yr)
+    let amountInPaise = 249900;
+    if (plan === 'STANDARD') {
+      amountInPaise = billingCycle === 'yearly' ? 2499000 : 249900;
+    } else if (plan === 'BUSINESS') {
+      amountInPaise = billingCycle === 'yearly' ? 6499000 : 649900;
+    }
 
     try {
       const order = await razorpay.orders.create({
@@ -124,6 +163,7 @@ export class SubscriptionsService {
         notes: {
           businessId: business.id,
           plan,
+          billingCycle,
           userEmail: user.email,
         },
       });
@@ -139,6 +179,7 @@ export class SubscriptionsService {
         currency: order.currency,
         keyId: env.RAZORPAY.KEY_ID,
         plan,
+        billingCycle,
         businessName: business.name,
         userEmail: user.email,
       };
@@ -149,7 +190,7 @@ export class SubscriptionsService {
   }
 
   /**
-   * Verify Razorpay Payment Signature and Upgrade Subscription
+   * Verify Razorpay Payment Signature & Activate Plan with Expiry Timeline
    */
   static async verifyRazorpayPayment(
     payload: {
@@ -157,6 +198,7 @@ export class SubscriptionsService {
       razorpay_payment_id: string;
       razorpay_signature: string;
       plan: 'STANDARD' | 'BUSINESS';
+      billingCycle?: 'monthly' | 'yearly';
     },
     user: AuthenticatedUser
   ) {
@@ -164,9 +206,9 @@ export class SubscriptionsService {
       throw ApiError.badRequest('No business profile found.');
     }
 
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan } = payload;
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, plan, billingCycle = 'monthly' } = payload;
 
-    // HMAC Signature Validation: razorpay_order_id + '|' + razorpay_payment_id
+    // HMAC Signature Validation
     const generatedSignature = crypto
       .createHmac('sha256', env.RAZORPAY.KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
@@ -176,19 +218,28 @@ export class SubscriptionsService {
       throw ApiError.badRequest('Invalid Razorpay payment signature verification failed.');
     }
 
-    const amountPaid = plan === 'STANDARD' ? 249900 : 649900;
+    const durationDays = billingCycle === 'yearly' ? 365 : 30;
+    const currentPeriodEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
 
-    // Update Business Plan & Subscription Status in DB
+    let amountPaid = 249900;
+    if (plan === 'STANDARD') {
+      amountPaid = billingCycle === 'yearly' ? 2499000 : 249900;
+    } else if (plan === 'BUSINESS') {
+      amountPaid = billingCycle === 'yearly' ? 6499000 : 649900;
+    }
+
+    // Update Business Plan & Expiry Date in DB
     const business = await prisma.business.update({
       where: { id: user.businessId },
       data: {
         plan: plan as SubscriptionPlan,
         subscriptionStatus: SubscriptionStatus.ACTIVE,
         razorpayOrderId: razorpay_order_id,
+        currentPeriodEnd,
       },
     });
 
-    // Record Billing Receipt in BillingHistory
+    // Record Billing Receipt
     await prisma.billingHistory.create({
       data: {
         businessId: business.id,
@@ -198,17 +249,18 @@ export class SubscriptionsService {
         currency: 'INR',
         status: 'captured',
       },
-    }).catch(() => null); // Prevent crash if duplicate
+    }).catch(() => null);
 
     return {
       success: true,
-      message: `Payment successful! Business upgraded to ${plan} plan.`,
+      message: `Payment successful! Business plan set to ${plan} (${billingCycle}). Valid until ${currentPeriodEnd.toLocaleDateString()}.`,
       plan: business.plan,
+      currentPeriodEnd: currentPeriodEnd.toISOString(),
     };
   }
 
   /**
-   * Cancel Subscription and Downgrade to Free
+   * Cancel Subscription (Retains access until currentPeriodEnd, then downgrades to FREE)
    */
   static async cancelSubscription(user: AuthenticatedUser) {
     if (!user.businessId) {
@@ -218,15 +270,16 @@ export class SubscriptionsService {
     const business = await prisma.business.update({
       where: { id: user.businessId },
       data: {
-        plan: SubscriptionPlan.FREE,
         subscriptionStatus: SubscriptionStatus.CANCELED,
       },
     });
 
     return {
       success: true,
-      message: 'Subscription canceled. Business plan downgraded to Free.',
+      message: 'Subscription canceled. Access will remain active until current period end date, then re-set to Free plan.',
       plan: business.plan,
+      subscriptionStatus: business.subscriptionStatus,
+      currentPeriodEnd: business.currentPeriodEnd?.toISOString(),
     };
   }
 
@@ -257,6 +310,9 @@ export class SubscriptionsService {
         const notes = payment.notes || {};
         const businessId = notes.businessId;
         const plan = notes.plan as SubscriptionPlan;
+        const billingCycle = (notes.billingCycle as 'monthly' | 'yearly') || 'monthly';
+        const durationDays = billingCycle === 'yearly' ? 365 : 30;
+        const currentPeriodEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
 
         if (businessId && plan) {
           await prisma.business.update({
@@ -264,6 +320,7 @@ export class SubscriptionsService {
             data: {
               plan,
               subscriptionStatus: SubscriptionStatus.ACTIVE,
+              currentPeriodEnd,
             },
           });
         }
@@ -281,7 +338,6 @@ export class SubscriptionsService {
           await prisma.business.update({
             where: { id: business.id },
             data: {
-              plan: SubscriptionPlan.FREE,
               subscriptionStatus: SubscriptionStatus.CANCELED,
             },
           });

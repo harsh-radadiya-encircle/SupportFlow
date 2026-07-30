@@ -9,9 +9,14 @@ import {
 } from '../api/subscriptions.api';
 
 export const useSubscriptionDetails = () => {
+  const { user, isAuthenticated } = useAuthStore();
+
   return useQuery({
     queryKey: ['subscription'],
     queryFn: getSubscriptionDetails,
+    enabled: isAuthenticated && Boolean(user),
+    staleTime: 30000,
+    retry: false,
   });
 };
 
@@ -19,11 +24,12 @@ export const useCreateRazorpayOrder = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (plan: 'STANDARD' | 'BUSINESS') => createRazorpayOrder(plan),
+    mutationFn: ({ plan, billingCycle }: { plan: 'STANDARD' | 'BUSINESS'; billingCycle?: 'monthly' | 'yearly' }) =>
+      createRazorpayOrder(plan, billingCycle),
     onSuccess: (data, variables) => {
       if (data?.isTestMode && data?.message) {
         toast.success(data.message);
-        useAuthStore.getState().updateUserBusinessPlan(variables);
+        useAuthStore.getState().updateUserBusinessPlan(variables.plan);
         queryClient.invalidateQueries({ queryKey: ['subscription'] });
       }
     },
@@ -43,6 +49,7 @@ export const useVerifyRazorpayPayment = () => {
       razorpay_payment_id: string;
       razorpay_signature: string;
       plan: 'STANDARD' | 'BUSINESS';
+      billingCycle?: 'monthly' | 'yearly';
     }) => verifyRazorpayPayment(payload),
     onSuccess: (data, variables) => {
       toast.success(data.message || 'Payment verified successfully!');

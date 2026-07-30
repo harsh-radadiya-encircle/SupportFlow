@@ -89,6 +89,7 @@ model User {
 
   @@index([firebaseUid])
   @@index([businessId, role])
+  @@index([role, isActive])
 }
 
 model Business {
@@ -110,6 +111,9 @@ model Business {
   tickets              Ticket[]
   invitations          Invitation[]
   billingHistory       BillingHistory[]
+
+  @@index([plan, subscriptionStatus])
+  @@index([isSuspended])
 }
 
 model Invitation {
@@ -124,6 +128,9 @@ model Invitation {
   isAccepted  Boolean  @default(false)
   expiresAt   DateTime
   createdAt   DateTime @default(now())
+
+  @@index([businessId, isAccepted])
+  @@index([email])
 }
 
 model Ticket {
@@ -156,8 +163,11 @@ model Ticket {
   notifications   Notification[]
 
   @@index([businessId, status])
-  @@index([customerId])
-  @@index([assignedAgentId])
+  @@index([businessId, createdAt])
+  @@index([customerId, status])
+  @@index([assignedAgentId, status])
+  @@index([category])
+  @@index([priority])
 }
 
 model Message {
@@ -173,6 +183,7 @@ model Message {
   createdAt   DateTime    @default(now())
 
   @@index([ticketId, createdAt])
+  @@index([senderId])
 }
 
 model InternalNote {
@@ -184,7 +195,7 @@ model InternalNote {
   content   String
   createdAt DateTime @default(now())
 
-  @@index([ticketId])
+  @@index([ticketId, createdAt])
 }
 
 model TicketActivity {
@@ -225,6 +236,7 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, isRead])
+  @@index([userId, createdAt])
 }
 
 model BillingHistory {
@@ -238,4 +250,6 @@ model BillingHistory {
   status            String
   pdfUrl            String?
   createdAt         DateTime @default(now())
+
+  @@index([businessId, createdAt])
 }

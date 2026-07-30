@@ -28,6 +28,7 @@ export interface User {
   fullName: string;
   avatarUrl?: string | null;
   role: Role;
+  authProvider?: 'EMAIL_PASSWORD' | 'GOOGLE' | 'MULTI_PROVIDER';
   isActive: boolean;
   businessId?: string | null;
   business?: Business | null;

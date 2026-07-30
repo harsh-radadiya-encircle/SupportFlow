@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 export const createCheckoutSessionSchema = z.object({
   plan: z.enum(['STANDARD', 'BUSINESS']),
+  billingCycle: z.enum(['monthly', 'yearly']).optional(),
 });
 
 export const verifyPaymentSchema = z.object({
@@ -9,4 +10,5 @@ export const verifyPaymentSchema = z.object({
   razorpay_payment_id: z.string().min(1, 'Payment ID is required'),
   razorpay_signature: z.string().min(1, 'Signature is required'),
   plan: z.enum(['STANDARD', 'BUSINESS']),
+  billingCycle: z.enum(['monthly', 'yearly']).optional(),
 });

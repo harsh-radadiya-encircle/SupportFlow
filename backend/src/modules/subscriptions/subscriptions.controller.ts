@@ -12,7 +12,18 @@ export class SubscriptionsController {
     try {
       const user = req.user;
       if (!user?.businessId) {
-        throw ApiError.badRequest('User is not associated with a business organization.');
+        return res.status(200).json({
+          success: true,
+          data: {
+            plan: 'FREE',
+            subscriptionStatus: 'ACTIVE',
+            agentSeatsUsed: 0,
+            maxAgentSeats: 1,
+            monthlyTicketsUsed: 0,
+            maxMonthlyTickets: 25,
+            billingHistory: [],
+          },
+        });
       }
 
       const details = await SubscriptionsService.getSubscriptionDetails(user.businessId);
@@ -33,7 +44,7 @@ export class SubscriptionsController {
       const user = req.user!;
       const dto = createCheckoutSessionSchema.parse(req.body);
 
-      const result = await SubscriptionsService.createRazorpayOrder(dto.plan, user);
+      const result = await SubscriptionsService.createRazorpayOrder(dto.plan, dto.billingCycle, user);
       res.status(200).json({
         success: true,
         data: result,
