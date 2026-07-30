@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -7,24 +7,24 @@
 @layer base {
   :root {
     /* Page & Surfaces */
-    --bg-page: 210 40% 98%;          /* slate-50 */
-    --bg-card: 0 0% 100%;             /* pure white */
-    --bg-card-hover: 210 40% 96%;     /* slate-100 */
-    --bg-sidebar: 0 0% 100%;          /* pure white */
+    --bg-page: 210 40% 98%; /* slate-50 */
+    --bg-card: 0 0% 100%; /* pure white */
+    --bg-card-hover: 210 40% 96%; /* slate-100 */
+    --bg-sidebar: 0 0% 100%; /* pure white */
 
     /* Typography & Text Colors */
-    --text-primary: 222 47% 11%;      /* slate-900 (#0f172a) */
-    --text-secondary: 215 16% 47%;    /* slate-500 (#64748b) */
-    --text-muted: 215 16% 65%;        /* slate-400 (#94a3b8) */
+    --text-primary: 222 47% 11%; /* slate-900 (#0f172a) */
+    --text-secondary: 215 16% 47%; /* slate-500 (#64748b) */
+    --text-muted: 215 16% 65%; /* slate-400 (#94a3b8) */
 
     /* Brand & Accent (Indigo) */
-    --primary: 239 84% 67%;           /* indigo-500 */
-    --primary-hover: 239 84% 59%;     /* indigo-600 */
-    --primary-foreground: 0 0% 100%;  /* white */
-    --primary-light: 239 84% 96%;     /* indigo-50 */
+    --primary: 239 84% 67%; /* indigo-500 */
+    --primary-hover: 239 84% 59%; /* indigo-600 */
+    --primary-foreground: 0 0% 100%; /* white */
+    --primary-light: 239 84% 96%; /* indigo-50 */
 
     /* Borders & Inputs */
-    --border-color: 214 32% 91%;      /* slate-200 (#e2e8f0) */
+    --border-color: 214 32% 91%; /* slate-200 (#e2e8f0) */
     --input-bg: 0 0% 100%;
 
     --radius: 0.75rem;
@@ -32,7 +32,11 @@
 
   * {
     border-color: hsl(var(--border-color));
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      sans-serif !important;
   }
 
   html {
@@ -47,7 +51,11 @@
   textarea {
     background-color: hsl(var(--bg-page));
     color: hsl(var(--text-primary));
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+    font-family:
+      "Inter",
+      system-ui,
+      -apple-system,
+      sans-serif !important;
     font-size: 1rem; /* 16px default */
     line-height: 1.5rem;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";

@@ -6,6 +6,7 @@ import { dashboardApi } from '../../dashboard/api/dashboard.api';
 import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
+import { StatCard } from '../../../shared/components/ui/StatCard';
 import { DataTable, Column, FilterOption } from '../../../shared/components/ui/DataTable';
 import {
   CreditCard,
@@ -278,75 +279,36 @@ export const AdminSubscriptionsPage: React.FC = () => {
 
       {/* Summary Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Active Subscriptions */}
-        <Card glass className="p-5 border border-slate-200/80 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Subs</p>
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-emerald-600 mt-1" />
-              ) : (
-                <p className="text-2xl font-bold text-slate-900">{summary.activeSubscriptions}</p>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        {/* MRR */}
-        <Card glass className="p-5 border border-slate-200/80 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-              <DollarSign className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Monthly Revenue</p>
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-purple-600 mt-1" />
-              ) : (
-                <p className="text-xl font-bold text-slate-900">{summary.monthlyRevenue}</p>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        {/* Standard Plan Count */}
-        <Card glass className="p-5 border border-slate-200/80 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0">
-              <TrendingUp className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Standard Plan</p>
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin mt-1" />
-              ) : (
-                <p className="text-2xl font-bold text-slate-900">{planCounts.STANDARD}</p>
-              )}
-              <p className="text-[11px] text-slate-400 font-medium">₹2,499/mo each</p>
-            </div>
-          </div>
-        </Card>
-
-        {/* Business Plan Count */}
-        <Card glass className="p-5 border border-slate-200/80 shadow-sm">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Business Plan</p>
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin mt-1" />
-              ) : (
-                <p className="text-2xl font-bold text-slate-900">{planCounts.BUSINESS}</p>
-              )}
-              <p className="text-[11px] text-slate-400 font-medium">₹6,499/mo each</p>
-            </div>
-          </div>
-        </Card>
+        <StatCard
+          title="Active Subs"
+          value={summary.activeSubscriptions}
+          icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+          iconBg="bg-emerald-50 border border-emerald-100"
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Monthly Revenue"
+          value={summary.monthlyRevenue}
+          icon={<DollarSign className="w-5 h-5 text-purple-600" />}
+          iconBg="bg-purple-50 border border-purple-100"
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Standard Plan"
+          value={planCounts.STANDARD}
+          sub="₹2,499/mo each"
+          icon={<TrendingUp className="w-5 h-5 text-indigo-600" />}
+          iconBg="bg-indigo-50 border border-indigo-100"
+          isLoading={isLoading}
+        />
+        <StatCard
+          title="Business Plan"
+          value={planCounts.BUSINESS}
+          sub="₹6,499/mo each"
+          icon={<Sparkles className="w-5 h-5 text-amber-600" />}
+          iconBg="bg-amber-50 border border-amber-100"
+          isLoading={isLoading}
+        />
       </div>
 
       {/* Plan Revenue Breakdown Cards */}

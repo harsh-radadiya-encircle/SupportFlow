@@ -1,8 +1,12 @@
 import { Response } from 'express';
 import { AuthenticatedRequest } from '../../common/types';
-import { DashboardService } from './dashboard.service';
+import { BusinessMetricsService } from './services/business-metrics.service';
+import { AgentMetricsService } from './services/agent-metrics.service';
+import { PlatformMetricsService } from './services/platform-metrics.service';
 
-const dashboardService = new DashboardService();
+const businessMetricsService = new BusinessMetricsService();
+const agentMetricsService = new AgentMetricsService();
+const platformMetricsService = new PlatformMetricsService();
 
 export class DashboardController {
   async getBusinessAdminMetrics(req: AuthenticatedRequest, res: Response): Promise<void> {
@@ -17,7 +21,7 @@ export class DashboardController {
       }
 
       const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
-      const metrics = await dashboardService.getBusinessAdminMetrics(
+      const metrics = await businessMetricsService.getBusinessAdminMetrics(
         user.businessId,
         startDate,
         endDate
@@ -38,7 +42,7 @@ export class DashboardController {
   async getAgentMetrics(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const user = req.user!;
-      const metrics = await dashboardService.getAgentMetrics(user.id);
+      const metrics = await agentMetricsService.getAgentMetrics(user.id);
 
       res.status(200).json({
         success: true,
@@ -54,7 +58,7 @@ export class DashboardController {
 
   async getPlatformAdminMetrics(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
-      const metrics = await dashboardService.getPlatformAdminMetrics();
+      const metrics = await platformMetricsService.getPlatformAdminMetrics();
 
       res.status(200).json({
         success: true,
@@ -72,7 +76,7 @@ export class DashboardController {
   async toggleBusinessSuspension(req: AuthenticatedRequest, res: Response): Promise<void> {
     try {
       const { businessId } = req.params;
-      const updated = await dashboardService.toggleBusinessSuspension(businessId);
+      const updated = await platformMetricsService.toggleBusinessSuspension(businessId);
 
       res.status(200).json({
         success: true,

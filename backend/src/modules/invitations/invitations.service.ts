@@ -130,7 +130,7 @@ export class InvitationsService {
   static async getBusinessTeamAndInvitations(businessId: string) {
     const [agents, invitations, business] = await Promise.all([
       prisma.user.findMany({
-        where: { businessId, role: { in: [Role.SUPPORT_AGENT, Role.BUSINESS_ADMIN] } },
+        where: { businessId, role: Role.SUPPORT_AGENT },
         select: {
           id: true,
           email: true,

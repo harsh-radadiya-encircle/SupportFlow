@@ -1,7 +1,11 @@
 import { Response, NextFunction } from 'express';
-import { TicketsService } from './tickets.service';
+import { TicketCrudService } from './services/ticket-crud.service';
+import { TicketAssignmentService } from './services/ticket-assignment.service';
 import { sendResponse } from '../../common/responses/apiResponse';
 import { AuthenticatedRequest } from '../../common/types';
+
+const ticketCrudService = new TicketCrudService();
+const ticketAssignmentService = new TicketAssignmentService();
 
 export class TicketsController {
   static async createTicket(
@@ -10,7 +14,7 @@ export class TicketsController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const ticket = await TicketsService.createTicket(req.body, req.user!);
+      const ticket = await ticketCrudService.createTicket(req.body, req.user!);
       sendResponse({
         res,
         statusCode: 201,
@@ -28,7 +32,7 @@ export class TicketsController {
     next: NextFunction
   ): Promise<void> {
     try {
-      const result = await TicketsService.getTickets(req.user!, req.query as any);
+      const result = await ticketCrudService.getTickets(req.user!, req.query as any);
       sendResponse({
         res,
         statusCode: 200,
@@ -48,7 +52,7 @@ export class TicketsController {
   ): Promise<void> {
     try {
       const ticketId = req.params.id as string;
-      const ticket = await TicketsService.getTicketById(ticketId, req.user!);
+      const ticket = await ticketCrudService.getTicketById(ticketId, req.user!);
       sendResponse({
         res,
         statusCode: 200,
@@ -68,7 +72,7 @@ export class TicketsController {
     try {
       const ticketId = req.params.id as string;
       const { status } = req.body;
-      const ticket = await TicketsService.updateStatus(ticketId, status, req.user!);
+      const ticket = await ticketAssignmentService.updateStatus(ticketId, status, req.user!);
       sendResponse({
         res,
         statusCode: 200,
@@ -88,7 +92,7 @@ export class TicketsController {
     try {
       const ticketId = req.params.id as string;
       const { assignedAgentId } = req.body;
-      const ticket = await TicketsService.assignAgent(ticketId, assignedAgentId, req.user!);
+      const ticket = await ticketAssignmentService.assignAgent(ticketId, assignedAgentId, req.user!);
       sendResponse({
         res,
         statusCode: 200,
@@ -108,7 +112,7 @@ export class TicketsController {
     try {
       const ticketId = req.params.id as string;
       const { content } = req.body;
-      const note = await TicketsService.addInternalNote(ticketId, content, req.user!);
+      const note = await ticketAssignmentService.addInternalNote(ticketId, content, req.user!);
       sendResponse({
         res,
         statusCode: 201,

@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
+import { StatCard } from '../../../shared/components/ui/StatCard';
 import {
   StatusDonutChart,
   DonutChartItem,
@@ -138,77 +139,35 @@ export const BusinessAdminDashboardPage: React.FC = () => {
 
       {/* Top Summary Analytics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Total Tickets */}
-        <Card glass className="flex items-center gap-4 p-5 border border-slate-200/80">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shrink-0 shadow-sm">
-            <Ticket className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Total Tickets
-            </p>
-            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">
-              {summary.totalTickets}
-            </p>
-            <span className="text-xs text-emerald-600 font-semibold flex items-center gap-0.5 mt-1">
-              <TrendingUp className="w-3 h-3" /> Live Ticket Volume
-            </span>
-          </div>
-        </Card>
-
-        {/* Open Tickets */}
-        <Card glass className="flex items-center gap-4 p-5 border border-slate-200/80">
-          <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shrink-0 shadow-sm">
-            <AlertTriangle className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Open Tickets
-            </p>
-            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">
-              {summary.openTickets}
-            </p>
-            <span className="text-xs text-amber-600 font-semibold mt-1 block">
-              Requires agent action
-            </span>
-          </div>
-        </Card>
-
-        {/* Resolved Tickets */}
-        <Card glass className="flex items-center gap-4 p-5 border border-slate-200/80">
-          <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shrink-0 shadow-sm">
-            <CheckCircle2 className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Resolved Tickets
-            </p>
-            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">
-              {summary.resolvedTickets}
-            </p>
-            <span className="text-xs text-emerald-600 font-semibold mt-1 block">
-              {summary.resolutionRate}% resolution rate
-            </span>
-          </div>
-        </Card>
-
-        {/* Average Response Time */}
-        <Card glass className="p-5 border border-slate-200/80 flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 border border-purple-100 text-purple-600 flex items-center justify-center shrink-0 shadow-sm">
-            <Clock className="w-6 h-6" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Average Response Time
-            </p>
-            <p className="text-2xl font-bold text-slate-900 leading-none mt-1">
-              {summary.avgResponseTime}
-            </p>
-            <span className="text-xs text-purple-600 font-semibold mt-1 block">
-              Target: &lt; 30 mins
-            </span>
-          </div>
-        </Card>
+        <StatCard
+          title="Total Tickets"
+          value={summary.totalTickets}
+          sub="Live Ticket Volume"
+          icon={<Ticket className="w-6 h-6 text-indigo-600" />}
+          iconBg="bg-indigo-50 border border-indigo-100"
+          trend={{ value: 'Live Volume', positive: true }}
+        />
+        <StatCard
+          title="Open Tickets"
+          value={summary.openTickets}
+          sub="Requires agent action"
+          icon={<AlertTriangle className="w-6 h-6 text-amber-600" />}
+          iconBg="bg-amber-50 border border-amber-100"
+        />
+        <StatCard
+          title="Resolved Tickets"
+          value={summary.resolvedTickets}
+          sub={`${summary.resolutionRate}% resolution rate`}
+          icon={<CheckCircle2 className="w-6 h-6 text-emerald-600" />}
+          iconBg="bg-emerald-50 border border-emerald-100"
+        />
+        <StatCard
+          title="Avg Response Time"
+          value={summary.avgResponseTime}
+          sub="Target: < 30 mins"
+          icon={<Clock className="w-6 h-6 text-purple-600" />}
+          iconBg="bg-purple-50 border border-purple-100"
+        />
       </div>
 
       {/* Shared Reusable Charts: Tickets by Priority & Status */}

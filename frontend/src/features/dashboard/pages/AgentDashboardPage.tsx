@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
+import { StatCard } from '../../../shared/components/ui/StatCard';
 import { useAgentDashboard } from '../hooks/useDashboard';
 import {
   Ticket,
@@ -57,77 +58,34 @@ export const AgentDashboardPage: React.FC = () => {
 
       {/* 1-4. Summary Cards Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Assigned Tickets */}
-        <Card glass className="p-5 space-y-2 border border-slate-200/80">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Assigned Tickets
-            </span>
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center">
-              <Ticket className="w-5 h-5" />
-            </div>
-          </div>
-          <div>
-            <p className="text-3xl font-bold text-slate-900 leading-none">
-              {summary.assignedTickets}
-            </p>
-            <p className="text-xs text-slate-500 font-normal mt-1.5">Total tickets in your queue</p>
-          </div>
-        </Card>
-
-        {/* Open Tickets */}
-        <Card glass className="p-5 space-y-2 border border-slate-200/80">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Open Tickets
-            </span>
-            <div className="w-10 h-10 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center">
-              <AlertCircle className="w-5 h-5" />
-            </div>
-          </div>
-          <div>
-            <p className="text-3xl font-bold text-slate-900 leading-none">{summary.openTickets}</p>
-            <p className="text-xs text-amber-600 font-semibold mt-1.5">
-              Requires immediate agent reply
-            </p>
-          </div>
-        </Card>
-
-        {/* Waiting Tickets */}
-        <Card glass className="p-5 space-y-2 border border-slate-200/80">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Waiting Tickets
-            </span>
-            <div className="w-10 h-10 rounded-2xl bg-sky-50 border border-sky-100 text-sky-600 flex items-center justify-center">
-              <Clock className="w-5 h-5" />
-            </div>
-          </div>
-          <div>
-            <p className="text-3xl font-bold text-slate-900 leading-none">
-              {summary.waitingTickets}
-            </p>
-            <p className="text-xs text-sky-600 font-semibold mt-1.5">Pending customer response</p>
-          </div>
-        </Card>
-
-        {/* Resolved Tickets */}
-        <Card glass className="p-5 space-y-2 border border-slate-200/80">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-              Resolved Tickets
-            </span>
-            <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-          </div>
-          <div>
-            <p className="text-3xl font-bold text-slate-900 leading-none">
-              {summary.resolvedTickets}
-            </p>
-            <p className="text-xs text-emerald-600 font-semibold mt-1.5">Successfully completed</p>
-          </div>
-        </Card>
+        <StatCard
+          title="Assigned Tickets"
+          value={summary.assignedTickets}
+          sub="Total tickets in your queue"
+          icon={<Ticket className="w-5 h-5 text-indigo-600" />}
+          iconBg="bg-indigo-50 border border-indigo-100"
+        />
+        <StatCard
+          title="Open Tickets"
+          value={summary.openTickets}
+          sub="Requires immediate agent reply"
+          icon={<AlertCircle className="w-5 h-5 text-amber-600" />}
+          iconBg="bg-amber-50 border border-amber-100"
+        />
+        <StatCard
+          title="Waiting Tickets"
+          value={summary.waitingTickets}
+          sub="Pending customer response"
+          icon={<Clock className="w-5 h-5 text-sky-600" />}
+          iconBg="bg-sky-50 border border-sky-100"
+        />
+        <StatCard
+          title="Resolved Tickets"
+          value={summary.resolvedTickets}
+          sub="Successfully completed"
+          icon={<CheckCircle2 className="w-5 h-5 text-emerald-600" />}
+          iconBg="bg-emerald-50 border border-emerald-100"
+        />
       </div>
 
       {/* Main Grid: Recent Messages & Ticket Notifications */}
