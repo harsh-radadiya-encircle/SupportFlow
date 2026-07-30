@@ -13,10 +13,40 @@ export interface SendNotificationOptions {
     | 'NEW_MESSAGE'
     | 'STATUS_CHANGED'
     | 'TICKET_RESOLVED'
+    | 'PLAN_PURCHASED'
+    | 'PLAN_UPGRADED'
+    | 'PLAN_DOWNGRADED'
+    | 'PLAN_CANCELED'
+    | 'CSAT_RECEIVED'
+    | 'URGENT_TICKET'
     | 'SYSTEM';
 }
 
 export class NotificationService {
+  /**
+   * Fetch all Business Admins for a specific business and dispatch a notification to each of them.
+   */
+  static async sendToBusinessAdmins(
+    businessId: string,
+    options: Omit<SendNotificationOptions, 'userId'>
+  ) {
+    try {
+      const admins = await prisma.user.findMany({
+        where: { businessId, role: 'BUSINESS_ADMIN' },
+        select: { id: true },
+      });
+
+      for (const admin of admins) {
+        await this.sendNotification({
+          ...options,
+          userId: admin.id,
+        });
+      }
+    } catch (err: any) {
+      console.error('[NotificationService sendToBusinessAdmins Error]:', err.message);
+    }
+  }
+
   /**
    * Create persistent notification in PostgreSQL & dispatch FCM Browser Push Notification + Socket.IO live update
    */

@@ -8,6 +8,7 @@ import {
   updateTicketStatusSchema,
   assignTicketSchema,
   addInternalNoteSchema,
+  submitCsatSchema,
 } from './tickets.schema';
 
 const router = Router();
@@ -40,6 +41,14 @@ router.post(
   authorize(['SUPPORT_AGENT', 'BUSINESS_ADMIN', 'PLATFORM_ADMIN']),
   validate(addInternalNoteSchema),
   TicketsController.addInternalNote
+);
+
+// Customer CSAT Rating
+router.patch(
+  '/:id/csat',
+  authorize(['CUSTOMER']),
+  validate(submitCsatSchema),
+  TicketsController.submitCsat
 );
 
 export default router;

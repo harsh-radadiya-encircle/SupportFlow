@@ -153,6 +153,8 @@ export class BusinessMetricsService {
             id: true,
             status: true,
             createdAt: true,
+            firstResponseAt: true,
+            csatScore: true,
           },
         },
       },
@@ -166,6 +168,34 @@ export class BusinessMetricsService {
         (t) => t.status === 'RESOLVED' || t.status === 'CLOSED'
       ).length;
 
+      // Calculate Individual SLA (First Response Time)
+      const respondedTickets = agent.assignedTickets.filter((t) => t.firstResponseAt);
+      let totalResponseMs = 0;
+      respondedTickets.forEach((t) => {
+        totalResponseMs += new Date(t.firstResponseAt!).getTime() - new Date(t.createdAt).getTime();
+      });
+      const avgResponseMs =
+        respondedTickets.length > 0 ? totalResponseMs / respondedTickets.length : 0;
+      
+      let responseSLA = 'N/A';
+      let isSlaMet = true;
+      if (avgResponseMs > 0) {
+        const hours = Math.floor(avgResponseMs / (1000 * 60 * 60));
+        const mins = Math.floor((avgResponseMs % (1000 * 60 * 60)) / (1000 * 60));
+        responseSLA = hours > 0 ? `${hours} hrs` : `${mins} mins`;
+        isSlaMet = avgResponseMs <= 24 * 60 * 60 * 1000; // 24-hour target
+        responseSLA += isSlaMet ? ' (SLA Met)' : ' (SLA Missed)';
+      }
+
+      // Calculate Individual CSAT
+      const ratedTickets = agent.assignedTickets.filter((t) => t.csatScore !== null);
+      let totalCsat = 0;
+      ratedTickets.forEach((t) => {
+        totalCsat += t.csatScore!;
+      });
+      const csatRating =
+        ratedTickets.length > 0 ? (totalCsat / ratedTickets.length).toFixed(1) + ' / 5.0' : 'N/A';
+
       return {
         id: agent.id,
         fullName: agent.fullName,
@@ -173,6 +203,8 @@ export class BusinessMetricsService {
         activeTickets: activeTicketsCount,
         resolvedTickets: resolvedCount,
         totalAssigned: agent.assignedTickets.length,
+        responseSLA,
+        csatRating,
       };
     });
 

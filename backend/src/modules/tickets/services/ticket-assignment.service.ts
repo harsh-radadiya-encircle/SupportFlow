@@ -168,6 +168,14 @@ export class TicketAssignmentService {
     // Broadcast Real-Time Internal Note Addition via Socket.IO Room
     emitToTicketRoom(ticketId, 'internal_note_added', note);
 
+    const { NotificationService } = await import('../../../services/notification.service');
+    NotificationService.sendToBusinessAdmins(ticket.businessId, {
+      ticketId,
+      title: '🔒 New Internal Note',
+      message: `${user.fullName} added a private note to Ticket #${ticket.ticketNumber || ticket.id.substring(0, 6)}`,
+      type: 'SYSTEM',
+    });
+
     return note;
   }
 }

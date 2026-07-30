@@ -10,6 +10,7 @@ interface AuthState {
   clearAuth: () => void;
   setLoading: (isLoading: boolean) => void;
   updateUserBusinessPlan: (plan: string) => void;
+  updateUserProfile: (data: { fullName: string; phoneNumber?: string | null }) => void;
 }
 
 const initialToken = localStorage.getItem('supportflow_token');
@@ -55,6 +56,19 @@ export const useAuthStore = create<AuthState>((set) => ({
           ...state.user.business,
           plan: plan as any,
         },
+      };
+      localStorage.setItem('supportflow_user', JSON.stringify(updatedUser));
+      return { user: updatedUser };
+    });
+  },
+
+  updateUserProfile: (data) => {
+    set((state) => {
+      if (!state.user) return state;
+      const updatedUser = {
+        ...state.user,
+        fullName: data.fullName,
+        phoneNumber: data.phoneNumber !== undefined ? data.phoneNumber : state.user.phoneNumber,
       };
       localStorage.setItem('supportflow_user', JSON.stringify(updatedUser));
       return { user: updatedUser };

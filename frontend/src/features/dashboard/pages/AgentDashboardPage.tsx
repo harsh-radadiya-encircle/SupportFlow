@@ -123,6 +123,12 @@ export const AgentDashboardPage: React.FC = () => {
                         </div>
                         <span className="font-semibold text-slate-900">
                           {msg.sender?.fullName || 'User'}
+                          {msg.ticket?.customer?.fullName && (
+                            <span className="text-slate-400 font-normal">
+                              {' '}
+                              → {msg.ticket.customer.fullName}
+                            </span>
+                          )}
                         </span>
                         <Badge
                           variant={msg.sender?.role === 'CUSTOMER' ? 'warning' : 'purple'}
@@ -135,6 +141,7 @@ export const AgentDashboardPage: React.FC = () => {
                         {new Date(msg.createdAt).toLocaleTimeString([], {
                           hour: '2-digit',
                           minute: '2-digit',
+                          hour12: true,
                         })}
                       </span>
                     </div>

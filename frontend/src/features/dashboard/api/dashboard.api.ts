@@ -37,6 +37,8 @@ export interface DashboardMetricsResponse {
     activeTickets: number;
     resolvedTickets: number;
     totalAssigned: number;
+    responseSLA: string;
+    csatRating: string | number;
   }>;
   recentTickets: Array<{
     id: string;
@@ -82,6 +84,9 @@ export interface AgentMetricsResponse {
       id: string;
       ticketNumber?: string;
       title: string;
+      customer?: {
+        fullName: string;
+      };
     };
   }>;
   notifications: Array<{

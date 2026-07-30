@@ -54,6 +54,11 @@ export class AgentMetricsService {
             id: true,
             ticketNumber: true,
             title: true,
+            customer: {
+              select: {
+                fullName: true,
+              },
+            },
           },
         },
       },

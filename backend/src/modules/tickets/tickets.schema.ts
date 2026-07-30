@@ -22,3 +22,8 @@ export const assignTicketSchema = z.object({
 export const addInternalNoteSchema = z.object({
   content: z.string().min(2, 'Internal note cannot be empty'),
 });
+
+export const submitCsatSchema = z.object({
+  score: z.number().int().min(1, 'Score must be at least 1').max(5, 'Score cannot exceed 5'),
+  comment: z.string().optional(),
+});

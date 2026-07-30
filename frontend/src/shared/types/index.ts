@@ -17,6 +17,7 @@ export interface User {
   firebaseUid: string;
   email: string;
   fullName: string;
+  phoneNumber?: string | null;
   avatarUrl?: string | null;
   role: Role;
   authProvider?: 'EMAIL_PASSWORD' | 'GOOGLE' | 'MULTI_PROVIDER';

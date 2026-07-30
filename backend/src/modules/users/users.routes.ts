@@ -7,6 +7,7 @@ const router = Router();
 
 router.get('/businesses', UsersController.getActiveBusinesses);
 router.post('/fcm-token', authenticate, UsersController.saveFcmToken);
+router.patch('/profile', authenticate, UsersController.updateProfile);
 
 router.get('/admin/all', authenticate, authorize(['PLATFORM_ADMIN']), UsersController.getAllUsers);
 

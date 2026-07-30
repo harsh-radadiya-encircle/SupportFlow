@@ -63,9 +63,7 @@ export const LandingPage: React.FC = () => {
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-            <a href="#features" className="hover:text-slate-900 transition-colors">
-              Features
-            </a>
+
             <a href="#workflows" className="hover:text-slate-900 transition-colors">
               Role Workflows
             </a>
@@ -220,44 +218,40 @@ export const LandingPage: React.FC = () => {
           <div className="flex flex-wrap items-center justify-center gap-2 max-w-3xl mx-auto bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
             <button
               onClick={() => setActiveTab('admin')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'admin'
+              className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${activeTab === 'admin'
                   ? 'bg-white text-slate-900 shadow-md font-bold'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <Building2 className="w-4 h-4 text-indigo-600" /> Business Admin
             </button>
 
             <button
               onClick={() => setActiveTab('agent')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'agent'
+              className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${activeTab === 'agent'
                   ? 'bg-white text-slate-900 shadow-md font-bold'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <UserCheck className="w-4 h-4 text-emerald-600" /> Support Agent
             </button>
 
             <button
               onClick={() => setActiveTab('customer')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'customer'
+              className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${activeTab === 'customer'
                   ? 'bg-white text-slate-900 shadow-md font-bold'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <MessageSquare className="w-4 h-4 text-amber-600" /> Customer
             </button>
 
             <button
               onClick={() => setActiveTab('platform')}
-              className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${
-                activeTab === 'platform'
+              className={`px-5 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-2 ${activeTab === 'platform'
                   ? 'bg-white text-slate-900 shadow-md font-bold'
                   : 'text-slate-600 hover:text-slate-900'
-              }`}
+                }`}
             >
               <ShieldCheck className="w-4 h-4 text-purple-600" /> Platform Admin
             </button>

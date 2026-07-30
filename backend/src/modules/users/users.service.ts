@@ -2,6 +2,24 @@ import { prisma } from '../../utils/prisma';
 import { admin, isFirebaseInitialized } from '../../config/firebase';
 
 export class UsersService {
+  static async updateProfile(userId: string, data: { fullName?: string; phoneNumber?: string }) {
+    return prisma.user.update({
+      where: { id: userId },
+      data,
+      select: {
+        id: true,
+        email: true,
+        fullName: true,
+        phoneNumber: true,
+        role: true,
+        avatarUrl: true,
+        authProvider: true,
+        businessId: true,
+        business: true,
+      },
+    });
+  }
+
   static async saveFcmToken(userId: string, token: string, deviceType?: string) {
     const existing = await prisma.fcmToken.findUnique({
       where: { token },

@@ -57,7 +57,7 @@ export const initSocketServer = (httpServer: HttpServer): SocketIOServer => {
           const ticket = await prisma.ticket.update({
             where: { id: data.ticketId },
             data: { updatedAt: new Date() },
-            select: { ticketNumber: true, title: true, customerId: true, assignedAgentId: true },
+            select: { ticketNumber: true, title: true, customerId: true, assignedAgentId: true, businessId: true },
           });
 
           // Broadcast message to ticket room
@@ -66,14 +66,29 @@ export const initSocketServer = (httpServer: HttpServer): SocketIOServer => {
           // Determine recipient for NEW_MESSAGE Notification
           if (ticket) {
             const isCustomerSender = data.senderId === ticket.customerId;
-            const recipientId = isCustomerSender ? ticket.assignedAgentId : ticket.customerId;
+            const { NotificationService } = await import('../services/notification.service');
 
-            if (recipientId) {
-              const { NotificationService } = await import('../services/notification.service');
-              NotificationService.sendNotification({
-                userId: recipientId,
+            if (isCustomerSender) {
+              if (ticket.assignedAgentId) {
+                NotificationService.sendNotification({
+                  userId: ticket.assignedAgentId,
+                  ticketId: data.ticketId,
+                  title: '💬 New Customer Message',
+                  message: `${message.sender.fullName}: "${data.content.trim().substring(0, 45)}..."`,
+                  type: 'NEW_MESSAGE',
+                }).catch(() => null);
+              }
+              NotificationService.sendToBusinessAdmins(ticket.businessId, {
                 ticketId: data.ticketId,
-                title: '💬 New Reply Message',
+                title: '💬 New Customer Message',
+                message: `${message.sender.fullName}: "${data.content.trim().substring(0, 45)}..."`,
+                type: 'NEW_MESSAGE',
+              });
+            } else {
+              NotificationService.sendNotification({
+                userId: ticket.customerId,
+                ticketId: data.ticketId,
+                title: '💬 Support Team Reply',
                 message: `${message.sender.fullName}: "${data.content.trim().substring(0, 45)}..."`,
                 type: 'NEW_MESSAGE',
               }).catch(() => null);

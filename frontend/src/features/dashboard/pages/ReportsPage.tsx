@@ -288,11 +288,11 @@ export const ReportsPage: React.FC = () => {
                     <td className="py-3 font-bold text-slate-700">{agent.activeTickets}</td>
                     <td className="py-3 font-bold text-emerald-600">{agent.resolvedTickets}</td>
                     <td className="py-3 text-slate-500 font-medium">
-                      {summary.avgResponseTime} (SLA Met)
+                      {agent.responseSLA || 'N/A'}
                     </td>
                     <td className="py-3 text-right font-bold text-amber-500 flex items-center justify-end gap-1">
                       <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>4.9 / 5.0</span>
+                      <span>{agent.csatRating || 'N/A'}</span>
                     </td>
                   </tr>
                 ))}

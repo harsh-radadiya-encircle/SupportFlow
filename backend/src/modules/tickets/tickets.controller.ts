@@ -123,4 +123,24 @@ export class TicketsController {
       next(error);
     }
   }
+
+  static async submitCsat(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      const ticketId = req.params.id as string;
+      const { score, comment } = req.body;
+      const ticket = await ticketCrudService.submitCsat(ticketId, score, comment, req.user!);
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: 'Feedback submitted successfully',
+        data: ticket,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

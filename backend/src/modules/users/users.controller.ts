@@ -5,6 +5,28 @@ import { AuthenticatedRequest } from '../../common/types';
 import { ApiError } from '../../common/exceptions/apiError';
 
 export class UsersController {
+  static async updateProfile(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> {
+    try {
+      if (!req.user) throw ApiError.unauthorized('User not authenticated');
+      const { fullName, phoneNumber } = req.body;
+
+      const updatedUser = await UsersService.updateProfile(req.user.id, { fullName, phoneNumber });
+
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: 'Profile updated successfully',
+        data: updatedUser,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   static async saveFcmToken(
     req: AuthenticatedRequest,
     res: Response,

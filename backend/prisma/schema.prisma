@@ -69,6 +69,7 @@ model User {
   firebaseUid    String       @unique
   email          String       @unique
   fullName       String
+  phoneNumber    String?
   avatarUrl      String?
   role           Role         @default(CUSTOMER)
   authProvider   AuthProvider @default(EMAIL_PASSWORD)
@@ -142,6 +143,9 @@ model Ticket {
   priority        TicketPriority @default(MEDIUM)
   status          TicketStatus   @default(OPEN)
   
+  csatScore       Int?
+  csatComment     String?
+
   businessId      String
   business        Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
   

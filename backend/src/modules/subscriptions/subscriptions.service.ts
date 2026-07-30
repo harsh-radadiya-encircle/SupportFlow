@@ -5,6 +5,7 @@ import { razorpay } from '../../config/razorpay';
 import { env } from '../../config/env';
 import { ApiError } from '../../common/exceptions/apiError';
 import { AuthenticatedUser } from '../../common/types';
+import { NotificationService } from '../../services/notification.service';
 
 export class SubscriptionsService {
   /**
@@ -334,14 +335,44 @@ export class SubscriptionsService {
         const currentPeriodEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
 
         if (businessId && plan) {
-          await prisma.business.update({
-            where: { id: businessId },
-            data: {
-              plan,
-              subscriptionStatus: SubscriptionStatus.ACTIVE,
-              currentPeriodEnd,
-            },
-          });
+          const business = await prisma.business.findUnique({ where: { id: businessId } });
+          if (business) {
+            const oldPlan = business.plan;
+
+            await prisma.business.update({
+              where: { id: businessId },
+              data: {
+                plan,
+                subscriptionStatus: SubscriptionStatus.ACTIVE,
+                currentPeriodEnd,
+              },
+            });
+
+            // Determine notification type
+            const planLevels: Record<SubscriptionPlan, number> = { FREE: 0, STANDARD: 1, BUSINESS: 2 };
+            const oldLevel = planLevels[oldPlan] || 0;
+            const newLevel = planLevels[plan] || 0;
+
+            if (newLevel > oldLevel) {
+              NotificationService.sendToBusinessAdmins(businessId, {
+                title: '🚀 Plan Upgraded!',
+                message: `Your workspace has successfully been upgraded to the ${plan} plan.`,
+                type: 'PLAN_UPGRADED',
+              });
+            } else if (newLevel < oldLevel) {
+              NotificationService.sendToBusinessAdmins(businessId, {
+                title: '⬇️ Plan Downgraded',
+                message: `Your workspace has been downgraded to the ${plan} plan.`,
+                type: 'PLAN_DOWNGRADED',
+              });
+            } else {
+              NotificationService.sendToBusinessAdmins(businessId, {
+                title: '💳 Subscription Renewed',
+                message: `Your ${plan} subscription has been successfully renewed.`,
+                type: 'PLAN_PURCHASED',
+              });
+            }
+          }
         }
         break;
       }
@@ -359,6 +390,12 @@ export class SubscriptionsService {
             data: {
               subscriptionStatus: SubscriptionStatus.CANCELED,
             },
+          });
+
+          NotificationService.sendToBusinessAdmins(business.id, {
+            title: '⚠️ Subscription Canceled',
+            message: `Your subscription has been canceled. Your workspace will revert to the FREE plan at the end of the billing cycle.`,
+            type: 'PLAN_CANCELED',
           });
         }
         break;

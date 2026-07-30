@@ -17,7 +17,6 @@ import {
   Headset,
   User as UserIcon,
   Key,
-  Settings,
   Menu,
   X,
 } from 'lucide-react';
@@ -349,15 +348,6 @@ export const DashboardLayout: React.FC = () => {
                       >
                         <Key className="w-4 h-4 text-slate-500" />
                         <span>Change Password</span>
-                      </Link>
-
-                      <Link
-                        to="/profile"
-                        onClick={() => setIsHeaderProfileOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors"
-                      >
-                        <Settings className="w-4 h-4 text-slate-500" />
-                        <span>Settings</span>
                       </Link>
                     </div>
 

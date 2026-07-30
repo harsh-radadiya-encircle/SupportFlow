@@ -47,4 +47,9 @@ export const ticketsApi = {
     const response = await apiClient.post(`/tickets/${id}/notes`, { content });
     return response.data;
   },
+
+  submitCsat: async (id: string, score: number, comment?: string) => {
+    const response = await apiClient.patch(`/tickets/${id}/csat`, { score, comment });
+    return response.data;
+  },
 };

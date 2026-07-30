@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, Link } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { useCreateTicket, useActiveBusinesses } from '../hooks/useTickets';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { Card } from '../../../shared/components/ui/Card';
+import { SearchableSelect } from '../../../shared/components/ui/SearchableSelect';
 import { Ticket, ArrowLeft, Send, Building, Layers, HelpCircle } from 'lucide-react';
 
 const createTicketSchema = z.object({
@@ -32,6 +33,7 @@ export const CreateTicketPage: React.FC = () => {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<CreateTicketFormValues>({
@@ -51,7 +53,7 @@ export const CreateTicketPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -74,17 +76,22 @@ export const CreateTicketPage: React.FC = () => {
             <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1">
               <Building className="w-3.5 h-3.5 text-indigo-600" /> Target Company / Business
             </label>
-            <select
-              {...register('businessId')}
-              className="w-full px-3 py-2.5 text-xs font-medium border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white"
-            >
-              <option value="">Default Business / System Support</option>
-              {businesses.map((b: any) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            <Controller
+              name="businessId"
+              control={control}
+              render={({ field }) => (
+                <SearchableSelect
+                  options={[
+                    { id: '', name: 'Default Business / System Support' },
+                    ...businesses.map((b: any) => ({ id: b.id, name: b.name })),
+                  ]}
+                  value={field.value || ''}
+                  onChange={field.onChange}
+                  placeholder="Search and select a business..."
+                  error={errors.businessId?.message}
+                />
+              )}
+            />
             <p className="text-[11px] text-slate-400">
               Select which company's support team should receive and handle this ticket.
             </p>

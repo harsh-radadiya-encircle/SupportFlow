@@ -24,4 +24,9 @@ export const usersApi = {
     const response = await apiClient.delete(`/users/admin/${userId}`);
     return response.data;
   },
+
+  updateProfile: async (data: { fullName?: string; phoneNumber?: string }) => {
+    const response = await apiClient.patch('/users/profile', data);
+    return response.data;
+  },
 };

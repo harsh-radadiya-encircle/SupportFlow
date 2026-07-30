@@ -1,37 +1,41 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import toast from 'react-hot-toast';
+
+const chatSchema = z.object({
+  message: z.string().optional(),
+});
+const noteSchema = z.object({
+  note: z.string().min(1, 'Note cannot be empty'),
+});
+const csatSchema = z.object({
+  score: z.number().min(1, 'Please select a rating').max(5),
+  comment: z.string().optional(),
+});
+
+type ChatFormValues = z.infer<typeof chatSchema>;
+type NoteFormValues = z.infer<typeof noteSchema>;
+type CsatFormValues = z.infer<typeof csatSchema>;
 import {
   useTicketDetail,
   useUpdateTicketStatus,
   useAssignTicket,
   useAddInternalNote,
   useSocketChat,
+  useSubmitCsat,
 } from '../hooks/useTickets';
 import { useInvitations } from '../../invitations/hooks/useInvitations';
 import { useAuthStore } from '../../../shared/store/authStore';
 import { Button } from '../../../shared/components/ui/Button';
-import { Card } from '../../../shared/components/ui/Card';
-import { Badge } from '../../../shared/components/ui/Badge';
-import {
-  ArrowLeft,
-  Lock,
-  History,
-  Send,
-  User,
-  Clock,
-  Shield,
-  AlertTriangle,
-  Headset,
-  Paperclip,
-  Image as ImageIcon,
-  FileText,
-  X,
-  Eye,
-  MessageSquare,
-  Download,
-} from 'lucide-react';
+import { TicketHeader } from '../components/TicketHeader';
+import { TicketMetadataSidebar } from '../components/TicketMetadataSidebar';
+import { TicketChatFeed } from '../components/TicketChatFeed';
+import { TicketActivitySidebar } from '../components/TicketActivitySidebar';
+import { AlertTriangle, ArrowLeft, Image as ImageIcon } from 'lucide-react';
 
 export const TicketDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -49,16 +53,30 @@ export const TicketDetailPage: React.FC = () => {
   const updateStatusMutation = useUpdateTicketStatus();
   const assignAgentMutation = useAssignTicket();
   const addNoteMutation = useAddInternalNote();
+  const submitCsatMutation = useSubmitCsat();
 
   const { messages: socketMessages, typingUser, sendMessage, emitTyping } = useSocketChat(ticketId);
 
-  const [chatInput, setChatInput] = useState('');
-  const [noteInput, setNoteInput] = useState('');
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileDataUrl, setFileDataUrl] = useState<string | null>(null);
   const [previewModalUrl, setPreviewModalUrl] = useState<string | null>(null);
   const [activeRightTab, setActiveRightTab] = useState<'notes' | 'timeline'>('notes');
+
+  const chatForm = useForm<ChatFormValues>({
+    resolver: zodResolver(chatSchema),
+    defaultValues: { message: '' },
+  });
+
+  const noteForm = useForm<NoteFormValues>({
+    resolver: zodResolver(noteSchema),
+    defaultValues: { note: '' },
+  });
+
+  const csatForm = useForm<CsatFormValues>({
+    resolver: zodResolver(csatSchema),
+    defaultValues: { score: 0, comment: '' },
+  });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -112,21 +130,21 @@ export const TicketDetailPage: React.FC = () => {
     }
   };
 
-  const handleSendChat = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!chatInput.trim() && !fileDataUrl) return;
+  const onSendChat = (data: ChatFormValues) => {
+    const input = data.message || '';
+    if (!input.trim() && !fileDataUrl) return;
 
     if (isAgentOrAdmin && isNoteMode) {
       // Send as Private Internal Note
       const noteContent = fileDataUrl
-        ? `${chatInput.trim()}\n\n[Attached File: ${selectedFile?.name}]`
-        : chatInput.trim();
+        ? `${input.trim()}\n\n[Attached File: ${selectedFile?.name}]`
+        : input.trim();
 
       addNoteMutation.mutate(
         { id: ticketId, content: noteContent },
         {
           onSuccess: () => {
-            setChatInput('');
+            chatForm.reset();
             handleRemoveFile();
             toast.success('Private internal note saved');
           },
@@ -134,60 +152,26 @@ export const TicketDetailPage: React.FC = () => {
       );
     } else {
       // Send as Public Chat Message
-      let contentToSend = chatInput.trim();
+      let contentToSend = input.trim();
       if (fileDataUrl) {
         contentToSend = `${contentToSend} ${fileDataUrl}`.trim();
       }
 
       sendMessage(contentToSend);
-      setChatInput('');
+      chatForm.reset();
       handleRemoveFile();
     }
   };
 
-  const handleAddNote = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!noteInput.trim()) return;
+  const onAddNote = (data: NoteFormValues) => {
     addNoteMutation.mutate(
-      { id: ticketId, content: noteInput.trim() },
+      { id: ticketId, content: data.note.trim() },
       {
-        onSuccess: () => setNoteInput(''),
+        onSuccess: () => noteForm.reset(),
       }
     );
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'OPEN':
-        return <Badge variant="info">Open</Badge>;
-      case 'ASSIGNED':
-        return <Badge variant="purple">Assigned</Badge>;
-      case 'IN_PROGRESS':
-        return <Badge variant="warning">In Progress</Badge>;
-      case 'WAITING_FOR_CUSTOMER':
-        return <Badge variant="warning">Waiting Customer</Badge>;
-      case 'RESOLVED':
-        return <Badge variant="success">Resolved</Badge>;
-      case 'CLOSED':
-        return <Badge variant="secondary">Closed</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
-
-  const getPriorityBadge = (priority: string) => {
-    switch (priority) {
-      case 'URGENT':
-        return <Badge variant="danger">Urgent</Badge>;
-      case 'HIGH':
-        return <Badge variant="warning">High</Badge>;
-      case 'MEDIUM':
-        return <Badge variant="info">Medium</Badge>;
-      case 'LOW':
-      default:
-        return <Badge variant="secondary">Low</Badge>;
-    }
-  };
 
   if (isLoading) {
     return (
@@ -197,6 +181,14 @@ export const TicketDetailPage: React.FC = () => {
       </div>
     );
   }
+
+  const onSubmitCsat = (data: CsatFormValues) => {
+    submitCsatMutation.mutate({
+      id: ticketId,
+      score: data.score,
+      comment: data.comment || '',
+    });
+  };
 
   if (isError || !ticket) {
     return (
@@ -219,492 +211,60 @@ export const TicketDetailPage: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans pb-12">
-      {/* Top Header Banner Card */}
-      <div className="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <Link
-              to="/customer/tickets"
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Tickets
-            </Link>
-            <div className="flex items-center gap-3 flex-wrap pt-1">
-              <span className="text-sm font-bold text-slate-400">
-                #{ticket.ticketNumber || ticket.id.substring(0, 6)}
-              </span>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-                {ticket.title}
-              </h1>
-            </div>
-          </div>
+      <TicketHeader ticket={ticket} />
 
-          <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            <Badge variant="ghost" className="text-xs font-semibold text-slate-600 capitalize">
-              {ticket.category ? ticket.category.toLowerCase().replace('_', ' ') : 'General'}
-            </Badge>
-            {getPriorityBadge(ticket.priority)}
-            {getStatusBadge(ticket.status)}
-          </div>
-        </div>
-
-        {/* Ticket Description snippet */}
-        {ticket.description && (
-          <div className="pt-2 border-t border-slate-100">
-            <p className="text-xs text-slate-600 font-medium bg-slate-50 p-3 rounded-xl border border-slate-200/60 leading-relaxed">
-              {ticket.description}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Main Workspace Grid: Chat (8 cols) & Side Controls (4 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT / MAIN COLUMN: Light-Themed Real-Time Support Chat */}
-        <div className="lg:col-span-8 flex flex-col bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden h-[620px]">
-          {/* Light Slate Chat Header */}
-          <div className="p-4 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-2xs">
-                <Headset className="w-5 h-5" />
-              </div>
-              <div>
-                <span className="text-sm font-bold text-slate-900 block leading-none">
-                  Real-Time Support Conversation
-                </span>
-                <span className="text-xs text-slate-500 font-normal">
-                  Ticket #{ticket.ticketNumber || ticket.id.substring(0, 6)}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full border border-emerald-200">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live Socket
-            </div>
-          </div>
+        <TicketChatFeed
+          ticket={ticket}
+          allMessages={allMessages}
+          user={user}
+          typingUser={typingUser}
+          isAgentOrAdmin={isAgentOrAdmin}
+          isNoteMode={isNoteMode}
+          setIsNoteMode={setIsNoteMode}
+          chatForm={chatForm}
+          onSendChat={onSendChat}
+          emitTyping={emitTyping}
+          fileDataUrl={fileDataUrl}
+          selectedFile={selectedFile}
+          handleFileSelect={handleFileSelect}
+          handleRemoveFile={handleRemoveFile}
+          setPreviewModalUrl={setPreviewModalUrl}
+        />
 
-          {/* Messages Stream Container */}
-          <div className="flex-1 p-5 space-y-4 overflow-y-auto bg-slate-50/40">
-            {allMessages.length === 0 ? (
-              <div className="text-center text-xs text-slate-400 py-20 font-normal">
-                No messages yet. Type a message below to start the conversation!
-              </div>
-            ) : (
-              allMessages.map((msg: any, idx: number) => {
-                const isMe = msg.senderId === user?.id;
-                const isAgent =
-                  msg.sender?.role === 'SUPPORT_AGENT' || msg.sender?.role === 'BUSINESS_ADMIN';
-
-                // Check if message content contains an embedded image dataUrl
-                const hasImageAttachment =
-                  typeof msg.content === 'string' && msg.content.includes('data:image');
-                let textContent = msg.content;
-                let imageUrl = '';
-
-                if (hasImageAttachment) {
-                  const parts = msg.content.split('data:image');
-                  textContent = parts[0];
-                  imageUrl = `data:image${parts[1]}`;
-                }
-
-                return (
-                  <div
-                    key={msg.id || idx}
-                    className={`flex gap-3 ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
-                  >
-                    {/* User Avatar Circle */}
-                    <div
-                      className={`w-8 h-8 rounded-full font-bold text-xs flex items-center justify-center shrink-0 border shadow-2xs ${
-                        isMe
-                          ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                          : isAgent
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : 'bg-slate-100 text-slate-700 border-slate-200'
-                      }`}
-                    >
-                      {msg.sender?.fullName ? msg.sender.fullName[0].toUpperCase() : 'U'}
-                    </div>
-
-                    <div
-                      className={`space-y-1 max-w-[80%] ${isMe ? 'items-end text-right' : 'items-start'}`}
-                    >
-                      <div
-                        className={`flex items-center gap-2 text-xs ${isMe ? 'justify-end' : 'justify-start'}`}
-                      >
-                        <span className="font-semibold text-slate-800">
-                          {msg.sender?.fullName || 'User'}
-                        </span>
-                        <Badge
-                          variant={isAgent ? 'purple' : 'warning'}
-                          className="text-[10px] px-1.5 py-0"
-                        >
-                          {isAgent ? 'Support Team' : 'Customer'}
-                        </Badge>
-                        <span className="text-[10px] text-slate-400 font-normal">
-                          {new Date(msg.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-
-                      <div
-                        className={`p-4 rounded-2xl text-sm font-medium leading-relaxed shadow-2xs space-y-2 ${
-                          isMe
-                            ? 'bg-indigo-50 border border-indigo-100 text-indigo-950 rounded-tr-none'
-                            : 'bg-white text-slate-900 border border-slate-200/80 rounded-tl-none'
-                        }`}
-                      >
-                        {textContent && <p>{textContent}</p>}
-
-                        {/* Embedded Image Attachment Card */}
-                        {imageUrl && (
-                          <div className="pt-1">
-                            <div
-                              onClick={() => setPreviewModalUrl(imageUrl)}
-                              className="relative group cursor-pointer rounded-xl overflow-hidden border border-slate-200/80 max-w-xs shadow-sm"
-                            >
-                              <img
-                                src={imageUrl}
-                                alt="Chat attachment"
-                                className="w-full h-40 object-cover group-hover:scale-105 transition-transform duration-300"
-                              />
-                              <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold gap-1">
-                                <Eye className="w-4 h-4" /> Click to Expand
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-
-            {typingUser && (
-              <div className="text-xs font-semibold text-indigo-600 italic flex items-center gap-2 animate-pulse pt-1">
-                <span className="w-2 h-2 rounded-full bg-indigo-600" />
-                {typingUser} is typing a response...
-              </div>
-            )}
-          </div>
-
-          {/* Attachment Preview Chip */}
-          {selectedFile && (
-            <div className="px-4 py-2 bg-indigo-50/80 border-t border-indigo-100 flex items-center justify-between text-xs font-semibold text-indigo-900 shrink-0">
-              <div className="flex items-center gap-2 truncate">
-                {selectedFile.type.startsWith('image/') ? (
-                  <ImageIcon className="w-4 h-4 text-indigo-600 shrink-0" />
-                ) : (
-                  <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
-                )}
-                <span className="truncate">{selectedFile.name}</span>
-                <span className="text-[10px] text-indigo-500 font-normal">
-                  ({(selectedFile.size / 1024).toFixed(1)} KB)
-                </span>
-              </div>
-              <button
-                onClick={handleRemoveFile}
-                className="p-1 hover:bg-indigo-100 rounded-lg text-indigo-600"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
-
-          {/* Chat Composer Input */}
-          <form
-            onSubmit={handleSendChat}
-            className="p-4 bg-white border-t border-slate-200 flex flex-col gap-2 shrink-0"
-          >
-            {/* Mode Switcher for Agents & Admins */}
-            {isAgentOrAdmin && (
-              <div className="flex items-center gap-2 pb-1 text-xs">
-                <button
-                  type="button"
-                  onClick={() => setIsNoteMode(false)}
-                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all ${
-                    !isNoteMode
-                      ? 'bg-indigo-600 text-white shadow-2xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  <MessageSquare className="w-3 h-3" /> Public Reply
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsNoteMode(true)}
-                  className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all ${
-                    isNoteMode
-                      ? 'bg-amber-500 text-white shadow-2xs'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  <Lock className="w-3 h-3" /> Private Note
-                </button>
-              </div>
-            )}
-
-            <div className="flex items-center gap-2">
-              {/* Hidden File Input */}
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileSelect}
-                accept="image/*,application/pdf"
-                className="hidden"
-              />
-
-              <Button
-                type="button"
-                variant="outline"
-                size="md"
-                onClick={() => fileInputRef.current?.click()}
-                className="bg-slate-50 hover:bg-slate-100 text-slate-600 border-slate-200 font-semibold p-3 rounded-xl shrink-0"
-                title="Attach file or image"
-              >
-                <Paperclip className="w-4 h-4" />
-              </Button>
-
-              <input
-                type="text"
-                placeholder={
-                  isNoteMode
-                    ? 'Write private internal note for team...'
-                    : 'Type public reply to customer...'
-                }
-                value={chatInput}
-                onChange={(e) => {
-                  setChatInput(e.target.value);
-                  emitTyping(true);
-                }}
-                onBlur={() => emitTyping(false)}
-                className={`flex-1 px-4 py-3 text-sm border rounded-xl focus:outline-none focus:ring-1 font-medium shadow-2xs ${
-                  isNoteMode
-                    ? 'border-amber-200 focus:border-amber-500 focus:ring-amber-500 bg-amber-50/40'
-                    : 'border-slate-200 focus:border-indigo-600 focus:ring-indigo-600 bg-white'
-                }`}
-              />
-
-              <Button
-                type="submit"
-                variant="outline"
-                size="md"
-                className={`font-bold py-3 px-5 rounded-xl shadow-2xs shrink-0 transition-all ${
-                  isNoteMode
-                    ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-500'
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600'
-                }`}
-              >
-                <Send className="w-4 h-4 mr-1.5" /> {isNoteMode ? 'Save Note' : 'Send'}
-              </Button>
-            </div>
-          </form>
-        </div>
-
-        {/* RIGHT COLUMN: Controls, Customer Info & Internal Notes */}
         <div className="lg:col-span-4 space-y-6">
-          {/* Card 1: Ticket Status & Agent Controls */}
-          <Card glass className="p-5 border border-slate-200/80 space-y-4">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Ticket Management
-            </h3>
-
-            {/* Status Control */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-slate-700">Ticket Status</label>
-              {isAgentOrAdmin ? (
-                <select
-                  value={ticket.status}
-                  onChange={(e) =>
-                    updateStatusMutation.mutate({ id: ticketId, status: e.target.value })
-                  }
-                  disabled={updateStatusMutation.isPending}
-                  className="w-full px-3.5 py-2.5 text-xs font-semibold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white shadow-2xs"
-                >
-                  <option value="OPEN">Open</option>
-                  <option value="ASSIGNED">Assigned</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="WAITING_FOR_CUSTOMER">Waiting for Customer</option>
-                  <option value="RESOLVED">Resolved</option>
-                  <option value="CLOSED">Closed</option>
-                </select>
-              ) : (
-                <div className="py-1">{getStatusBadge(ticket.status)}</div>
-              )}
-            </div>
-
-            {/* Agent Assignment Control */}
-            {isAgentOrAdmin && (
-              <div className="space-y-1.5 pt-3 border-t border-slate-100">
-                <label className="text-xs font-semibold text-slate-700">
-                  Assigned Support Agent
-                </label>
-                <select
-                  value={ticket.assignedAgentId || ''}
-                  onChange={(e) =>
-                    assignAgentMutation.mutate({ id: ticketId, assignedAgentId: e.target.value })
-                  }
-                  disabled={assignAgentMutation.isPending}
-                  className="w-full px-3.5 py-2.5 text-xs font-semibold border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white shadow-2xs"
-                >
-                  <option value="">Unassigned</option>
-                  {agentsList.map((ag: any) => (
-                    <option key={ag.id} value={ag.id}>
-                      {ag.fullName} ({ag.role === 'BUSINESS_ADMIN' ? 'Admin' : 'Agent'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Customer Details Box */}
-            <div className="pt-3 border-t border-slate-100 space-y-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Customer Details
-              </span>
-              <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-1 text-xs">
-                <div className="font-bold text-slate-900 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-indigo-600" />
-                  {ticket.customer?.fullName || 'Customer'}
-                </div>
-                <div className="text-slate-500 font-normal truncate">{ticket.customer?.email}</div>
-                <div className="text-slate-400 text-[10px] pt-1 font-normal flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> Created{' '}
-                  {new Date(ticket.createdAt).toLocaleDateString()}
-                </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Card 2: Agent Private Internal Notes & Audit Timeline */}
-          <Card glass className="p-5 border border-slate-200/80 space-y-4 flex flex-col">
-            {/* Tabs Switcher Header */}
-            <div className="flex border-b border-slate-100 pb-2 gap-4">
-              {isAgentOrAdmin && (
-                <button
-                  onClick={() => setActiveRightTab('notes')}
-                  className={`text-xs font-bold pb-1 flex items-center gap-1.5 transition-colors ${
-                    activeRightTab === 'notes'
-                      ? 'text-indigo-600 border-b-2 border-indigo-600'
-                      : 'text-slate-400 hover:text-slate-600'
-                  }`}
-                >
-                  <Lock className="w-3.5 h-3.5 text-amber-500" /> Private Notes
-                </button>
-              )}
-              <button
-                onClick={() => setActiveRightTab('timeline')}
-                className={`text-xs font-bold pb-1 flex items-center gap-1.5 transition-colors ${
-                  activeRightTab === 'timeline' || !isAgentOrAdmin
-                    ? 'text-indigo-600 border-b-2 border-indigo-600'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <History className="w-3.5 h-3.5 text-slate-500" /> Activity Log
-              </button>
-            </div>
-
-            {/* TAB 1: Private Agent Internal Notes */}
-            {isAgentOrAdmin && activeRightTab === 'notes' && (
-              <div className="space-y-3">
-                <div className="space-y-2.5 overflow-y-auto max-h-[220px] pr-1">
-                  <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs font-medium flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-amber-600 shrink-0" />
-                    <span>Private internal notes are hidden from customer.</span>
-                  </div>
-
-                  {ticket.internalNotes?.length === 0 ? (
-                    <p className="text-xs text-slate-400 text-center py-4 font-normal">
-                      No internal notes added yet.
-                    </p>
-                  ) : (
-                    ticket.internalNotes?.map((note: any) => (
-                      <div
-                        key={note.id}
-                        className="p-3 bg-amber-50/50 border border-amber-200/80 rounded-xl space-y-1 text-xs"
-                      >
-                        <div className="flex items-center justify-between font-bold text-slate-900">
-                          <span>{note.author?.fullName}</span>
-                          <span className="text-[10px] text-slate-400 font-normal">
-                            {new Date(note.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-slate-800 font-normal leading-relaxed">{note.content}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                <form onSubmit={handleAddNote} className="space-y-2 pt-2 border-t border-slate-100">
-                  <textarea
-                    rows={2}
-                    placeholder="Add private internal note..."
-                    value={noteInput}
-                    onChange={(e) => setNoteInput(e.target.value)}
-                    className="w-full p-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-600 bg-white font-medium shadow-2xs"
-                  />
-                  <Button
-                    type="submit"
-                    variant="outline"
-                    size="sm"
-                    className="w-full bg-slate-100 hover:bg-slate-200 text-slate-900 font-bold py-2.5 rounded-xl shadow-2xs border-slate-200"
-                    isLoading={addNoteMutation.isPending}
-                  >
-                    Save Note
-                  </Button>
-                </form>
-              </div>
-            )}
-
-            {/* TAB 2: Immutable Activity Log */}
-            {(activeRightTab === 'timeline' || !isAgentOrAdmin) && (
-              <div className="space-y-2.5 overflow-y-auto max-h-[300px] pr-1">
-                {ticket.activities?.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-6 font-normal">
-                    No activity logged yet.
-                  </p>
-                ) : (
-                  ticket.activities?.map((act: any) => (
-                    <div
-                      key={act.id}
-                      className="p-3 bg-slate-50 border border-slate-200/60 rounded-xl text-xs space-y-1"
-                    >
-                      <div className="flex items-center justify-between font-bold text-slate-900">
-                        <span>{act.action}</span>
-                        <span className="text-[10px] text-slate-400 font-normal">
-                          {new Date(act.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-slate-500 font-normal">
-                        By {act.actor?.fullName || 'System'}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </Card>
+          <TicketMetadataSidebar
+            ticket={ticket}
+            agentsList={agentsList}
+            isAgentOrAdmin={isAgentOrAdmin}
+            updateStatusMutation={updateStatusMutation}
+            assignAgentMutation={assignAgentMutation}
+            submitCsatMutation={submitCsatMutation}
+            csatForm={csatForm}
+            onSubmitCsat={onSubmitCsat}
+          />
+          <TicketActivitySidebar
+            ticket={ticket}
+            isAgentOrAdmin={isAgentOrAdmin}
+            activeRightTab={activeRightTab}
+            setActiveRightTab={setActiveRightTab}
+            noteForm={noteForm}
+            onAddNote={onAddNote}
+            addNoteMutation={addNoteMutation}
+          />
         </div>
       </div>
 
-      {/* Premium Glassmorphism Image Lightbox Modal via React Portal */}
       {previewModalUrl &&
         createPortal(
           <div
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200"
             onClick={() => setPreviewModalUrl(null)}
           >
-            {/* Main Glass Card Container */}
             <div
               className="relative max-w-5xl w-full bg-slate-900/95 rounded-3xl border border-white/15 p-4 sm:p-6 shadow-2xl space-y-4 backdrop-blur-2xl ring-1 ring-white/10 overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Top Modal Header */}
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 flex items-center justify-center shadow-inner">
@@ -719,8 +279,6 @@ export const TicketDetailPage: React.FC = () => {
                     </p>
                   </div>
                 </div>
-
-                {/* Action Buttons */}
                 <div className="flex items-center gap-2">
                   <a
                     href={previewModalUrl}
@@ -731,7 +289,6 @@ export const TicketDetailPage: React.FC = () => {
                   >
                     <Download className="w-4 h-4 text-indigo-400" /> Download
                   </a>
-
                   <button
                     onClick={() => setPreviewModalUrl(null)}
                     className="w-9 h-9 rounded-xl bg-white/10 hover:bg-rose-500/80 text-white flex items-center justify-center border border-white/10 transition-all duration-200 hover:rotate-90"
@@ -741,8 +298,6 @@ export const TicketDetailPage: React.FC = () => {
                   </button>
                 </div>
               </div>
-
-              {/* Image Box Container */}
               <div className="flex items-center justify-center p-2 rounded-2xl bg-black/40 border border-white/5 max-h-[75vh] overflow-hidden">
                 <img
                   src={previewModalUrl}

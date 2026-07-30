@@ -259,4 +259,54 @@ export class TicketCrudService {
 
     return ticket;
   }
+
+  /**
+   * Submit Customer Satisfaction (CSAT) rating
+   */
+  async submitCsat(ticketId: string, score: number, comment: string | undefined, user: AuthenticatedUser) {
+    if (user.role !== Role.CUSTOMER) {
+      throw ApiError.forbidden('Only customers can submit CSAT ratings.');
+    }
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+
+    if (!ticket) {
+      throw ApiError.notFound('Ticket not found.');
+    }
+
+    if (ticket.customerId !== user.id) {
+      throw ApiError.forbidden('You can only rate your own tickets.');
+    }
+
+    if (ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED') {
+      throw ApiError.badRequest('You can only rate a ticket after it has been resolved.');
+    }
+
+    if (ticket.csatScore) {
+      throw ApiError.badRequest('You have already rated this ticket.');
+    }
+
+    const updatedTicket = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: {
+        csatScore: score,
+        csatComment: comment || null,
+      },
+    });
+
+    // Notify the assigned agent
+    if (updatedTicket.assignedAgentId) {
+      NotificationService.sendNotification({
+        userId: updatedTicket.assignedAgentId,
+        ticketId: ticket.id,
+        title: '⭐ New CSAT Rating Received',
+        message: `Your ticket #${ticket.ticketNumber || ticket.id.substring(0, 6)} received a ${score}/5 rating!`,
+        type: 'CSAT_RECEIVED',
+      }).catch(() => null);
+    }
+
+    return updatedTicket;
+  }
 }

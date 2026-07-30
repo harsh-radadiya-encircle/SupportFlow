@@ -111,6 +111,23 @@ export const useAddInternalNote = () => {
   });
 };
 
+export const useSubmitCsat = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, score, comment }: { id: string; score: number; comment?: string }) =>
+      ticketsApi.submitCsat(id, score, comment),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['ticket', variables.id] });
+      toast.success('Thank you for your feedback!');
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.message || 'Failed to submit feedback.';
+      toast.error(msg);
+    },
+  });
+};
+
 /**
  * Custom Socket.IO Chat & Live Synchronization Hook
  */

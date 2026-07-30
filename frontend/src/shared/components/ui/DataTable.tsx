@@ -91,7 +91,8 @@ export function DataTable<T extends { id?: string | number }>({
     if (onSearchChange) {
       onSearchChange(debouncedSearch);
     }
-  }, [debouncedSearch, onSearchChange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
 
   const displayTotal = totalCount !== undefined ? totalCount : total;
   const start = Math.min((page - 1) * limit + 1, displayTotal);
@@ -265,6 +266,7 @@ export function DataTable<T extends { id?: string | number }>({
             {/* Page Buttons */}
             <div className="flex items-center gap-1.5">
               <button
+                type="button"
                 onClick={() => onPageChange(page - 1)}
                 disabled={page <= 1}
                 className="px-3.5 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all whitespace-nowrap"
@@ -283,6 +285,7 @@ export function DataTable<T extends { id?: string | number }>({
                       <React.Fragment key={p}>
                         {showEllipsis && <span className="text-slate-400 text-sm px-1">...</span>}
                         <button
+                          type="button"
                           onClick={() => onPageChange(p)}
                           className={`w-8 h-8 rounded-lg text-sm font-semibold transition-all ${
                             p === page
@@ -298,6 +301,7 @@ export function DataTable<T extends { id?: string | number }>({
               </div>
 
               <button
+                type="button"
                 onClick={() => onPageChange(page + 1)}
                 disabled={page >= totalPages}
                 className="px-3.5 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all whitespace-nowrap"
