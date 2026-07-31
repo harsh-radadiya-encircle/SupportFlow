@@ -29,7 +29,7 @@
 
 - `backend/`: Express TypeScript API server with domain-driven modules (`auth`, `business`, `tickets`, `chat`, `notifications`, `subscriptions`, `dashboard`, `reports`, `socket`, `prisma`).
 - `frontend/`: React 19 Vite TypeScript application with feature-based architecture (`features`, `components`, `layouts`, `routes`, `services`, `store`, `types`).
-- `docs/`: System ER diagrams, environment setup guide, and documentation.
+
 
 ---
 
