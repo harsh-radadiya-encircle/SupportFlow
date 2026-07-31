@@ -35,7 +35,7 @@ import { TicketHeader } from '../components/TicketHeader';
 import { TicketMetadataSidebar } from '../components/TicketMetadataSidebar';
 import { TicketChatFeed } from '../components/TicketChatFeed';
 import { TicketActivitySidebar } from '../components/TicketActivitySidebar';
-import { AlertTriangle, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Download, Image as ImageIcon, X } from 'lucide-react';
 
 export const TicketDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();

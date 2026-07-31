@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { auth } from '../config/firebase';
 import { Badge } from '../components/ui/Badge';
 import { NotificationBell } from '../../features/notifications/components/NotificationBell';
-import { useNotifications } from '../../features/notifications/hooks/useNotifications.tsx';
+import { useSetupNotificationSocket } from '../../features/notifications/hooks/useNotifications.tsx';
 import { useSubscriptionDetails } from '../../features/subscriptions/hooks/useSubscriptions';
 import {
   LayoutDashboard,
@@ -24,7 +24,7 @@ import {
 export const DashboardLayout: React.FC = () => {
   const { user, clearAuth } = useAuthStore();
   const { data: subData } = useSubscriptionDetails();
-  useNotifications();
+  useSetupNotificationSocket();
   const activePlan = subData?.plan || user?.business?.plan || 'FREE';
 
   const navigate = useNavigate();

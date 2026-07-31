@@ -40,7 +40,7 @@ const playNotificationChime = () => {
   }
 };
 
-export const useNotifications = () => {
+export const useSetupNotificationSocket = () => {
   const { user, isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
   const { connect } = useSocketStore();
@@ -91,6 +91,10 @@ export const useNotifications = () => {
       socket.off('new_notification', handleNewNotification);
     };
   }, [user, isAuthenticated, queryClient, connect]);
+};
+
+export const useNotifications = () => {
+  const { user, isAuthenticated } = useAuthStore();
 
   return useQuery({
     queryKey: ['notifications'],
