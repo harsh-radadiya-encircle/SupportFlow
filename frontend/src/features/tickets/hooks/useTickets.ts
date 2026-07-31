@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { io, Socket } from 'socket.io-client';
+import { Socket } from 'socket.io-client';
+import { useSocketStore } from '../../../shared/store/socketStore';
 import toast from 'react-hot-toast';
 import { ticketsApi, CreateTicketPayload, TicketFilterQuery } from '../api/tickets.api';
 import { apiClient } from '../../../shared/api/apiClient';
@@ -134,6 +135,7 @@ export const useSubmitCsat = () => {
 export const useSocketChat = (ticketId: string) => {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
+  const { connect } = useSocketStore();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [typingUser, setTypingUser] = useState<string | null>(null);
@@ -141,59 +143,73 @@ export const useSocketChat = (ticketId: string) => {
   useEffect(() => {
     if (!ticketId || !user) return;
 
-    const socketInstance = io('http://localhost:5000', {
-      withCredentials: true,
-    });
+    const socketInstance = connect(user.id);
+    if (!socketInstance) return;
 
     setSocket(socketInstance);
 
-    // Join Ticket Room & User Room
+    // Join Ticket Room
     socketInstance.emit('join_ticket', ticketId);
-    socketInstance.emit('join_user_room', user.id);
 
-    // Listen for new messages
-    socketInstance.on('receive_message', (newMsg: any) => {
+    const handleReceiveMessage = (newMsg: any) => {
       setMessages((prev) => [...prev, newMsg]);
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
-    });
+    };
 
-    // Listen for Live Ticket Status Updates
-    socketInstance.on('ticket_status_updated', (data: any) => {
+    const handleStatusUpdated = (data: any) => {
       if (data.ticketId === ticketId) {
         queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
         queryClient.invalidateQueries({ queryKey: ['tickets'] });
       }
-    });
+    };
 
-    // Listen for Live Agent Assignments
-    socketInstance.on('ticket_assigned', (data: any) => {
+    const handleTicketAssigned = (data: any) => {
       if (data.ticketId === ticketId) {
         queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
         queryClient.invalidateQueries({ queryKey: ['tickets'] });
       }
-    });
+    };
 
-    // Listen for Live Internal Notes
-    socketInstance.on('internal_note_added', () => {
+    const handleInternalNoteAdded = () => {
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
-    });
+    };
 
-    // Listen for typing indicators
-    socketInstance.on('user_typing_start', (data: any) => {
+    const handleTypingStart = (data: any) => {
       if (data.userName !== user.fullName) {
         setTypingUser(data.userName);
       }
-    });
+    };
 
-    socketInstance.on('user_typing_stop', () => {
+    const handleTypingStop = () => {
       setTypingUser(null);
-    });
+    };
+
+    // Listen for new messages
+    socketInstance.on('receive_message', handleReceiveMessage);
+
+    // Listen for Live Ticket Status Updates
+    socketInstance.on('ticket_status_updated', handleStatusUpdated);
+
+    // Listen for Live Agent Assignments
+    socketInstance.on('ticket_assigned', handleTicketAssigned);
+
+    // Listen for Live Internal Notes
+    socketInstance.on('internal_note_added', handleInternalNoteAdded);
+
+    // Listen for typing indicators
+    socketInstance.on('user_typing_start', handleTypingStart);
+    socketInstance.on('user_typing_stop', handleTypingStop);
 
     return () => {
       socketInstance.emit('leave_ticket', ticketId);
-      socketInstance.disconnect();
+      socketInstance.off('receive_message', handleReceiveMessage);
+      socketInstance.off('ticket_status_updated', handleStatusUpdated);
+      socketInstance.off('ticket_assigned', handleTicketAssigned);
+      socketInstance.off('internal_note_added', handleInternalNoteAdded);
+      socketInstance.off('user_typing_start', handleTypingStart);
+      socketInstance.off('user_typing_stop', handleTypingStop);
     };
-  }, [ticketId, user]);
+  }, [ticketId, user, connect, queryClient]);
 
   const sendMessage = (content: string) => {
     if (socket && user && content.trim()) {

@@ -1,11 +1,11 @@
-import crypto from 'crypto';
-import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
-import { prisma } from '../../utils/prisma';
-import { razorpay } from '../../config/razorpay';
-import { env } from '../../config/env';
-import { ApiError } from '../../common/exceptions/apiError';
-import { AuthenticatedUser } from '../../common/types';
-import { NotificationService } from '../../services/notification.service';
+import crypto from "crypto";
+import { SubscriptionPlan, SubscriptionStatus } from "@prisma/client";
+import { prisma } from "../../utils/prisma";
+import { razorpay } from "../../config/razorpay";
+import { env } from "../../config/env";
+import { ApiError } from "../../common/exceptions/apiError";
+import { AuthenticatedUser } from "../../common/types";
+import { NotificationService } from "../../services/notification.service";
 
 export class SubscriptionsService {
   /**
@@ -16,14 +16,14 @@ export class SubscriptionsService {
       where: { id: businessId },
       include: {
         billingHistory: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           take: 10,
         },
       },
     });
 
     if (!business) {
-      throw ApiError.notFound('Business profile not found.');
+      throw ApiError.notFound("Business profile not found.");
     }
 
     const now = new Date();
@@ -42,7 +42,7 @@ export class SubscriptionsService {
         },
         include: {
           billingHistory: {
-            orderBy: { createdAt: 'desc' },
+            orderBy: { createdAt: "desc" },
             take: 10,
           },
         },
@@ -55,7 +55,7 @@ export class SubscriptionsService {
       prisma.user.count({
         where: {
           businessId,
-          role: 'SUPPORT_AGENT',
+          role: "SUPPORT_AGENT",
           isActive: true,
         },
       }),
@@ -75,20 +75,29 @@ export class SubscriptionsService {
 
     const maxAgents = agentLimits[business.plan] || 1;
 
-    // Calculate currentPeriodEnd & daysRemaining
+    // Calculate currentPeriodEnd & daysRemaining (null for FREE plan)
     const currentPeriodEnd =
-      business.currentPeriodEnd || new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    const daysRemaining = Math.max(
-      0,
-      Math.ceil((currentPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-    );
+      business.plan === SubscriptionPlan.FREE
+        ? null
+        : business.currentPeriodEnd;
+    const daysRemaining = currentPeriodEnd
+      ? Math.max(
+          0,
+          Math.ceil(
+            (currentPeriodEnd.getTime() - now.getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
+        )
+      : null;
 
     return {
       businessId: business.id,
       name: business.name,
       plan: business.plan,
       subscriptionStatus: business.subscriptionStatus,
-      currentPeriodEnd: currentPeriodEnd.toISOString(),
+      currentPeriodEnd: currentPeriodEnd
+        ? currentPeriodEnd.toISOString()
+        : null,
       daysRemaining,
       razorpayCustomerId: business.razorpayCustomerId,
       usage: {
@@ -99,9 +108,9 @@ export class SubscriptionsService {
         },
         tickets: {
           used: monthlyTicketCount,
-          max: business.plan === 'FREE' ? 25 : 'Unlimited',
+          max: business.plan === "FREE" ? 25 : "Unlimited",
           percentage:
-            business.plan === 'FREE'
+            business.plan === "FREE"
               ? Math.min(100, Math.round((monthlyTicketCount / 25) * 100))
               : 0,
         },
@@ -114,12 +123,14 @@ export class SubscriptionsService {
    * Create Razorpay Order for Plan Upgrades & Downgrades (Monthly & Yearly)
    */
   static async createRazorpayOrder(
-    plan: 'STANDARD' | 'BUSINESS',
-    billingCycle: 'monthly' | 'yearly' = 'monthly',
-    user: AuthenticatedUser
+    plan: "STANDARD" | "BUSINESS",
+    billingCycle: "monthly" | "yearly" = "monthly",
+    user: AuthenticatedUser,
   ) {
     if (!user.businessId) {
-      throw ApiError.badRequest('You must be associated with a business to manage plans.');
+      throw ApiError.badRequest(
+        "You must be associated with a business to manage plans.",
+      );
     }
 
     const business = await prisma.business.findUnique({
@@ -127,16 +138,18 @@ export class SubscriptionsService {
     });
 
     if (!business) {
-      throw ApiError.notFound('Business profile not found.');
+      throw ApiError.notFound("Business profile not found.");
     }
 
     const isRealRazorpayKey =
       env.RAZORPAY.KEY_ID &&
-      env.RAZORPAY.KEY_ID.startsWith('rzp_') &&
-      env.RAZORPAY.KEY_ID !== 'rzp_test_mock';
+      env.RAZORPAY.KEY_ID.startsWith("rzp_") &&
+      env.RAZORPAY.KEY_ID !== "rzp_test_mock";
 
-    const durationDays = billingCycle === 'yearly' ? 365 : 30;
-    const currentPeriodEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+    const durationDays = billingCycle === "yearly" ? 365 : 30;
+    const currentPeriodEnd = new Date(
+      Date.now() + durationDays * 24 * 60 * 60 * 1000,
+    );
 
     // Development / Test Fallback Mode
     if (!isRealRazorpayKey) {
@@ -160,16 +173,16 @@ export class SubscriptionsService {
     // Determine Amount in INR Paise
     // Standard: ₹2,499/mo (₹24,990/yr) | Business: ₹6,499/mo (₹64,990/yr)
     let amountInPaise = 249900;
-    if (plan === 'STANDARD') {
-      amountInPaise = billingCycle === 'yearly' ? 2499000 : 249900;
-    } else if (plan === 'BUSINESS') {
-      amountInPaise = billingCycle === 'yearly' ? 6499000 : 649900;
+    if (plan === "STANDARD") {
+      amountInPaise = billingCycle === "yearly" ? 2499000 : 249900;
+    } else if (plan === "BUSINESS") {
+      amountInPaise = billingCycle === "yearly" ? 6499000 : 649900;
     }
 
     try {
       const order = await razorpay.orders.create({
         amount: amountInPaise,
-        currency: 'INR',
+        currency: "INR",
         receipt: `rcpt_${business.id.slice(0, 8)}_${Date.now()}`,
         notes: {
           businessId: business.id,
@@ -195,8 +208,10 @@ export class SubscriptionsService {
         userEmail: user.email,
       };
     } catch (err: any) {
-      console.error('[Razorpay Order Creation Error]:', err);
-      throw ApiError.badRequest(err.message || 'Failed to create Razorpay payment order.');
+      console.error("[Razorpay Order Creation Error]:", err);
+      throw ApiError.badRequest(
+        err.message || "Failed to create Razorpay payment order.",
+      );
     }
   }
 
@@ -208,13 +223,13 @@ export class SubscriptionsService {
       razorpay_order_id: string;
       razorpay_payment_id: string;
       razorpay_signature: string;
-      plan: 'STANDARD' | 'BUSINESS';
-      billingCycle?: 'monthly' | 'yearly';
+      plan: "STANDARD" | "BUSINESS";
+      billingCycle?: "monthly" | "yearly";
     },
-    user: AuthenticatedUser
+    user: AuthenticatedUser,
   ) {
     if (!user.businessId) {
-      throw ApiError.badRequest('No business profile found.');
+      throw ApiError.badRequest("No business profile found.");
     }
 
     const {
@@ -222,27 +237,31 @@ export class SubscriptionsService {
       razorpay_payment_id,
       razorpay_signature,
       plan,
-      billingCycle = 'monthly',
+      billingCycle = "monthly",
     } = payload;
 
     // HMAC Signature Validation
     const generatedSignature = crypto
-      .createHmac('sha256', env.RAZORPAY.KEY_SECRET)
+      .createHmac("sha256", env.RAZORPAY.KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest('hex');
+      .digest("hex");
 
     if (generatedSignature !== razorpay_signature) {
-      throw ApiError.badRequest('Invalid Razorpay payment signature verification failed.');
+      throw ApiError.badRequest(
+        "Invalid Razorpay payment signature verification failed.",
+      );
     }
 
-    const durationDays = billingCycle === 'yearly' ? 365 : 30;
-    const currentPeriodEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+    const durationDays = billingCycle === "yearly" ? 365 : 30;
+    const currentPeriodEnd = new Date(
+      Date.now() + durationDays * 24 * 60 * 60 * 1000,
+    );
 
     let amountPaid = 249900;
-    if (plan === 'STANDARD') {
-      amountPaid = billingCycle === 'yearly' ? 2499000 : 249900;
-    } else if (plan === 'BUSINESS') {
-      amountPaid = billingCycle === 'yearly' ? 6499000 : 649900;
+    if (plan === "STANDARD") {
+      amountPaid = billingCycle === "yearly" ? 2499000 : 249900;
+    } else if (plan === "BUSINESS") {
+      amountPaid = billingCycle === "yearly" ? 6499000 : 649900;
     }
 
     // Update Business Plan & Expiry Date in DB
@@ -264,8 +283,8 @@ export class SubscriptionsService {
           razorpayPaymentId: razorpay_payment_id,
           razorpayOrderId: razorpay_order_id,
           amountPaid,
-          currency: 'INR',
-          status: 'captured',
+          currency: "INR",
+          status: "captured",
         },
       })
       .catch(() => null);
@@ -283,7 +302,7 @@ export class SubscriptionsService {
    */
   static async cancelSubscription(user: AuthenticatedUser) {
     if (!user.businessId) {
-      throw ApiError.badRequest('No business profile found.');
+      throw ApiError.badRequest("No business profile found.");
     }
 
     const business = await prisma.business.update({
@@ -296,7 +315,7 @@ export class SubscriptionsService {
     return {
       success: true,
       message:
-        'Subscription canceled. Access will remain active until current period end date, then re-set to Free plan.',
+        "Subscription canceled. Access will remain active until current period end date, then re-set to Free plan.",
       plan: business.plan,
       subscriptionStatus: business.subscriptionStatus,
       currentPeriodEnd: business.currentPeriodEnd?.toISOString(),
@@ -310,12 +329,14 @@ export class SubscriptionsService {
     const webhookSecret = env.RAZORPAY.WEBHOOK_SECRET;
 
     const expectedSignature = crypto
-      .createHmac('sha256', webhookSecret)
+      .createHmac("sha256", webhookSecret)
       .update(payloadBuffer)
-      .digest('hex');
+      .digest("hex");
 
     if (expectedSignature !== signature) {
-      throw ApiError.badRequest('Razorpay Webhook signature verification failed.');
+      throw ApiError.badRequest(
+        "Razorpay Webhook signature verification failed.",
+      );
     }
 
     const body = JSON.parse(payloadBuffer.toString());
@@ -324,18 +345,23 @@ export class SubscriptionsService {
     console.log(`[Razorpay Webhook Received]: Event ${event}`);
 
     switch (event) {
-      case 'order.paid':
-      case 'payment.captured': {
+      case "order.paid":
+      case "payment.captured": {
         const payment = body.payload.payment.entity;
         const notes = payment.notes || {};
         const businessId = notes.businessId;
         const plan = notes.plan as SubscriptionPlan;
-        const billingCycle = (notes.billingCycle as 'monthly' | 'yearly') || 'monthly';
-        const durationDays = billingCycle === 'yearly' ? 365 : 30;
-        const currentPeriodEnd = new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000);
+        const billingCycle =
+          (notes.billingCycle as "monthly" | "yearly") || "monthly";
+        const durationDays = billingCycle === "yearly" ? 365 : 30;
+        const currentPeriodEnd = new Date(
+          Date.now() + durationDays * 24 * 60 * 60 * 1000,
+        );
 
         if (businessId && plan) {
-          const business = await prisma.business.findUnique({ where: { id: businessId } });
+          const business = await prisma.business.findUnique({
+            where: { id: businessId },
+          });
           if (business) {
             const oldPlan = business.plan;
 
@@ -349,27 +375,31 @@ export class SubscriptionsService {
             });
 
             // Determine notification type
-            const planLevels: Record<SubscriptionPlan, number> = { FREE: 0, STANDARD: 1, BUSINESS: 2 };
+            const planLevels: Record<SubscriptionPlan, number> = {
+              FREE: 0,
+              STANDARD: 1,
+              BUSINESS: 2,
+            };
             const oldLevel = planLevels[oldPlan] || 0;
             const newLevel = planLevels[plan] || 0;
 
             if (newLevel > oldLevel) {
               NotificationService.sendToBusinessAdmins(businessId, {
-                title: '🚀 Plan Upgraded!',
+                title: "🚀 Plan Upgraded!",
                 message: `Your workspace has successfully been upgraded to the ${plan} plan.`,
-                type: 'PLAN_UPGRADED',
+                type: "PLAN_UPGRADED",
               });
             } else if (newLevel < oldLevel) {
               NotificationService.sendToBusinessAdmins(businessId, {
-                title: '⬇️ Plan Downgraded',
+                title: "⬇️ Plan Downgraded",
                 message: `Your workspace has been downgraded to the ${plan} plan.`,
-                type: 'PLAN_DOWNGRADED',
+                type: "PLAN_DOWNGRADED",
               });
             } else {
               NotificationService.sendToBusinessAdmins(businessId, {
-                title: '💳 Subscription Renewed',
+                title: "💳 Subscription Renewed",
                 message: `Your ${plan} subscription has been successfully renewed.`,
-                type: 'PLAN_PURCHASED',
+                type: "PLAN_PURCHASED",
               });
             }
           }
@@ -377,8 +407,8 @@ export class SubscriptionsService {
         break;
       }
 
-      case 'subscription.cancelled':
-      case 'subscription.halted': {
+      case "subscription.cancelled":
+      case "subscription.halted": {
         const subscription = body.payload.subscription.entity;
         const business = await prisma.business.findFirst({
           where: { razorpaySubscriptionId: subscription.id },
@@ -393,9 +423,9 @@ export class SubscriptionsService {
           });
 
           NotificationService.sendToBusinessAdmins(business.id, {
-            title: '⚠️ Subscription Canceled',
+            title: "⚠️ Subscription Canceled",
             message: `Your subscription has been canceled. Your workspace will revert to the FREE plan at the end of the billing cycle.`,
-            type: 'PLAN_CANCELED',
+            type: "PLAN_CANCELED",
           });
         }
         break;
@@ -405,6 +435,6 @@ export class SubscriptionsService {
         console.log(`[Razorpay Webhook] Unhandled event: ${event}`);
     }
 
-    return { status: 'ok' };
+    return { status: "ok" };
   }
 }

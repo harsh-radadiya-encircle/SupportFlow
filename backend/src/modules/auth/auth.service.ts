@@ -1,10 +1,10 @@
-import { Role, AuthProvider } from '@prisma/client';
-import jwt from 'jsonwebtoken';
-import { prisma } from '../../utils/prisma';
-import { env } from '../../config/env';
-import { ApiError } from '../../common/exceptions/apiError';
-import { EmailService } from '../../services/email.service';
-import { admin, isFirebaseInitialized } from '../../config/firebase';
+import { Role, AuthProvider } from "@prisma/client";
+import jwt from "jsonwebtoken";
+import { prisma } from "../../utils/prisma";
+import { env } from "../../config/env";
+import { ApiError } from "../../common/exceptions/apiError";
+import { EmailService } from "../../services/email.service";
+import { admin, isFirebaseInitialized } from "../../config/firebase";
 
 export interface SyncUserDto {
   firebaseUid: string;
@@ -12,8 +12,8 @@ export interface SyncUserDto {
   fullName?: string;
   role?: Role;
   businessName?: string;
-  mode?: 'login' | 'register';
-  authProvider?: 'EMAIL_PASSWORD' | 'GOOGLE' | 'MULTI_PROVIDER';
+  mode?: "login" | "register";
+  authProvider?: "EMAIL_PASSWORD" | "GOOGLE" | "MULTI_PROVIDER";
 }
 
 export class AuthService {
@@ -51,17 +51,14 @@ export class AuthService {
    *   - New user via email/password register    → provision as EMAIL_PASSWORD
    */
   static async syncOrRegisterUser(dto: SyncUserDto) {
-    const isLoginMode = dto.mode === 'login';
-    const isRegisterMode = dto.mode === 'register';
+    const isLoginMode = dto.mode === "login";
+    const isRegisterMode = dto.mode === "register";
     const incomingProvider = dto.authProvider as AuthProvider | undefined;
 
     // Find existing user by firebaseUid first, then fall back to email
     let existingUser = await prisma.user.findFirst({
       where: {
-        OR: [
-          { firebaseUid: dto.firebaseUid },
-          { email: dto.email },
-        ],
+        OR: [{ firebaseUid: dto.firebaseUid }, { email: dto.email }],
       },
       include: { business: true },
     });
@@ -69,7 +66,7 @@ export class AuthService {
     // ── REGISTER MODE ──────────────────────────────────────────────────────────
     if (isRegisterMode && existingUser) {
       throw ApiError.badRequest(
-        'An account with this email already exists. Please sign in using Email & Password or Google.'
+        "An account with this email already exists. Please sign in using Email & Password or Google.",
       );
     }
 
@@ -81,9 +78,9 @@ export class AuthService {
       // ── MULTI_PROVIDER upgrade (from Profile "Connect Google Account" button) ──
       // When the user explicitly connects Google from their profile, we trust the
       // new Google UID and upgrade their account to MULTI_PROVIDER.
-      if (incomingProvider === 'MULTI_PROVIDER') {
+      if (incomingProvider === "MULTI_PROVIDER") {
         updateData.authProvider = AuthProvider.MULTI_PROVIDER;
-        if (dto.firebaseUid && dto.firebaseUid !== 'check') {
+        if (dto.firebaseUid && dto.firebaseUid !== "check") {
           // Store the Google UID alongside the account so either provider UID
           // can be used to look up the user in future requests.
           updateData.firebaseUid = dto.firebaseUid;
@@ -93,28 +90,32 @@ export class AuthService {
       // Block: pure EMAIL_PASSWORD account attempting a direct Google login from Login page.
       // (Frontend should catch this first, but backend enforces it as a safety net.)
       if (
-        storedProvider === 'EMAIL_PASSWORD' &&
-        incomingProvider === 'GOOGLE' &&
+        storedProvider === "EMAIL_PASSWORD" &&
+        incomingProvider === "GOOGLE" &&
         existingUser.firebaseUid !== dto.firebaseUid
       ) {
         throw ApiError.badRequest(
-          'This email is registered with Email & Password. Please sign in with your password. You can link Google in Profile > Connected Accounts after signing in.'
+          "This email is registered with Email & Password. Please sign in with your password. You can link Google in Profile > Connected Accounts after signing in.",
         );
       }
 
       // Sync firebaseUid if it has legitimately changed (e.g. same provider, different device)
       if (
-        incomingProvider !== 'MULTI_PROVIDER' && // Already handled above
+        incomingProvider !== "MULTI_PROVIDER" && // Already handled above
         dto.firebaseUid &&
-        dto.firebaseUid !== 'check' &&
+        dto.firebaseUid !== "check" &&
         existingUser.firebaseUid !== dto.firebaseUid &&
-        (storedProvider === 'MULTI_PROVIDER' || storedProvider === (incomingProvider as string))
+        (storedProvider === "MULTI_PROVIDER" ||
+          storedProvider === (incomingProvider as string))
       ) {
         updateData.firebaseUid = dto.firebaseUid;
       }
 
       // Upgrade to MULTI_PROVIDER when a GOOGLE-registered user now also uses email/password
-      if (storedProvider === 'GOOGLE' && incomingProvider === 'EMAIL_PASSWORD') {
+      if (
+        storedProvider === "GOOGLE" &&
+        incomingProvider === "EMAIL_PASSWORD"
+      ) {
         updateData.authProvider = AuthProvider.MULTI_PROVIDER;
       }
 
@@ -128,14 +129,14 @@ export class AuthService {
     }
 
     // ── LOGIN with no existing user (Google auto-provision) ────────────────────
-    if (isLoginMode && !existingUser && incomingProvider === 'GOOGLE') {
+    if (isLoginMode && !existingUser && incomingProvider === "GOOGLE") {
       // Auto-register new Google users on first login
       let businessId: string | undefined;
 
       if (dto.role === Role.BUSINESS_ADMIN && dto.businessName) {
         const slug =
-          dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-') +
-          '-' +
+          dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, "-") +
+          "-" +
           Date.now();
         const business = await prisma.business.create({
           data: { name: dto.businessName, slug },
@@ -147,7 +148,7 @@ export class AuthService {
         data: {
           firebaseUid: dto.firebaseUid,
           email: dto.email,
-          fullName: dto.fullName || 'Google User',
+          fullName: dto.fullName || "Google User",
           role: dto.role || Role.CUSTOMER,
           authProvider: AuthProvider.GOOGLE,
           businessId,
@@ -158,9 +159,36 @@ export class AuthService {
 
     // ── LOGIN with no existing user (non-Google) ───────────────────────────────
     if (isLoginMode && !existingUser) {
-      throw ApiError.notFound(
-        'No account found for this email. Please click "Create account" to sign up first.'
-      );
+      // Self-heal desync: if the user exists in Firebase but not in Postgres, auto-create them.
+      let role: Role = dto.role || Role.CUSTOMER;
+      let businessId: string | undefined;
+
+      // Check if they have an active pending invitation
+      const invitation = await prisma.invitation.findFirst({
+        where: { email: dto.email, isAccepted: false },
+      });
+
+      if (invitation) {
+        role = invitation.role;
+        businessId = invitation.businessId;
+        await prisma.invitation.update({
+          where: { id: invitation.id },
+          data: { isAccepted: true },
+        });
+      }
+
+      existingUser = await prisma.user.create({
+        data: {
+          firebaseUid: dto.firebaseUid,
+          email: dto.email,
+          fullName: dto.fullName || dto.email.split("@")[0] || "User",
+          role,
+          authProvider:
+            (incomingProvider as AuthProvider) || AuthProvider.EMAIL_PASSWORD,
+          businessId,
+        },
+        include: { business: true },
+      });
     }
 
     // ── REGISTER (new user provision) ──────────────────────────────────────────
@@ -169,8 +197,8 @@ export class AuthService {
 
       if (dto.role === Role.BUSINESS_ADMIN && dto.businessName) {
         const slug =
-          dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, '-') +
-          '-' +
+          dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, "-") +
+          "-" +
           Date.now();
         const business = await prisma.business.create({
           data: { name: dto.businessName, slug },
@@ -182,9 +210,10 @@ export class AuthService {
         data: {
           firebaseUid: dto.firebaseUid,
           email: dto.email,
-          fullName: dto.fullName || 'User',
+          fullName: dto.fullName || "User",
           role: dto.role || Role.CUSTOMER,
-          authProvider: (incomingProvider as AuthProvider) || AuthProvider.EMAIL_PASSWORD,
+          authProvider:
+            (incomingProvider as AuthProvider) || AuthProvider.EMAIL_PASSWORD,
           businessId,
         },
         include: { business: true },
@@ -200,20 +229,24 @@ export class AuthService {
         businessId: existingUser.businessId,
       },
       env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: "7d" },
     );
 
-    const firebaseCustomToken = await this.createFirebaseCustomToken(existingUser.firebaseUid);
+    const firebaseCustomToken = await this.createFirebaseCustomToken(
+      existingUser.firebaseUid,
+    );
 
     return { user: existingUser, token, firebaseCustomToken };
   }
 
-  static async createFirebaseCustomToken(firebaseUid: string): Promise<string | undefined> {
-    if (isFirebaseInitialized && firebaseUid && firebaseUid !== 'check') {
+  static async createFirebaseCustomToken(
+    firebaseUid: string,
+  ): Promise<string | undefined> {
+    if (isFirebaseInitialized && firebaseUid && firebaseUid !== "check") {
       try {
         return await admin.auth().createCustomToken(firebaseUid);
       } catch (err: any) {
-        console.warn('[Firebase Custom Token Notice]:', err.message);
+        console.warn("[Firebase Custom Token Notice]:", err.message);
       }
     }
     return undefined;
@@ -221,8 +254,10 @@ export class AuthService {
 
   static async getCustomToken(email: string) {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw ApiError.notFound('User not found');
-    const firebaseCustomToken = await this.createFirebaseCustomToken(user.firebaseUid);
+    if (!user) throw ApiError.notFound("User not found");
+    const firebaseCustomToken = await this.createFirebaseCustomToken(
+      user.firebaseUid,
+    );
     return { firebaseCustomToken };
   }
 
@@ -233,7 +268,9 @@ export class AuthService {
     });
 
     if (!user) {
-      throw ApiError.unauthorized('Invalid credentials or user account not found');
+      throw ApiError.unauthorized(
+        "Invalid credentials or user account not found",
+      );
     }
 
     const token = jwt.sign(
@@ -245,10 +282,12 @@ export class AuthService {
         businessId: user.businessId,
       },
       env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: "7d" },
     );
 
-    const firebaseCustomToken = await this.createFirebaseCustomToken(user.firebaseUid);
+    const firebaseCustomToken = await this.createFirebaseCustomToken(
+      user.firebaseUid,
+    );
 
     return { user, token, firebaseCustomToken };
   }
@@ -264,7 +303,9 @@ export class AuthService {
     });
 
     if (!user) {
-      throw ApiError.notFound('No registered user account found for this email address.');
+      throw ApiError.notFound(
+        "No registered user account found for this email address.",
+      );
     }
 
     let firebaseUid = user.firebaseUid;
@@ -274,9 +315,11 @@ export class AuthService {
         const fbUser = await admin.auth().getUserByEmail(email);
         firebaseUid = fbUser.uid;
         await admin.auth().updateUser(fbUser.uid, { password });
-        console.log(`[Firebase Auth Sync] Successfully restored/synced password for ${email}`);
+        console.log(
+          `[Firebase Auth Sync] Successfully restored/synced password for ${email}`,
+        );
       } catch (fbErr: any) {
-        console.warn('[Firebase Auth Sync Notice]:', fbErr.message);
+        console.warn("[Firebase Auth Sync Notice]:", fbErr.message);
       }
     }
 
@@ -297,10 +340,11 @@ export class AuthService {
         businessId: user.businessId,
       },
       env.JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: "7d" },
     );
 
-    const firebaseCustomToken = await this.createFirebaseCustomToken(firebaseUid);
+    const firebaseCustomToken =
+      await this.createFirebaseCustomToken(firebaseUid);
 
     return { user, token, firebaseCustomToken };
   }
@@ -308,24 +352,34 @@ export class AuthService {
   static async forgotPassword(email: string) {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      throw ApiError.notFound('No registered user account found with this email address.');
+      throw ApiError.notFound(
+        "No registered user account found with this email address.",
+      );
     }
 
-    const resetToken = jwt.sign({ id: user.id, email: user.email }, env.JWT_SECRET, {
-      expiresIn: '15m',
-    });
+    const resetToken = jwt.sign(
+      { id: user.id, email: user.email },
+      env.JWT_SECRET,
+      {
+        expiresIn: "15m",
+      },
+    );
     const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
 
     try {
-      await EmailService.sendPasswordResetEmail(user.email, user.fullName, resetUrl);
+      await EmailService.sendPasswordResetEmail(
+        user.email,
+        user.fullName,
+        resetUrl,
+      );
     } catch (emailErr: any) {
       throw ApiError.badRequest(
-        emailErr.message || 'Failed to dispatch password reset email.'
+        emailErr.message || "Failed to dispatch password reset email.",
       );
     }
 
     return {
-      message: 'Password reset email sent to your email address.',
+      message: "Password reset email sent to your email address.",
       resetToken,
       resetUrl,
     };
@@ -333,23 +387,30 @@ export class AuthService {
 
   static async resetPassword(token: string, newPassword?: string) {
     try {
-      const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string; email: string };
+      const decoded = jwt.verify(token, env.JWT_SECRET) as {
+        id: string;
+        email: string;
+      };
       const user = await prisma.user.findUnique({ where: { id: decoded.id } });
-      if (!user) throw ApiError.notFound('User account not found');
+      if (!user) throw ApiError.notFound("User account not found");
 
       if (newPassword && isFirebaseInitialized && user.firebaseUid) {
         try {
-          await admin.auth().updateUser(user.firebaseUid, { password: newPassword });
-          console.log(`[Firebase Auth] Successfully updated password for user ${user.email}`);
+          await admin
+            .auth()
+            .updateUser(user.firebaseUid, { password: newPassword });
+          console.log(
+            `[Firebase Auth] Successfully updated password for user ${user.email}`,
+          );
         } catch (fbErr: any) {
-          console.warn('[Firebase Auth Password Sync Notice]:', fbErr.message);
+          console.warn("[Firebase Auth Password Sync Notice]:", fbErr.message);
         }
       }
 
-      return { message: 'Password has been successfully updated.' };
+      return { message: "Password has been successfully updated." };
     } catch (err: any) {
       if (err instanceof ApiError) throw err;
-      throw ApiError.badRequest('Invalid or expired password reset token');
+      throw ApiError.badRequest("Invalid or expired password reset token");
     }
   }
 }

@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithPopup, deleteUser } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { useVerifyInvitationToken, useAcceptInvitation } from '../hooks/useInvitations';
 import { auth, googleProvider } from '../../../shared/config/firebase';
@@ -86,6 +86,12 @@ export const AcceptInvitePage: React.FC = () => {
             setAuth(user, idToken);
             setTimeout(() => navigate('/agent/dashboard'), 800);
           },
+          onError: async () => {
+            if (auth.currentUser) {
+              await deleteUser(auth.currentUser).catch(() => null);
+            }
+            await auth.signOut().catch(() => null);
+          }
         }
       );
     } catch (err: any) {

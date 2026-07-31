@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { User } from '../types';
+import { useSocketStore } from './socketStore';
 
 interface AuthState {
   user: User | null;
@@ -37,6 +38,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearAuth: () => {
     localStorage.removeItem('supportflow_token');
     localStorage.removeItem('supportflow_user');
+    
+    // Disconnect the shared Socket.IO connection on logout
+    useSocketStore.getState().disconnect();
+
     set({
       user: null,
       token: null,

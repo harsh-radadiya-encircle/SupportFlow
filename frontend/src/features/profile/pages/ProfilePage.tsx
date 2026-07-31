@@ -26,7 +26,15 @@ import {
 
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-  phoneNumber: z.string().optional().nullable(),
+  phoneNumber: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((val) => (val === '' ? null : val))
+    .refine(
+      (val) => !val || /^\+?[0-9\s\-()]{10,15}$/.test(val),
+      'Phone number must be a valid format (10 to 15 digits)'
+    ),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;

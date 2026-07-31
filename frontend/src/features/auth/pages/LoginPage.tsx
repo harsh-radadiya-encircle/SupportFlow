@@ -8,6 +8,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   signInWithCustomToken,
+  deleteUser,
 } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { auth, googleProvider, requestFcmToken } from '../../../shared/config/firebase';
@@ -186,6 +187,9 @@ export const LoginPage: React.FC = () => {
           toast.success(`Welcome to SupportFlow, ${user.fullName}!`);
           redirectUserByRole(user.role);
         } catch (dbErr: any) {
+          if (auth.currentUser) {
+            await deleteUser(auth.currentUser).catch(() => null);
+          }
           await auth.signOut().catch(() => null);
           throw dbErr;
         }

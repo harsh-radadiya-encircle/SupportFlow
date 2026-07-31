@@ -182,23 +182,25 @@ export const BillingManagementPage: React.FC = () => {
         </div>
 
         {/* Expiry Date & Days Remaining Timeline Alert Bar */}
-        <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2 text-slate-700 font-semibold">
-            <Calendar className="w-4 h-4 text-indigo-600 shrink-0" />
-            <span>
-              {subscriptionStatus === 'CANCELED'
-                ? `Current Plan Expires On: ${formatDate(currentPeriodEnd)}`
-                : `Current Period Renews On: ${formatDate(currentPeriodEnd)}`}
-            </span>
-          </div>
+        {plan !== 'FREE' && currentPeriodEnd && (
+          <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-slate-700 font-semibold">
+              <Calendar className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>
+                {subscriptionStatus === 'CANCELED'
+                  ? `Current Plan Expires On: ${formatDate(currentPeriodEnd)}`
+                  : `Current Period Renews On: ${formatDate(currentPeriodEnd)}`}
+              </span>
+            </div>
 
-          <div className="flex items-center gap-2">
-            <div className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5" />
-              {daysRemaining} day(s) remaining in cycle
+            <div className="flex items-center gap-2">
+              <div className="px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" />
+                {daysRemaining} day(s) remaining in cycle
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Quota Usage Cards */}

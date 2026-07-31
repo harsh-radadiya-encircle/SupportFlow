@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { io } from 'socket.io-client';
+import { useSocketStore } from '../../../shared/store/socketStore';
 import toast from 'react-hot-toast';
 import { notificationsApi } from '../api/notifications.api';
 import { useAuthStore } from '../../../shared/store/authStore';
@@ -43,20 +43,15 @@ const playNotificationChime = () => {
 export const useNotifications = () => {
   const { user, isAuthenticated } = useAuthStore();
   const queryClient = useQueryClient();
+  const { connect } = useSocketStore();
 
   useEffect(() => {
     if (!user || !isAuthenticated) return;
 
-    const socket = io('http://localhost:5000', {
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
-    });
+    const socket = connect(user.id);
+    if (!socket) return;
 
-    socket.on('connect', () => {
-      socket.emit('join_user_room', user.id);
-    });
-
-    socket.on('new_notification', (notification: any) => {
+    const handleNewNotification = (notification: any) => {
       // 1. Play real-time notification chime
       playNotificationChime();
 
@@ -88,12 +83,14 @@ export const useNotifications = () => {
         ),
         { duration: 5000 }
       );
-    });
+    };
+
+    socket.on('new_notification', handleNewNotification);
 
     return () => {
-      socket.disconnect();
+      socket.off('new_notification', handleNewNotification);
     };
-  }, [user, isAuthenticated, queryClient]);
+  }, [user, isAuthenticated, queryClient, connect]);
 
   return useQuery({
     queryKey: ['notifications'],
