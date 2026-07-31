@@ -20,6 +20,7 @@ import {
   Key,
   Menu,
   X,
+  Star,
 } from 'lucide-react';
 
 export const DashboardLayout: React.FC = () => {
@@ -123,6 +124,7 @@ export const DashboardLayout: React.FC = () => {
           { name: 'Dashboard', path: '/business/dashboard', icon: LayoutDashboard },
           { name: 'All Tickets', path: '/business/tickets', icon: Ticket },
           { name: 'Team Agents', path: '/business/team', icon: Users },
+          { name: 'Customer Ratings', path: '/business/ratings', icon: Star },
           { name: 'Billing & Plan', path: '/business/billing', icon: CreditCard },
           { name: 'Reports', path: '/business/reports', icon: BarChart3 },
         ];
@@ -130,6 +132,7 @@ export const DashboardLayout: React.FC = () => {
         return [
           { name: 'Agent Queue', path: '/agent/dashboard', icon: LayoutDashboard },
           { name: 'My Tickets', path: '/agent/tickets', icon: Ticket },
+          { name: 'Customer Ratings', path: '/agent/ratings', icon: Star },
         ];
       case 'CUSTOMER':
       default:

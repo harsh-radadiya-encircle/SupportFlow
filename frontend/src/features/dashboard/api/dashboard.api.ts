@@ -172,4 +172,47 @@ export const dashboardApi = {
     );
     return response.data;
   },
+
+  getRatings: async (params: {
+    page?: number;
+    limit?: number;
+    score?: number;
+  }): Promise<RatingsResponse> => {
+    const response = await apiClient.get('/dashboard/ratings', { params });
+    return response.data.data;
+  },
 };
+
+export interface RatingEntry {
+  id: string;
+  ticketNumber?: string;
+  title: string;
+  csatScore: number;
+  csatComment?: string | null;
+  updatedAt: string;
+  customer: {
+    id: string;
+    fullName: string;
+    email: string;
+  };
+  assignedAgent?: {
+    id: string;
+    fullName: string;
+  } | null;
+}
+
+export interface RatingsResponse {
+  summary: {
+    totalRated: number;
+    avgScore: number;
+    fiveStarCount: number;
+    lowScoreCount: number;
+  };
+  data: RatingEntry[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}

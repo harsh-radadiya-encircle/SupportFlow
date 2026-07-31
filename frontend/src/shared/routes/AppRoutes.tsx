@@ -10,6 +10,7 @@ import {
   PlatformAdminDashboardPage,
   AgentDashboardPage,
   ReportsPage,
+  RatingsPage,
 } from '../../features/dashboard';
 import { CustomerTicketListPage, CreateTicketPage, TicketDetailPage } from '../../features/tickets';
 import { AgentManagementPage, AcceptInvitePage } from '../../features/invitations';
@@ -73,12 +74,14 @@ export const AppRoutes: React.FC = () => {
             <Route path="/business/team" element={<AgentManagementPage />} />
             <Route path="/business/billing" element={<BillingManagementPage />} />
             <Route path="/business/reports" element={<ReportsPage />} />
+            <Route path="/business/ratings" element={<RatingsPage />} />
           </Route>
 
           {/* Support Agent */}
           <Route element={<ProtectedRoute allowedRoles={['SUPPORT_AGENT', 'BUSINESS_ADMIN']} />}>
             <Route path="/agent/dashboard" element={<AgentDashboardPage />} />
             <Route path="/agent/tickets" element={<CustomerTicketListPage />} />
+            <Route path="/agent/ratings" element={<RatingsPage />} />
           </Route>
 
           {/* Customer & Shared Ticket Routes */}

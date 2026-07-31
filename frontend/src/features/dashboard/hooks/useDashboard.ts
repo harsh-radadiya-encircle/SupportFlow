@@ -37,3 +37,15 @@ export const usePlatformDashboard = () => {
     refetchInterval: (q) => (q.state.status === 'error' ? false : 30000),
   });
 };
+
+export const useRatings = (params: { page?: number; limit?: number; score?: number }) => {
+  const { user, token } = useAuthStore();
+
+  return useQuery({
+    queryKey: ['dashboard', 'ratings', params],
+    queryFn: () => dashboardApi.getRatings(params),
+    enabled: Boolean(user) && Boolean(token),
+    retry: 1,
+    staleTime: 15000,
+  });
+};

@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { AuthLayout } from '../components/AuthLayout';
+import { AuthAlert } from '../components/AuthAlert';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
-import { Card } from '../../../shared/components/ui/Card';
-import { Headset, Lock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { authApi } from '../api/auth.api';
 
 const resetSchema = z
@@ -15,7 +16,7 @@ const resetSchema = z
     password: z.string().min(6, 'Password must be at least 6 characters'),
     confirmPassword: z.string().min(6, 'Please confirm your password'),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((d) => d.password === d.confirmPassword, {
     message: 'Passwords do not match',
     path: ['confirmPassword'],
   });
@@ -35,29 +36,22 @@ export const ResetPasswordPage: React.FC = () => {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<ResetFormValues>({
-    resolver: zodResolver(resetSchema),
-  });
+  } = useForm<ResetFormValues>({ resolver: zodResolver(resetSchema) });
 
   const onSubmit = async (data: ResetFormValues) => {
     setIsSubmitting(true);
     setErrorMessage(null);
-
     try {
-      if (!oobCode) {
-        throw new Error('Invalid or missing password reset token.');
-      }
-
+      if (!oobCode) throw new Error('Invalid or missing password reset token.');
       await authApi.resetPassword(oobCode, data.password);
-
       setIsSuccess(true);
-      toast.success('Password updated successfully! Redirecting to sign in...');
-      setTimeout(() => navigate('/login'), 2000);
+      toast.success('Password updated! Redirecting to sign in...');
+      setTimeout(() => navigate('/login'), 2500);
     } catch (err: any) {
       const msg =
         err.response?.data?.message ||
         err.message ||
-        'Failed to reset password. Link may be expired.';
+        'Failed to reset password. The link may have expired.';
       setErrorMessage(msg);
       toast.error(msg);
     } finally {
@@ -66,71 +60,98 @@ export const ResetPasswordPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 p-4 relative overflow-hidden text-slate-900">
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="w-full max-w-md space-y-6 relative z-10">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 border border-indigo-500 text-white shadow-lg shadow-indigo-600/30 mb-2">
-            <Headset className="w-8 h-8" />
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">SupportFlow</h1>
-          <p className="text-sm font-medium text-slate-500">Set a new password for your account</p>
-        </div>
-
-        <Card glass className="p-8 shadow-xl border border-slate-200">
-          {isSuccess ? (
-            <div className="text-center space-y-4 py-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto">
-                <CheckCircle2 className="w-6 h-6" />
-              </div>
-              <h2 className="text-xl font-bold text-slate-900">Password Reset Complete!</h2>
-              <p className="text-sm text-slate-600 font-medium">
-                Your password has been successfully updated. Redirecting to sign in...
+    <AuthLayout>
+      {isSuccess ? (
+        /* ── Success ─────────────────────────────────────────────────────── */
+        <div className="space-y-6 text-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Password Updated!</h2>
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Your password has been successfully updated. Redirecting to sign in…
               </p>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <h2 className="text-xl font-bold text-slate-900">Create New Password</h2>
+          </div>
+          <Link to="/login">
+            <Button variant="primary" size="lg" className="w-full bg-slate-900 hover:bg-slate-800 text-white">
+              Go to Sign In
+            </Button>
+          </Link>
+        </div>
+      ) : (
+        /* ── Form ────────────────────────────────────────────────────────── */
+        <div className="space-y-6">
+          <div className="space-y-1">
+            <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-4">
+              <ShieldCheck className="w-6 h-6 text-indigo-600" />
+            </div>
+            <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight">
+              Create new password
+            </h2>
+            <p className="text-xs text-slate-500">
+              Choose a strong password with at least 6 characters.
+            </p>
+          </div>
 
-              {errorMessage && (
-                <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-                  <span>{errorMessage}</span>
-                </div>
-              )}
-
-              <Input
-                label="New Password"
-                type="password"
-                placeholder="••••••••"
-                leftIcon={<Lock className="w-4 h-4" />}
-                error={errors.password?.message}
-                {...register('password')}
-              />
-
-              <Input
-                label="Confirm New Password"
-                type="password"
-                placeholder="••••••••"
-                leftIcon={<Lock className="w-4 h-4" />}
-                error={errors.confirmPassword?.message}
-                {...register('confirmPassword')}
-              />
-
-              <Button
-                type="submit"
-                variant="primary"
-                size="lg"
-                className="w-full"
-                isLoading={isSubmitting}
-              >
-                Update Password
-              </Button>
-            </form>
+          {!oobCode && (
+            <AuthAlert
+              variant="warning"
+              message={
+                <>
+                  This reset link appears invalid or expired.{' '}
+                  <Link to="/forgot-password" className="font-bold underline">
+                    Request a new one
+                  </Link>
+                  .
+                </>
+              }
+            />
           )}
-        </Card>
-      </div>
-    </div>
+
+          {errorMessage && <AuthAlert variant="error" message={errorMessage} />}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <Input
+              label="New Password"
+              type="password"
+              placeholder="••••••••"
+              leftIcon={<Lock className="w-4 h-4" />}
+              error={errors.password?.message}
+              {...register('password')}
+            />
+            <Input
+              label="Confirm New Password"
+              type="password"
+              placeholder="••••••••"
+              leftIcon={<Lock className="w-4 h-4" />}
+              error={errors.confirmPassword?.message}
+              {...register('confirmPassword')}
+            />
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-3.5 rounded-xl shadow-md"
+              isLoading={isSubmitting}
+              disabled={!oobCode}
+            >
+              Update Password
+            </Button>
+          </form>
+
+          <div className="text-center">
+            <Link
+              to="/login"
+              className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
+            >
+              ← Back to Sign In
+            </Link>
+          </div>
+        </div>
+      )}
+    </AuthLayout>
   );
 };

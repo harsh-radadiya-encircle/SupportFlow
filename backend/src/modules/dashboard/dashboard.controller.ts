@@ -1,30 +1,39 @@
-import { Response } from 'express';
-import { AuthenticatedRequest } from '../../common/types';
-import { BusinessMetricsService } from './services/business-metrics.service';
-import { AgentMetricsService } from './services/agent-metrics.service';
-import { PlatformMetricsService } from './services/platform-metrics.service';
+import { Response } from "express";
+import { AuthenticatedRequest } from "../../common/types";
+import { BusinessMetricsService } from "./services/business-metrics.service";
+import { AgentMetricsService } from "./services/agent-metrics.service";
+import { PlatformMetricsService } from "./services/platform-metrics.service";
 
 const businessMetricsService = new BusinessMetricsService();
 const agentMetricsService = new AgentMetricsService();
 const platformMetricsService = new PlatformMetricsService();
 
 export class DashboardController {
-  async getBusinessAdminMetrics(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async getBusinessAdminMetrics(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
     try {
       const user = req.user!;
 
       if (!user.businessId) {
         res
           .status(400)
-          .json({ success: false, message: 'User is not associated with a business.' });
+          .json({
+            success: false,
+            message: "User is not associated with a business.",
+          });
         return;
       }
 
-      const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+      const { startDate, endDate } = req.query as {
+        startDate?: string;
+        endDate?: string;
+      };
       const metrics = await businessMetricsService.getBusinessAdminMetrics(
         user.businessId,
         startDate,
-        endDate
+        endDate,
       );
 
       res.status(200).json({
@@ -32,14 +41,20 @@ export class DashboardController {
         data: metrics,
       });
     } catch (error: any) {
-      console.error('[Dashboard Error]:', error);
+      console.error("[Dashboard Error]:", error);
       res
         .status(500)
-        .json({ success: false, message: error.message || 'Failed to fetch dashboard metrics.' });
+        .json({
+          success: false,
+          message: error.message || "Failed to fetch dashboard metrics.",
+        });
     }
   }
 
-  async getAgentMetrics(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async getAgentMetrics(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
     try {
       const user = req.user!;
       const metrics = await agentMetricsService.getAgentMetrics(user.id);
@@ -49,14 +64,20 @@ export class DashboardController {
         data: metrics,
       });
     } catch (error: any) {
-      console.error('[Agent Dashboard Error]:', error);
+      console.error("[Agent Dashboard Error]:", error);
       res
         .status(500)
-        .json({ success: false, message: error.message || 'Failed to fetch agent metrics.' });
+        .json({
+          success: false,
+          message: error.message || "Failed to fetch agent metrics.",
+        });
     }
   }
 
-  async getPlatformAdminMetrics(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async getPlatformAdminMetrics(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
     try {
       const metrics = await platformMetricsService.getPlatformAdminMetrics();
 
@@ -65,30 +86,76 @@ export class DashboardController {
         data: metrics,
       });
     } catch (error: any) {
-      console.error('[Platform Admin Dashboard Error]:', error);
+      console.error("[Platform Admin Dashboard Error]:", error);
       res.status(500).json({
         success: false,
-        message: error.message || 'Failed to fetch platform admin metrics.',
+        message: error.message || "Failed to fetch platform admin metrics.",
       });
     }
   }
 
-  async toggleBusinessSuspension(req: AuthenticatedRequest, res: Response): Promise<void> {
+  async toggleBusinessSuspension(
+    req: AuthenticatedRequest,
+    res: Response,
+  ): Promise<void> {
     try {
       const { businessId } = req.params;
-      const updated = await platformMetricsService.toggleBusinessSuspension(businessId);
+      const updated =
+        await platformMetricsService.toggleBusinessSuspension(businessId);
 
       res.status(200).json({
         success: true,
-        message: `Business ${updated.isSuspended ? 'suspended' : 'activated'} successfully.`,
+        message: `Business ${updated.isSuspended ? "suspended" : "activated"} successfully.`,
         data: updated,
       });
     } catch (error: any) {
-      console.error('[Toggle Business Suspension Error]:', error);
+      console.error("[Toggle Business Suspension Error]:", error);
       res.status(500).json({
         success: false,
-        message: error.message || 'Failed to toggle business suspension.',
+        message: error.message || "Failed to toggle business suspension.",
       });
+    }
+  }
+
+  async getRatings(req: AuthenticatedRequest, res: Response): Promise<void> {
+    try {
+      const user = req.user!;
+      const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+      const limit = Math.min(
+        50,
+        Math.max(1, parseInt((req.query.limit as string) || "10", 10)),
+      );
+      const scoreParam = req.query.score as string | undefined;
+      const score = scoreParam ? parseInt(scoreParam, 10) : undefined;
+
+      if (score !== undefined && (score < 1 || score > 5)) {
+        res
+          .status(400)
+          .json({
+            success: false,
+            message: "Score filter must be between 1 and 5.",
+          });
+        return;
+      }
+
+      const data = await agentMetricsService.getRatings(
+        user.id,
+        user.role,
+        user.businessId ?? undefined,
+        page,
+        limit,
+        score,
+      );
+
+      res.status(200).json({ success: true, data });
+    } catch (error: any) {
+      console.error("[Ratings Error]:", error);
+      res
+        .status(500)
+        .json({
+          success: false,
+          message: error.message || "Failed to fetch ratings.",
+        });
     }
   }
 }
