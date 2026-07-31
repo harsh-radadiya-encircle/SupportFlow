@@ -1,8 +1,11 @@
-import { prisma } from '../../utils/prisma';
-import { admin, isFirebaseInitialized } from '../../config/firebase';
+import { prisma } from "../../utils/prisma";
+import { admin, isFirebaseInitialized } from "../../config/firebase";
 
 export class UsersService {
-  static async updateProfile(userId: string, data: { fullName?: string; phoneNumber?: string }) {
+  static async updateProfile(
+    userId: string,
+    data: { fullName?: string; phoneNumber?: string },
+  ) {
     return prisma.user.update({
       where: { id: userId },
       data,
@@ -20,7 +23,11 @@ export class UsersService {
     });
   }
 
-  static async saveFcmToken(userId: string, token: string, deviceType?: string) {
+  static async saveFcmToken(
+    userId: string,
+    token: string,
+    deviceType?: string,
+  ) {
     const existing = await prisma.fcmToken.findUnique({
       where: { token },
     });
@@ -36,7 +43,7 @@ export class UsersService {
       data: {
         userId,
         token,
-        deviceType: deviceType || 'web',
+        deviceType: deviceType || "web",
       },
     });
   }
@@ -59,7 +66,7 @@ export class UsersService {
         slug: true,
         logoUrl: true,
       },
-      orderBy: { name: 'asc' },
+      orderBy: { name: "asc" },
     });
   }
 
@@ -68,7 +75,7 @@ export class UsersService {
    */
   static async getAllUsers() {
     const users = await prisma.user.findMany({
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         firebaseUid: true,
@@ -102,7 +109,7 @@ export class UsersService {
       authProvider: u.authProvider,
       isActive: u.isActive,
       createdAt: u.createdAt,
-      businessName: u.business?.name || 'N/A',
+      businessName: u.business?.name || "N/A",
       createdTicketsCount: u._count.createdTickets,
       assignedTicketsCount: u._count.assignedTickets,
     }));
@@ -117,7 +124,7 @@ export class UsersService {
     });
 
     if (!user) {
-      throw new Error('User account not found.');
+      throw new Error("User account not found.");
     }
 
     // 1. Delete from Firebase Auth if admin SDK is active
@@ -125,8 +132,21 @@ export class UsersService {
       try {
         await admin.auth().deleteUser(user.firebaseUid);
       } catch (fbErr: any) {
-        console.warn('[Firebase Auth Delete User Notice]:', fbErr.message);
+        if (fbErr.code === "auth/user-not-found") {
+          console.warn(
+            "[Firebase Auth Delete] User already deleted from Firebase.",
+          );
+        } else {
+          console.error("[Firebase Auth Delete User Error]:", fbErr.message);
+          throw new Error(
+            `Failed to delete user from Firebase Auth: ${fbErr.message}`,
+          );
+        }
       }
+    } else {
+      console.warn(
+        "[Firebase Auth Delete] Skipping Firebase deletion (Firebase not initialized or missing UID).",
+      );
     }
 
     // 2. Perform Cascade Foreign Key Cleanup inside a Prisma Transaction
@@ -162,9 +182,15 @@ export class UsersService {
 
       if (ticketIds.length > 0) {
         await tx.message.deleteMany({ where: { ticketId: { in: ticketIds } } });
-        await tx.internalNote.deleteMany({ where: { ticketId: { in: ticketIds } } });
-        await tx.ticketActivity.deleteMany({ where: { ticketId: { in: ticketIds } } });
-        await tx.notification.deleteMany({ where: { ticketId: { in: ticketIds } } });
+        await tx.internalNote.deleteMany({
+          where: { ticketId: { in: ticketIds } },
+        });
+        await tx.ticketActivity.deleteMany({
+          where: { ticketId: { in: ticketIds } },
+        });
+        await tx.notification.deleteMany({
+          where: { ticketId: { in: ticketIds } },
+        });
         await tx.ticket.deleteMany({ where: { id: { in: ticketIds } } });
       }
 
