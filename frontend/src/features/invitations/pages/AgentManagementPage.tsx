@@ -316,7 +316,7 @@ export const AgentManagementPage: React.FC = () => {
         ) : (
           <Card glass className="overflow-hidden border border-slate-200">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+              <table className="w-full text-left text-xs min-w-[600px]">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
                   <tr>
                     <th className="p-3.5">Recipient Email</th>

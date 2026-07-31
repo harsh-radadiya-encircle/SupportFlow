@@ -55,7 +55,17 @@ export const TicketDetailPage: React.FC = () => {
   const addNoteMutation = useAddInternalNote();
   const submitCsatMutation = useSubmitCsat();
 
-  const { messages: socketMessages, typingUser, sendMessage, emitTyping } = useSocketChat(ticketId);
+  const ticket = data?.data;
+  const agentsList = teamQuery.data?.data?.agents || [];
+  const targetUserId = user?.role === 'CUSTOMER' ? ticket?.assignedAgentId : ticket?.customerId;
+
+  const {
+    messages: socketMessages,
+    typingUser,
+    participantStatus,
+    sendMessage,
+    emitTyping,
+  } = useSocketChat(ticketId, targetUserId);
 
   const [isNoteMode, setIsNoteMode] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -67,6 +77,16 @@ export const TicketDetailPage: React.FC = () => {
     resolver: zodResolver(chatSchema),
     defaultValues: { message: '' },
   });
+
+  // Watch message text input value to trigger debounced typing indicators
+  const messageVal = chatForm.watch('message');
+  useEffect(() => {
+    if (messageVal && messageVal.trim()) {
+      emitTyping(true);
+    } else {
+      emitTyping(false);
+    }
+  }, [messageVal, emitTyping]);
 
   const noteForm = useForm<NoteFormValues>({
     resolver: zodResolver(noteSchema),
@@ -91,9 +111,6 @@ export const TicketDetailPage: React.FC = () => {
       document.body.style.overflow = '';
     };
   }, [previewModalUrl]);
-
-  const ticket = data?.data;
-  const agentsList = teamQuery.data?.data?.agents || [];
 
   // Combine initial database messages + real-time socket messages
   const initialMessages = ticket?.messages || [];
@@ -230,6 +247,7 @@ export const TicketDetailPage: React.FC = () => {
           handleFileSelect={handleFileSelect}
           handleRemoveFile={handleRemoveFile}
           setPreviewModalUrl={setPreviewModalUrl}
+          participantStatus={participantStatus}
         />
 
         <div className="lg:col-span-4 space-y-6">
@@ -242,6 +260,7 @@ export const TicketDetailPage: React.FC = () => {
             submitCsatMutation={submitCsatMutation}
             csatForm={csatForm}
             onSubmitCsat={onSubmitCsat}
+            participantStatus={participantStatus}
           />
           <TicketActivitySidebar
             ticket={ticket}

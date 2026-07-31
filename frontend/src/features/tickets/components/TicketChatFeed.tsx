@@ -11,6 +11,8 @@ import {
   Send,
   Image as ImageIcon,
   FileText,
+  Check,
+  CheckCheck,
 } from 'lucide-react';
 import { UseFormReturn } from 'react-hook-form';
 
@@ -30,6 +32,7 @@ interface TicketChatFeedProps {
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleRemoveFile: () => void;
   setPreviewModalUrl: (url: string | null) => void;
+  participantStatus?: 'online' | 'offline';
 }
 
 export const TicketChatFeed: React.FC<TicketChatFeedProps> = ({
@@ -48,6 +51,7 @@ export const TicketChatFeed: React.FC<TicketChatFeedProps> = ({
   handleFileSelect,
   handleRemoveFile,
   setPreviewModalUrl,
+  participantStatus = 'offline',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,8 +63,16 @@ export const TicketChatFeed: React.FC<TicketChatFeedProps> = ({
             <Headset className="w-5 h-5" />
           </div>
           <div>
-            <span className="text-sm font-bold text-slate-900 block leading-none">
+            <span className="text-sm font-bold text-slate-900 block leading-none flex items-center gap-1.5">
               Real-Time Support Conversation
+              <span
+                className={`w-2 h-2 rounded-full border ${
+                  participantStatus === 'online'
+                    ? 'bg-emerald-500 border-emerald-600 animate-pulse'
+                    : 'bg-slate-400 border-slate-500'
+                }`}
+                title={participantStatus === 'online' ? 'Participant is Online' : 'Participant is Offline'}
+              />
             </span>
             <span className="text-xs text-slate-500 font-normal">
               Ticket #{ticket.ticketNumber || ticket.id?.substring(0, 6)}
@@ -123,12 +135,19 @@ export const TicketChatFeed: React.FC<TicketChatFeedProps> = ({
                     >
                       {isAgent ? 'Support Team' : 'Customer'}
                     </Badge>
-                    <span className="text-[10px] text-slate-400 font-normal">
+                    <span className="text-[10px] text-slate-400 font-normal flex items-center gap-0.5">
                       {new Date(msg.createdAt).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
                         hour12: true,
                       })}
+                      {isMe && (
+                        msg.isRead ? (
+                          <CheckCheck className="w-3.5 h-3.5 text-indigo-600 ml-0.5" title="Read" />
+                        ) : (
+                          <Check className="w-3.5 h-3.5 text-slate-400 ml-0.5" title="Sent" />
+                        )
+                      )}
                     </span>
                   </div>
 
@@ -253,10 +272,7 @@ export const TicketChatFeed: React.FC<TicketChatFeedProps> = ({
                 ? 'Write private internal note for team...'
                 : 'Type public reply to customer...'
             }
-            {...chatForm.register('message', {
-              onChange: () => emitTyping(true),
-              onBlur: () => emitTyping(false),
-            })}
+            {...chatForm.register('message')}
             className={`flex-1 px-4 py-3 text-sm border rounded-xl focus:outline-none focus:ring-1 font-medium shadow-2xs ${
               isNoteMode
                 ? 'border-amber-200 focus:border-amber-500 focus:ring-amber-500 bg-amber-50/40'

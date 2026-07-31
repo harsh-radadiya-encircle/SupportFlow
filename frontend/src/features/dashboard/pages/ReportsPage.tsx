@@ -261,7 +261,7 @@ export const ReportsPage: React.FC = () => {
           </div>
         ) : (
           <div className="divide-y divide-slate-100 overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[650px]">
               <thead>
                 <tr className="text-slate-400 uppercase font-semibold border-b border-slate-100 text-[10px]">
                   <th className="pb-3">Support Agent</th>

@@ -8,6 +8,7 @@ import {
 import { Card } from '../../../shared/components/ui/Card';
 import { Badge } from '../../../shared/components/ui/Badge';
 import { Button } from '../../../shared/components/ui/Button';
+import { Dialog } from '../../../shared/components/ui/Dialog';
 import {
   CreditCard,
   CheckCircle2,
@@ -29,6 +30,8 @@ import toast from 'react-hot-toast';
 
 export const BillingManagementPage: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [isDowngradeModalOpen, setIsDowngradeModalOpen] = useState(false);
 
   const { data, isLoading } = useSubscriptionDetails();
   const orderMutation = useCreateRazorpayOrder();
@@ -167,8 +170,8 @@ export const BillingManagementPage: React.FC = () => {
           {plan !== 'FREE' && (
             <Button
               variant="outline"
-              onClick={() => cancelMutation.mutate()}
-              disabled={cancelMutation.isPending}
+              onClick={() => setIsCancelModalOpen(true)}
+              disabled={cancelMutation.isPending || subscriptionStatus === 'CANCELED'}
               className="font-semibold border-rose-200 text-rose-600 hover:bg-rose-50 shrink-0 shadow-2xs"
             >
               {cancelMutation.isPending ? (
@@ -176,7 +179,7 @@ export const BillingManagementPage: React.FC = () => {
               ) : (
                 <XCircle className="w-4 h-4 mr-2 text-rose-500" />
               )}
-              {subscriptionStatus === 'CANCELED' ? 'Downgrade to Free' : 'Cancel Subscription'}
+              {subscriptionStatus === 'CANCELED' ? 'Downgraded to Free' : 'Cancel Subscription'}
             </Button>
           )}
         </div>
@@ -370,9 +373,16 @@ export const BillingManagementPage: React.FC = () => {
             <Button
               variant="outline"
               disabled={plan === 'FREE'}
+              onClick={() => {
+                if (subscriptionStatus === 'CANCELED') {
+                  toast.success(`Already set to revert to Free Tier on ${formatDate(currentPeriodEnd)}`);
+                } else {
+                  setIsCancelModalOpen(true);
+                }
+              }}
               className="w-full font-bold mt-4 border-slate-200"
             >
-              {plan === 'FREE' ? 'Active Plan' : 'Revert to Free'}
+              {plan === 'FREE' ? 'Active Plan' : subscriptionStatus === 'CANCELED' ? 'Reverting to Free' : 'Revert to Free'}
             </Button>
           </Card>
 
@@ -429,7 +439,13 @@ export const BillingManagementPage: React.FC = () => {
 
             <Button
               variant={plan === 'STANDARD' ? 'outline' : 'primary'}
-              onClick={() => handleUpgradePlan('STANDARD')}
+              onClick={() => {
+                if (plan === 'BUSINESS') {
+                  setIsDowngradeModalOpen(true);
+                } else {
+                  handleUpgradePlan('STANDARD');
+                }
+              }}
               disabled={orderMutation.isPending || verifyMutation.isPending || plan === 'STANDARD'}
               className="w-full font-bold mt-4 bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
             >
@@ -539,7 +555,7 @@ export const BillingManagementPage: React.FC = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
+              <table className="w-full text-left border-collapse min-w-[650px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                     <th className="py-3 px-4">Payment ID</th>
@@ -573,6 +589,90 @@ export const BillingManagementPage: React.FC = () => {
           )}
         </Card>
       </div>
+
+      {/* Cancel Confirmation Modal */}
+      <Dialog isOpen={isCancelModalOpen} onClose={() => setIsCancelModalOpen(false)} className="max-w-md">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-sm">
+            <AlertCircle className="w-6 h-6 animate-bounce" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+              Cancel Subscription?
+            </h3>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
+              Are you sure you want to cancel your paid plan? You will retain all premium benefits until the end of your billing cycle on <strong>{formatDate(currentPeriodEnd)}</strong>.
+            </p>
+          </div>
+
+          <div className="p-3.5 bg-rose-50/60 border border-rose-100/50 rounded-2xl text-xs font-semibold text-rose-950 text-left space-y-1">
+            <p>⚠️ Your workspace will downgrade to the <strong>Free Plan</strong>.</p>
+            <p>⚠️ Support seats will revert to <strong>1 agent</strong> (extra active agents will be suspended).</p>
+            <p>⚠️ Tickets will be capped at <strong>25 tickets per month</strong>.</p>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsCancelModalOpen(false)}
+              className="flex-1 font-bold text-slate-600 hover:bg-slate-50 rounded-xl"
+            >
+              No, Keep Plan
+            </Button>
+            <Button
+              variant="primary"
+              onClick={async () => {
+                await cancelMutation.mutateAsync();
+                setIsCancelModalOpen(false);
+              }}
+              disabled={cancelMutation.isPending}
+              className="flex-1 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl shadow-md"
+            >
+              {cancelMutation.isPending ? 'Canceling...' : 'Yes, Cancel Plan'}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Downgrade/Change Plan Modal */}
+      <Dialog isOpen={isDowngradeModalOpen} onClose={() => setIsDowngradeModalOpen(false)} className="max-w-md">
+        <div className="text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center mx-auto shadow-sm">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-bold text-slate-900 tracking-tight">
+              Change Plan Options
+            </h3>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-sm mx-auto">
+              To transition from the <strong>{plan} Plan</strong> to the <strong>Standard Plan</strong>, you must first cancel your current active subscription.
+            </p>
+            <p className="text-xs text-slate-400 font-normal leading-relaxed">
+              Once your current Business cycle ends, your workspace will automatically revert to the Free Plan, and you can instantly subscribe to the Standard tier.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDowngradeModalOpen(false)}
+              className="flex-1 font-bold text-slate-600 hover:bg-slate-50 rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setIsDowngradeModalOpen(false);
+                setIsCancelModalOpen(true);
+              }}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md"
+            >
+              Proceed to Cancel
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };

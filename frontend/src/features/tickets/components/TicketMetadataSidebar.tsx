@@ -14,6 +14,7 @@ interface TicketMetadataSidebarProps {
   submitCsatMutation: any;
   csatForm: UseFormReturn<any>;
   onSubmitCsat: (data: any) => void;
+  participantStatus?: 'online' | 'offline';
 }
 
 export const TicketMetadataSidebar: React.FC<TicketMetadataSidebarProps> = ({
@@ -25,6 +26,7 @@ export const TicketMetadataSidebar: React.FC<TicketMetadataSidebarProps> = ({
   submitCsatMutation,
   csatForm,
   onSubmitCsat,
+  participantStatus = 'offline',
 }) => {
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -98,9 +100,19 @@ export const TicketMetadataSidebar: React.FC<TicketMetadataSidebarProps> = ({
       )}
 
       <div className="pt-3 border-t border-slate-100 space-y-2">
-        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-          Customer Details
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            Customer Details
+          </span>
+          {isAgentOrAdmin && (
+            <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider">
+              <span className={`w-1.5 h-1.5 rounded-full ${participantStatus === 'online' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+              <span className={participantStatus === 'online' ? 'text-emerald-600' : 'text-slate-500'}>
+                {participantStatus === 'online' ? 'Online' : 'Offline'}
+              </span>
+            </span>
+          )}
+        </div>
         <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/60 space-y-1 text-xs">
           <div className="font-bold text-slate-900 flex items-center gap-1.5">
             <User className="w-3.5 h-3.5 text-slate-500" />

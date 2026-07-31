@@ -113,7 +113,7 @@ export const PlatformAdminDashboardPage: React.FC = () => {
         <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
           <Building2 className="w-4 h-4 text-indigo-500" /> Business Overview
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Businesses"
             value={s?.totalBusinesses ?? '—'}
@@ -156,7 +156,7 @@ export const PlatformAdminDashboardPage: React.FC = () => {
         <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
           <DollarSign className="w-4 h-4 text-emerald-500" /> Revenue
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Monthly Revenue (MRR)"
             value={s?.monthlyRevenue ?? '₹0'}
@@ -198,7 +198,7 @@ export const PlatformAdminDashboardPage: React.FC = () => {
         <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
           <Users className="w-4 h-4 text-blue-500" /> Users Across Platform
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Users"
             value={s?.totalUsers ?? '—'}
@@ -241,7 +241,7 @@ export const PlatformAdminDashboardPage: React.FC = () => {
         <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
           <Ticket className="w-4 h-4 text-amber-500" /> Platform Tickets
         </h2>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             title="Total Tickets"
             value={s?.totalTickets ?? '—'}

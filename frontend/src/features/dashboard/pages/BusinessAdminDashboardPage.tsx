@@ -270,7 +270,7 @@ export const BusinessAdminDashboardPage: React.FC = () => {
           <div className="py-8 text-center text-xs text-slate-400">No tickets created yet.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-left text-xs min-w-[600px]">
               <thead>
                 <tr className="text-slate-400 uppercase font-semibold border-b border-slate-100 text-[10px]">
                   <th className="pb-3">Ticket ID</th>

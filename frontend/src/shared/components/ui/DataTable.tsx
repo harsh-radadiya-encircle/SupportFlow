@@ -243,7 +243,7 @@ export function DataTable<T extends { id?: string | number }>({
             <div className="flex items-center gap-3 text-sm text-slate-500 font-medium">
               {onLimitChange && (
                 <div className="flex items-center gap-1.5">
-                  <span className="text-slate-400">Entries per page:</span>
+                  <span className="hidden sm:inline text-slate-400">Entries per page:</span>
                   <select
                     value={limit}
                     onChange={(e) => onLimitChange(Number(e.target.value))}
@@ -256,7 +256,7 @@ export function DataTable<T extends { id?: string | number }>({
                   </select>
                 </div>
               )}
-              <span>
+              <span className="text-xs sm:text-sm">
                 Showing <strong className="font-bold text-slate-900">{start}</strong> to{' '}
                 <strong className="font-bold text-slate-900">{end}</strong> of{' '}
                 <strong className="font-bold text-slate-900">{displayTotal}</strong> results
@@ -264,17 +264,17 @@ export function DataTable<T extends { id?: string | number }>({
             </div>
 
             {/* Page Buttons */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => onPageChange(page - 1)}
                 disabled={page <= 1}
-                className="px-3.5 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all whitespace-nowrap"
+                className="px-2.5 sm:px-3.5 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all whitespace-nowrap"
               >
-                <ChevronLeft className="w-4 h-4" /> Previous
+                <ChevronLeft className="w-4 h-4" /> <span className="hidden sm:inline">Previous</span>
               </button>
 
-              <div className="flex items-center gap-1 px-1">
+              <div className="flex items-center gap-1 px-0.5">
                 {Array.from({ length: totalPages }, (_, idx) => idx + 1)
                   .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
                   .map((p, idx, arr) => {
@@ -283,11 +283,11 @@ export function DataTable<T extends { id?: string | number }>({
 
                     return (
                       <React.Fragment key={p}>
-                        {showEllipsis && <span className="text-slate-400 text-sm px-1">...</span>}
+                        {showEllipsis && <span className="text-slate-400 text-xs sm:text-sm px-0.5">...</span>}
                         <button
                           type="button"
                           onClick={() => onPageChange(p)}
-                          className={`w-8 h-8 rounded-lg text-sm font-semibold transition-all ${
+                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs sm:text-sm font-semibold transition-all ${
                             p === page
                               ? 'bg-slate-900 text-white shadow-sm font-bold'
                               : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
@@ -304,9 +304,9 @@ export function DataTable<T extends { id?: string | number }>({
                 type="button"
                 onClick={() => onPageChange(page + 1)}
                 disabled={page >= totalPages}
-                className="px-3.5 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all whitespace-nowrap"
+                className="px-2.5 sm:px-3.5 py-1.5 text-sm font-semibold rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1 transition-all whitespace-nowrap"
               >
-                Next <ChevronRight className="w-4 h-4" />
+                <span className="hidden sm:inline">Next</span> <ChevronRight className="w-4 h-4" />
               </button>
             </div>
           </div>

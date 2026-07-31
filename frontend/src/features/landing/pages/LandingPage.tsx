@@ -45,17 +45,17 @@ export const LandingPage: React.FC = () => {
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
       {/* Fixed Glass Navbar */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-sm">
-              <Headset className="w-5 h-5" />
+          <Link to="/" className="flex items-center gap-2 sm:gap-3 shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-sm shrink-0">
+              <Headset className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <span className="font-bold text-lg text-slate-900 tracking-tight block leading-none">
+              <span className="font-bold text-base sm:text-lg text-slate-900 tracking-tight block leading-none">
                 SupportFlow
               </span>
-              <span className="text-[10px] uppercase font-semibold tracking-wider text-indigo-600">
+              <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-wider text-indigo-600 block leading-none mt-1 whitespace-nowrap">
                 Customer Success
               </span>
             </div>
@@ -63,7 +63,6 @@ export const LandingPage: React.FC = () => {
 
           {/* Navigation Links */}
           <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-
             <a href="#workflows" className="hover:text-slate-900 transition-colors">
               Role Workflows
             </a>
@@ -73,21 +72,21 @@ export const LandingPage: React.FC = () => {
           </nav>
 
           {/* Action CTAs */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             {isAuthenticated ? (
               <Button
                 variant="primary"
                 onClick={() => navigate(getDashboardPath())}
-                className="bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-md"
+                className="bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-md text-xs sm:text-sm px-3 sm:px-4 py-2"
               >
-                Go to Console <ArrowRight className="w-4 h-4 ml-1.5" />
+                Go to Console <ArrowRight className="w-3.5 h-3.5 ml-1 sm:ml-1.5" />
               </Button>
             ) : (
               <>
-                <Link to="/login">
+                <Link to="/login" className="hidden sm:inline-block">
                   <Button
                     variant="ghost"
-                    className="font-semibold text-slate-700 hover:text-slate-900"
+                    className="font-semibold text-slate-700 hover:text-slate-900 text-sm"
                   >
                     Sign In
                   </Button>
@@ -95,9 +94,9 @@ export const LandingPage: React.FC = () => {
                 <Link to="/login">
                   <Button
                     variant="primary"
-                    className="bg-slate-900 hover:bg-slate-800 text-white font-semibold shadow-md"
+                    className="bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-md text-xs sm:text-sm px-3 sm:px-4 py-2"
                   >
-                    Get Started Free <ChevronRight className="w-4 h-4 ml-1" />
+                    Get Started <span className="hidden sm:inline">Free</span> <ChevronRight className="w-3.5 h-3.5 ml-1" />
                   </Button>
                 </Link>
               </>

@@ -6,6 +6,7 @@ import { Badge } from '../components/ui/Badge';
 import { NotificationBell } from '../../features/notifications/components/NotificationBell';
 import { useSetupNotificationSocket } from '../../features/notifications/hooks/useNotifications.tsx';
 import { useSubscriptionDetails } from '../../features/subscriptions/hooks/useSubscriptions';
+import { SubscriptionModalManager } from '../../features/subscriptions/components/SubscriptionModalManager';
 import {
   LayoutDashboard,
   Ticket,
@@ -370,6 +371,7 @@ export const DashboardLayout: React.FC = () => {
 
         {/* Route Page Container */}
         <div className="p-4 md:p-6 flex-1 w-full max-w-7xl mx-auto">
+          {user?.role === 'BUSINESS_ADMIN' && <SubscriptionModalManager />}
           <Outlet />
         </div>
       </main>

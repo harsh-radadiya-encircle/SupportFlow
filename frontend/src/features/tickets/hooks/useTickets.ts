@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Socket } from 'socket.io-client';
 import { useSocketStore } from '../../../shared/store/socketStore';
@@ -132,13 +132,17 @@ export const useSubmitCsat = () => {
 /**
  * Custom Socket.IO Chat & Live Synchronization Hook
  */
-export const useSocketChat = (ticketId: string) => {
+export const useSocketChat = (ticketId: string, targetUserId?: string | null) => {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const { connect } = useSocketStore();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [messages, setMessages] = useState<any[]>([]);
   const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [participantStatus, setParticipantStatus] = useState<'online' | 'offline'>('offline');
+
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastEmitTypingRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!ticketId || !user) return;
@@ -148,12 +152,44 @@ export const useSocketChat = (ticketId: string) => {
 
     setSocket(socketInstance);
 
-    // Join Ticket Room
+    // Join Ticket Room and automatically mark existing messages as read
     socketInstance.emit('join_ticket', ticketId);
+    socketInstance.emit('mark_messages_read', { ticketId, userId: user.id });
+
+    // Request initial online status of target participant
+    if (targetUserId) {
+      socketInstance.emit('check_user_status', targetUserId, (status: 'online' | 'offline') => {
+        setParticipantStatus(status);
+      });
+    }
 
     const handleReceiveMessage = (newMsg: any) => {
       setMessages((prev) => [...prev, newMsg]);
+
+      // If viewing active room and message is from someone else, instantly mark as read
+      if (newMsg.senderId !== user.id) {
+        socketInstance.emit('mark_messages_read', { ticketId, userId: user.id });
+      }
       queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
+    };
+
+    const handleMessagesRead = (data: { ticketId: string; readerId: string }) => {
+      if (data.ticketId === ticketId && data.readerId !== user.id) {
+        // Mark all our sent messages as read in local state for instant UI update
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.senderId === user.id ? { ...msg, isRead: true } : msg
+          )
+        );
+        // Force refresh data query to retrieve updated isRead states from DB
+        queryClient.invalidateQueries({ queryKey: ['ticket', ticketId] });
+      }
+    };
+
+    const handleUserStatusChange = (data: { userId: string; status: 'online' | 'offline' }) => {
+      if (targetUserId && data.userId === targetUserId) {
+        setParticipantStatus(data.status);
+      }
     };
 
     const handleStatusUpdated = (data: any) => {
@@ -184,32 +220,31 @@ export const useSocketChat = (ticketId: string) => {
       setTypingUser(null);
     };
 
-    // Listen for new messages
+    // Listeners
     socketInstance.on('receive_message', handleReceiveMessage);
-
-    // Listen for Live Ticket Status Updates
+    socketInstance.on('messages_read', handleMessagesRead);
+    socketInstance.on('user_status_change', handleUserStatusChange);
     socketInstance.on('ticket_status_updated', handleStatusUpdated);
-
-    // Listen for Live Agent Assignments
     socketInstance.on('ticket_assigned', handleTicketAssigned);
-
-    // Listen for Live Internal Notes
     socketInstance.on('internal_note_added', handleInternalNoteAdded);
-
-    // Listen for typing indicators
     socketInstance.on('user_typing_start', handleTypingStart);
     socketInstance.on('user_typing_stop', handleTypingStop);
 
     return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
       socketInstance.emit('leave_ticket', ticketId);
       socketInstance.off('receive_message', handleReceiveMessage);
+      socketInstance.off('messages_read', handleMessagesRead);
+      socketInstance.off('user_status_change', handleUserStatusChange);
       socketInstance.off('ticket_status_updated', handleStatusUpdated);
       socketInstance.off('ticket_assigned', handleTicketAssigned);
       socketInstance.off('internal_note_added', handleInternalNoteAdded);
       socketInstance.off('user_typing_start', handleTypingStart);
       socketInstance.off('user_typing_stop', handleTypingStop);
     };
-  }, [ticketId, user, connect, queryClient]);
+  }, [ticketId, targetUserId, user, connect, queryClient]);
 
   const sendMessage = (content: string) => {
     if (socket && user && content.trim()) {
@@ -218,16 +253,36 @@ export const useSocketChat = (ticketId: string) => {
         senderId: user.id,
         content: content.trim(),
       });
-      socket.emit('typing_stop', { ticketId });
+      // Instantly clear local typing state when message is dispatched
+      emitTyping(false);
     }
   };
 
   const emitTyping = (isTyping: boolean) => {
-    if (socket && user) {
-      if (isTyping) {
+    if (!socket || !user) return;
+
+    if (isTyping) {
+      if (!lastEmitTypingRef.current) {
         socket.emit('typing_start', { ticketId, userName: user.fullName });
-      } else {
+        lastEmitTypingRef.current = true;
+      }
+
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+
+      typingTimeoutRef.current = setTimeout(() => {
         socket.emit('typing_stop', { ticketId });
+        lastEmitTypingRef.current = false;
+      }, 2500);
+    } else {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      if (lastEmitTypingRef.current) {
+        socket.emit('typing_stop', { ticketId });
+        lastEmitTypingRef.current = false;
       }
     }
   };
@@ -235,6 +290,7 @@ export const useSocketChat = (ticketId: string) => {
   return {
     messages,
     typingUser,
+    participantStatus,
     sendMessage,
     emitTyping,
   };
