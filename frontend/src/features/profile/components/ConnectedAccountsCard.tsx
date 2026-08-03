@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { linkWithPopup } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
+import { linkWithPopup, EmailAuthProvider, linkWithCredential } from 'firebase/auth';
 import toast from 'react-hot-toast';
 import { auth, googleProvider } from '../../../shared/config/firebase';
 import { authApi } from '../../auth/api/auth.api';
@@ -12,11 +12,30 @@ import { Link2, Key, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react
 export const ConnectedAccountsCard: React.FC = () => {
   const { user, setAuth } = useAuthStore();
   const [isLinkingGoogle, setIsLinkingGoogle] = useState<boolean>(false);
+  const [isLinkingPassword, setIsLinkingPassword] = useState<boolean>(false);
+  const [password, setPassword] = useState<string>('');
 
-  const isPasswordConnected =
-    user?.authProvider === 'EMAIL_PASSWORD' || user?.authProvider === 'MULTI_PROVIDER';
-  const isGoogleConnected =
-    user?.authProvider === 'GOOGLE' || user?.authProvider === 'MULTI_PROVIDER';
+  const [firebaseProviders, setFirebaseProviders] = useState<string[]>([]);
+  const [isLoadingProviders, setIsLoadingProviders] = useState<boolean>(true);
+
+  const fetchProviders = async () => {
+    try {
+      const res = await authApi.getProviders();
+      const data = res?.data || res;
+      setFirebaseProviders(data?.providers || []);
+    } catch (err) {
+      console.error('[Fetch Providers Error]:', err);
+    } finally {
+      setIsLoadingProviders(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProviders();
+  }, [user?.authProvider]);
+
+  const isPasswordConnected = firebaseProviders.includes('password');
+  const isGoogleConnected = firebaseProviders.includes('google.com');
 
   const handleLinkGoogle = async () => {
     setIsLinkingGoogle(true);
@@ -65,6 +84,51 @@ export const ConnectedAccountsCard: React.FC = () => {
       setIsLinkingGoogle(false);
     }
   };
+
+  const handleLinkPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password || password.length < 6) {
+      toast.error('Password must be at least 6 characters.');
+      return;
+    }
+
+    setIsLinkingPassword(true);
+    try {
+      const email = auth.currentUser?.email || user?.email;
+      if (!email) {
+        throw new Error('No user email associated with the session.');
+      }
+
+      const credential = EmailAuthProvider.credential(email, password);
+      const result = await linkWithCredential(auth.currentUser!, credential);
+
+      const idToken = await result.user.getIdToken(true);
+      localStorage.setItem('supportflow_token', idToken);
+
+      const linkResponse = await authApi.linkProvider();
+      const linkData = linkResponse?.data || linkResponse;
+      if (linkData?.user) {
+        setAuth(linkData.user, idToken);
+      }
+
+      toast.success('Password successfully connected to your profile!');
+      setPassword('');
+    } catch (err: any) {
+      console.error('[Link Password Error]:', err);
+      toast.error(err.message || 'Failed to connect email & password credentials.');
+    } finally {
+      setIsLinkingPassword(false);
+    }
+  };
+
+  if (isLoadingProviders) {
+    return (
+      <Card className="p-6 flex flex-col items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+        <p className="text-xs text-slate-500 mt-2 font-medium">Fetching connected sign-in methods...</p>
+      </Card>
+    );
+  }
 
   return (
     <Card className="p-6 space-y-6">
@@ -118,12 +182,36 @@ export const ConnectedAccountsCard: React.FC = () => {
             </div>
           </div>
 
-          <div className="pt-2 text-xs text-slate-500">
-            <span className="flex items-center gap-1 font-medium text-slate-600">
-              <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" /> Standard Email
-              Authentication Active
-            </span>
-          </div>
+          {!isPasswordConnected ? (
+            <form onSubmit={handleLinkPassword} className="space-y-2 pt-2">
+              <div className="relative">
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter a new password"
+                  className="w-full text-xs px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-indigo-600 bg-white"
+                  required
+                />
+              </div>
+              <Button
+                type="submit"
+                size="sm"
+                variant="primary"
+                isLoading={isLinkingPassword}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold shadow-xs"
+              >
+                Connect Email & Password
+              </Button>
+            </form>
+          ) : (
+            <div className="pt-2 text-xs text-slate-500">
+              <span className="flex items-center gap-1 font-medium text-slate-600">
+                <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" /> Standard Email
+                Authentication Active
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Google Account Provider Card */}

@@ -12,5 +12,6 @@ router.post("/sync", authRateLimiter, AuthController.syncUser);
 router.get("/me", authenticate, AuthController.getProfile);
 router.post("/logout", authenticate, AuthController.logout);
 router.post("/link-provider", authenticate, AuthController.linkProvider);
+router.get("/providers", authenticate, AuthController.getProviders);
 
 export default router;

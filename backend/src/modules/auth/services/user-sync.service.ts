@@ -82,21 +82,15 @@ export class UserSyncService {
         );
       }
 
-      // Upgrade to MULTI_PROVIDER when a GOOGLE-registered user now also uses email/password
+      // Block: pure GOOGLE account attempting a direct Email/Password login from Login page.
       if (
         storedProvider === "GOOGLE" &&
-        incomingProvider === "EMAIL_PASSWORD"
+        incomingProvider === "EMAIL_PASSWORD" &&
+        existingUser.firebaseUid !== dto.firebaseUid
       ) {
-        updateData.authProvider = AuthProvider.MULTI_PROVIDER;
-      }
-
-      // Upgrade to MULTI_PROVIDER when an EMAIL_PASSWORD user successfully logs in with linked Google
-      if (
-        storedProvider === "EMAIL_PASSWORD" &&
-        incomingProvider === "GOOGLE" &&
-        existingUser.firebaseUid === dto.firebaseUid
-      ) {
-        updateData.authProvider = AuthProvider.MULTI_PROVIDER;
+        throw ApiError.badRequest(
+          "This email is registered with Google. Please sign in with Google. You can link Email & Password in Profile > Connected Accounts after signing in.",
+        );
       }
 
       if (Object.keys(updateData).length > 0) {
@@ -195,5 +189,14 @@ export class UserSyncService {
       include: { business: true },
     });
     return { user };
+  }
+
+  /**
+   * Fetches live authentication provider IDs for a Firebase UID
+   */
+  static async getProviders(firebaseUid: string) {
+    const fbUser = await admin.auth().getUser(firebaseUid);
+    const providers = fbUser.providerData.map((p) => p.providerId);
+    return { providers };
   }
 }

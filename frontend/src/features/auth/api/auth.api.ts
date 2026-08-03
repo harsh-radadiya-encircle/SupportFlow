@@ -34,4 +34,9 @@ export const authApi = {
     const response = await apiClient.post('/auth/link-provider');
     return response.data;
   },
+
+  getProviders: async () => {
+    const response = await apiClient.get('/auth/providers');
+    return response.data;
+  },
 };

@@ -122,4 +122,22 @@ export class AuthController {
       next(error);
     }
   }
+
+  static async getProviders(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const result = await AuthService.getProviders(req.user!.firebaseUid);
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: "User authentication providers fetched successfully",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

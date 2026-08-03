@@ -195,25 +195,18 @@ export const useAuthSubmit = () => {
         throw popupErr;
       }
 
-      const email = result.user.email!;
-      const checkRes = await authApi.checkProvider(email).catch(() => null);
-      const storedProvider = checkRes?.data?.authProvider as string | undefined;
-
-      if (checkRes?.data?.exists && storedProvider === 'EMAIL_PASSWORD') {
-        await auth.signOut().catch(() => null);
-        const msg = 'This email is registered with Email & Password. Please sign in with your password. You can link Google under My Profile → Connected Accounts after signing in.';
-        setErrorMessage(msg);
-        toast.error(msg);
-        return;
-      }
+      await result.user.reload();
+      const providers = result.user.providerData.map(p => p.providerId);
+      console.log('Firebase provider identities for this user:', providers);
 
       const idToken = await result.user.getIdToken();
       const res = await authApi.syncUser({
         fullName: result.user.displayName || 'Google User',
         role: selectedRole,
-        mode: checkRes?.data?.exists ? 'login' : isRegisterMode ? 'register' : 'login',
+        mode: isRegisterMode ? 'register' : 'login',
       }, idToken);
       const { user } = res?.data || res;
+
       await finishSession(user, idToken, `Welcome, ${user.fullName}!`);
     } catch (err: any) {
       console.error('[Google Auth Error]:', err);

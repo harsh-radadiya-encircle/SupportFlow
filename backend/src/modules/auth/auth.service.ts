@@ -23,4 +23,11 @@ export class AuthService {
   static async linkProvider(userId: string) {
     return UserSyncService.linkProvider(userId);
   }
+
+  /**
+   * Fetches user provider IDs from Firebase Admin
+   */
+  static async getProviders(firebaseUid: string) {
+    return UserSyncService.getProviders(firebaseUid);
+  }
 }
