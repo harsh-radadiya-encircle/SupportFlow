@@ -42,7 +42,7 @@ export const LandingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex flex-col overflow-x-hidden">
       {/* Fixed Glass Navbar */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
@@ -106,7 +106,7 @@ export const LandingPage: React.FC = () => {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-16 pb-20 px-6 max-w-7xl mx-auto text-center space-y-8 flex-1">
+      <section className="pt-16 pb-20 px-4 sm:px-6 max-w-7xl mx-auto text-center space-y-8 flex-1">
         <div className="space-y-4 max-w-3xl mx-auto">
           <Badge
             variant="purple"
@@ -150,16 +150,18 @@ export const LandingPage: React.FC = () => {
         <div className="pt-8 max-w-5xl mx-auto">
           <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200/80 shadow-2xl space-y-6 text-left">
             {/* Top Mock Header */}
-            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-rose-400" />
-                <div className="w-3 h-3 rounded-full bg-amber-400" />
-                <div className="w-3 h-3 rounded-full bg-emerald-400" />
-                <span className="text-xs font-semibold text-slate-400 ml-2">
-                  supportflow.app / console
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="w-2.5 h-2.5 rounded-full bg-rose-400" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-400" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                </div>
+                <span className="text-[11px] font-semibold text-slate-400 truncate max-w-[160px] sm:max-w-none">
+                  supportflow.app/console
                 </span>
               </div>
-              <Badge variant="success" className="text-[11px] font-bold">
+              <Badge variant="success" className="text-[10px] font-bold self-start sm:self-auto shrink-0">
                 ● Live Real-Time Socket
               </Badge>
             </div>

@@ -44,6 +44,18 @@
     scroll-behavior: smooth;
   }
 
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px; /* Dynamically scale down all rem-based typography and spacings on mobile */
+    }
+  }
+
+  @media (max-width: 380px) {
+    html {
+      font-size: 13px; /* Extra compact scaling for narrow devices (e.g., 320px screens) */
+    }
+  }
+
   body,
   button,
   input,

@@ -280,22 +280,24 @@ export const DashboardLayout: React.FC = () => {
       {/* MAIN CONTENT AREA */}
       <main className="flex-1 flex flex-col min-w-0 w-full overflow-y-auto overflow-x-hidden">
         {/* Top Navbar Header */}
-        <header className="h-16 border-b border-slate-200/80 px-4 md:px-6 flex items-center justify-between bg-white/90 sticky top-0 z-30 backdrop-blur-md">
-          <div className="flex items-center gap-3">
+        <header className="h-16 border-b border-slate-200/80 px-3 sm:px-6 flex items-center justify-between bg-white/90 sticky top-0 z-30 backdrop-blur-md">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
             {/* Mobile Hamburger Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(true)}
-              className="md:hidden p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors"
+              className="md:hidden p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors shrink-0"
             >
               <Menu className="w-5 h-5" />
             </button>
 
-            <span className="font-bold text-slate-900 text-base truncate">SupportFlow Console</span>
+            <span className="font-bold text-slate-900 text-sm sm:text-base truncate select-none">
+              SupportFlow Console
+            </span>
           </div>
 
           {/* Right Top Action Bar Matching User's Design Mockup */}
-          <div className="flex items-center gap-3" ref={profileDropdownRef}>
-            <div className="flex items-center gap-1.5 p-1 rounded-full bg-slate-50 border border-slate-200/80 shadow-2xs">
+          <div className="flex items-center gap-3 shrink-0" ref={profileDropdownRef}>
+            <div className="flex items-center gap-1 sm:gap-1.5 p-0.5 sm:p-1 rounded-full bg-slate-50 border border-slate-200/80 shadow-2xs">
               {/* Notification Bell */}
               <NotificationBell />
 
