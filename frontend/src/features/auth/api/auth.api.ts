@@ -8,7 +8,6 @@ export interface SyncPayload {
   role?: Role;
   businessName?: string;
   mode?: 'login' | 'register';
-  authProvider?: 'EMAIL_PASSWORD' | 'GOOGLE' | 'MULTI_PROVIDER';
 }
 
 export const authApi = {
@@ -17,43 +16,22 @@ export const authApi = {
     return response.data;
   },
 
-  syncUser: async (payload: SyncPayload) => {
-    const response = await apiClient.post('/auth/sync', payload);
-    return response.data;
-  },
-
-  syncPassword: async (payload: { email: string; password: string }) => {
-    const response = await apiClient.post('/auth/sync-password', payload);
-    return response.data;
-  },
-
-  getCustomToken: async () => {
-    const response = await apiClient.get('/auth/custom-token');
-    return response.data;
-  },
-
-  register: async (payload: SyncPayload) => {
-    const response = await apiClient.post('/auth/sync', { ...payload, mode: 'register' });
-    return response.data;
-  },
-
-  login: async (idTokenOrEmail: string) => {
-    const response = await apiClient.post('/auth/sync', { mode: 'login' });
-    return response.data;
-  },
-
-  forgotPassword: async (email: string) => {
-    const response = await apiClient.post('/auth/forgot-password', { email });
-    return response.data;
-  },
-
-  resetPassword: async (token: string, password?: string) => {
-    const response = await apiClient.post('/auth/reset-password', { token, password });
+  syncUser: async (payload: Omit<SyncPayload, 'firebaseUid' | 'email'>, idToken: string) => {
+    const response = await apiClient.post('/auth/sync', payload, {
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
+    });
     return response.data;
   },
 
   logout: async () => {
     const response = await apiClient.post('/auth/logout');
+    return response.data;
+  },
+
+  linkProvider: async () => {
+    const response = await apiClient.post('/auth/link-provider');
     return response.data;
   },
 };

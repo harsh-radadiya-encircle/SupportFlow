@@ -113,9 +113,11 @@ export const useAuthSubmit = () => {
           throw new Error('Company / Business Name is required for Business Owners.');
 
         let firebaseUid: string;
+        let idToken = '';
         try {
           const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
           firebaseUid = cred.user.uid;
+          idToken = await cred.user.getIdToken();
         } catch (firebaseErr: any) {
           if (firebaseErr.code === 'auth/email-already-in-use') {
             setErrorMessage('Email already registered. Switching to Sign In.');
@@ -127,16 +129,13 @@ export const useAuthSubmit = () => {
 
         try {
           const res = await authApi.syncUser({
-            firebaseUid,
-            email: data.email,
             fullName: data.fullName || 'User',
             role: selectedRole,
             businessName: selectedRole === 'BUSINESS_ADMIN' ? data.businessName : undefined,
             mode: 'register',
-            authProvider: 'EMAIL_PASSWORD',
-          });
-          const { user, token } = res?.data || res;
-          await finishSession(user, token, `Welcome to SupportFlow, ${user.fullName}!`);
+          }, idToken);
+          const { user } = res?.data || res;
+          await finishSession(user, idToken, `Welcome to SupportFlow, ${user.fullName}!`);
         } catch (dbErr) {
           if (auth.currentUser) await deleteUser(auth.currentUser).catch(() => null);
           await auth.signOut().catch(() => null);
@@ -145,36 +144,23 @@ export const useAuthSubmit = () => {
       } else {
         let userUid = '';
         let userEmail = data.email;
+        let idToken = '';
 
         try {
           const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
           userUid = cred.user.uid;
           userEmail = cred.user.email || data.email;
+          idToken = await cred.user.getIdToken();
         } catch (firebaseErr: any) {
-          const code = firebaseErr?.code || '';
-          if (['auth/wrong-password', 'auth/invalid-credential', 'auth/user-not-found'].includes(code)) {
-            try {
-              const syncRes = await authApi.syncPassword({ email: data.email, password: data.password });
-              const syncData = syncRes?.data || syncRes;
-              if (syncData?.user && syncData?.token) {
-                if (syncData.firebaseCustomToken)
-                  await signInWithCustomToken(auth, syncData.firebaseCustomToken).catch(() => null);
-                await finishSession(syncData.user, syncData.token, `Welcome back, ${syncData.user.fullName}!`);
-                return;
-              }
-            } catch {
-              const msg = 'Incorrect password. Check your password or click "Forgot password?" to reset it.';
-              setErrorMessage(msg);
-              toast.error(msg);
-              return;
-            }
-          }
-          throw firebaseErr;
+          const msg = getFriendlyAuthError(firebaseErr);
+          setErrorMessage(msg);
+          toast.error(msg);
+          return;
         }
 
-        const res = await authApi.syncUser({ firebaseUid: userUid, email: userEmail, mode: 'login', authProvider: 'EMAIL_PASSWORD' });
-        const { user, token } = res?.data || res;
-        await finishSession(user, token, `Welcome back, ${user.fullName}!`);
+        const res = await authApi.syncUser({ mode: 'login' }, idToken);
+        const { user } = res?.data || res;
+        await finishSession(user, idToken, `Welcome back, ${user.fullName}!`);
       }
     } catch (err: any) {
       console.error('[Auth Error]:', err);
@@ -221,16 +207,14 @@ export const useAuthSubmit = () => {
         return;
       }
 
+      const idToken = await result.user.getIdToken();
       const res = await authApi.syncUser({
-        firebaseUid: result.user.uid,
-        email,
         fullName: result.user.displayName || 'Google User',
         role: selectedRole,
         mode: checkRes?.data?.exists ? 'login' : isRegisterMode ? 'register' : 'login',
-        authProvider: 'GOOGLE',
-      });
-      const { user, token } = res?.data || res;
-      await finishSession(user, token, `Welcome, ${user.fullName}!`);
+      }, idToken);
+      const { user } = res?.data || res;
+      await finishSession(user, idToken, `Welcome, ${user.fullName}!`);
     } catch (err: any) {
       console.error('[Google Auth Error]:', err);
       await auth.signOut().catch(() => null);

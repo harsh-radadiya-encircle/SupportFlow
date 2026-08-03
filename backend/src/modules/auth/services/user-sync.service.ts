@@ -1,7 +1,7 @@
 import { Role, AuthProvider } from "@prisma/client";
 import { prisma } from "../../../utils/prisma";
 import { ApiError } from "../../../common/exceptions/apiError";
-import { TokenService } from "./token.service";
+import { admin } from "../../../config/firebase";
 
 export interface SyncUserDto {
   firebaseUid: string;
@@ -45,13 +45,19 @@ export class UserSyncService {
     const isRegisterMode = dto.mode === "register";
     const incomingProvider = dto.authProvider as AuthProvider | undefined;
 
-    // Find existing user by firebaseUid first, then fall back to email
-    let existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ firebaseUid: dto.firebaseUid }, { email: dto.email }],
-      },
+    // Find existing user strictly by unique firebaseUid first
+    let existingUser = await prisma.user.findUnique({
+      where: { firebaseUid: dto.firebaseUid },
       include: { business: true },
     });
+
+    // Fall back to matching by unique email if UID query yields nothing
+    if (!existingUser && dto.email) {
+      existingUser = await prisma.user.findUnique({
+        where: { email: dto.email },
+        include: { business: true },
+      });
+    }
 
     // ── REGISTER MODE ──────────────────────────────────────────────────────────
     if (isRegisterMode && existingUser) {
@@ -65,14 +71,6 @@ export class UserSyncService {
       const storedProvider = existingUser.authProvider as string;
       const updateData: Record<string, unknown> = {};
 
-      // ── MULTI_PROVIDER upgrade (from Profile "Connect Google Account" button) ──
-      if (incomingProvider === "MULTI_PROVIDER") {
-        updateData.authProvider = AuthProvider.MULTI_PROVIDER;
-        if (dto.firebaseUid && dto.firebaseUid !== "check") {
-          updateData.firebaseUid = dto.firebaseUid;
-        }
-      }
-
       // Block: pure EMAIL_PASSWORD account attempting a direct Google login from Login page.
       if (
         storedProvider === "EMAIL_PASSWORD" &&
@@ -84,22 +82,19 @@ export class UserSyncService {
         );
       }
 
-      // Sync firebaseUid if it has legitimately changed (e.g. same provider, different device)
-      if (
-        incomingProvider !== "MULTI_PROVIDER" &&
-        dto.firebaseUid &&
-        dto.firebaseUid !== "check" &&
-        existingUser.firebaseUid !== dto.firebaseUid &&
-        (storedProvider === "MULTI_PROVIDER" ||
-          storedProvider === (incomingProvider as string))
-      ) {
-        updateData.firebaseUid = dto.firebaseUid;
-      }
-
       // Upgrade to MULTI_PROVIDER when a GOOGLE-registered user now also uses email/password
       if (
         storedProvider === "GOOGLE" &&
         incomingProvider === "EMAIL_PASSWORD"
+      ) {
+        updateData.authProvider = AuthProvider.MULTI_PROVIDER;
+      }
+
+      // Upgrade to MULTI_PROVIDER when an EMAIL_PASSWORD user successfully logs in with linked Google
+      if (
+        storedProvider === "EMAIL_PASSWORD" &&
+        incomingProvider === "GOOGLE" &&
+        existingUser.firebaseUid === dto.firebaseUid
       ) {
         updateData.authProvider = AuthProvider.MULTI_PROVIDER;
       }
@@ -113,138 +108,92 @@ export class UserSyncService {
       }
     }
 
-    // ── LOGIN with no existing user (Google auto-provision) ────────────────────
-    if (isLoginMode && !existingUser && incomingProvider === "GOOGLE") {
-      let businessId: string | undefined;
-
-      if (dto.role === Role.BUSINESS_ADMIN && dto.businessName) {
-        const slug =
-          dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, "-") +
-          "-" +
-          Date.now();
-        const business = await prisma.business.create({
-          data: { name: dto.businessName, slug },
-        });
-        businessId = business.id;
-      }
-
-      existingUser = await prisma.user.create({
-        data: {
-          firebaseUid: dto.firebaseUid,
-          email: dto.email,
-          fullName: dto.fullName || "Google User",
-          role: dto.role || Role.CUSTOMER,
-          authProvider: AuthProvider.GOOGLE,
-          businessId,
-        },
-        include: { business: true },
-      });
-    }
-
-    // ── LOGIN with no existing user (non-Google) ───────────────────────────────
-    if (isLoginMode && !existingUser) {
-      let role: Role = dto.role || Role.CUSTOMER;
-      let businessId: string | undefined;
-
-      // Check if they have an active pending invitation
+    // ── CREATE NEW USER (Registration / Auto-provision / Self-healing) ──
+    if (!existingUser) {
+      // Resolve any pending invitations matching email
       const invitation = await prisma.invitation.findFirst({
         where: { email: dto.email, isAccepted: false },
       });
 
+      let role: Role = Role.CUSTOMER;
+      let businessId: string | null = null;
+
       if (invitation) {
         role = invitation.role;
         businessId = invitation.businessId;
-        await prisma.invitation.update({
-          where: { id: invitation.id },
-          data: { isAccepted: true },
-        });
+      } else {
+        // Direct self-registration: Strictly validate requested role to prevent privilege escalation
+        role = dto.role || Role.CUSTOMER;
+        const allowedSelfRegRoles: Role[] = [
+          Role.CUSTOMER,
+          Role.BUSINESS_ADMIN,
+        ];
+        if (!allowedSelfRegRoles.includes(role)) {
+          throw ApiError.badRequest(
+            `Self-registration is not permitted for the role: ${role}`,
+          );
+        }
       }
 
-      existingUser = await prisma.user.create({
-        data: {
-          firebaseUid: dto.firebaseUid,
-          email: dto.email,
-          fullName: dto.fullName || dto.email.split("@")[0] || "User",
-          role,
-          authProvider:
-            (incomingProvider as AuthProvider) || AuthProvider.EMAIL_PASSWORD,
-          businessId,
-        },
-        include: { business: true },
+      existingUser = await prisma.$transaction(async (tx) => {
+        // If invitation exists, mark it as consumed
+        if (invitation) {
+          await tx.invitation.update({
+            where: { id: invitation.id },
+            data: { isAccepted: true },
+          });
+        } else if (role === Role.BUSINESS_ADMIN && dto.businessName) {
+          // Self-registering business admin: create the business
+          const slug =
+            dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, "-") +
+            "-" +
+            Date.now();
+          const business = await tx.business.create({
+            data: { name: dto.businessName, slug },
+          });
+          businessId = business.id;
+        }
+
+        const finalProvider = incomingProvider || AuthProvider.EMAIL_PASSWORD;
+
+        return tx.user.create({
+          data: {
+            firebaseUid: dto.firebaseUid,
+            email: dto.email,
+            fullName: dto.fullName || dto.email.split("@")[0] || "User",
+            role,
+            authProvider: finalProvider,
+            businessId,
+          },
+          include: { business: true },
+        });
       });
     }
 
-    // ── REGISTER (new user provision) ──────────────────────────────────────────
-    if (!existingUser) {
-      let businessId: string | undefined;
-
-      if (dto.role === Role.BUSINESS_ADMIN && dto.businessName) {
-        const slug =
-          dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, "-") +
-          "-" +
-          Date.now();
-        const business = await prisma.business.create({
-          data: { name: dto.businessName, slug },
-        });
-        businessId = business.id;
-      }
-
-      existingUser = await prisma.user.create({
-        data: {
-          firebaseUid: dto.firebaseUid,
-          email: dto.email,
-          fullName: dto.fullName || "User",
-          role: dto.role || Role.CUSTOMER,
-          authProvider:
-            (incomingProvider as AuthProvider) || AuthProvider.EMAIL_PASSWORD,
-          businessId,
-        },
-        include: { business: true },
-      });
-    }
-
-    const token = TokenService.generateJwtToken({
-      id: existingUser.id,
-      firebaseUid: existingUser.firebaseUid,
-      email: existingUser.email,
-      role: existingUser.role,
-      businessId: existingUser.businessId,
-    });
-
-    const firebaseCustomToken = await TokenService.createFirebaseCustomToken(
-      existingUser.firebaseUid,
-    );
-
-    return { user: existingUser, token, firebaseCustomToken };
+    return { user: existingUser };
   }
 
-  /**
-   * Log in user locally using email (once Firebase auth has checked/passed on frontend)
-   */
-  static async login(email: string) {
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: { business: true },
-    });
+  static async linkProvider(userId: string) {
+    const userRecord = await prisma.user.findUnique({ where: { id: userId } });
+    if (!userRecord) {
+      throw ApiError.notFound("User not found in system database");
+    }
 
-    if (!user) {
-      throw ApiError.unauthorized(
-        "Invalid credentials or user account not found",
+    // Retrieve Firebase user profile to inspect linked login providers
+    const fbUser = await admin.auth().getUser(userRecord.firebaseUid);
+
+    // If there is only one provider (or fewer) linked, then linking didn't actually happen on Firebase
+    if (!fbUser.providerData || fbUser.providerData.length <= 1) {
+      throw ApiError.badRequest(
+        "Account has not been linked to multiple providers on Firebase.",
       );
     }
 
-    const token = TokenService.generateJwtToken({
-      id: user.id,
-      firebaseUid: user.firebaseUid,
-      email: user.email,
-      role: user.role,
-      businessId: user.businessId,
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { authProvider: AuthProvider.MULTI_PROVIDER },
+      include: { business: true },
     });
-
-    const firebaseCustomToken = await TokenService.createFirebaseCustomToken(
-      user.firebaseUid,
-    );
-
-    return { user, token, firebaseCustomToken };
+    return { user };
   }
 }

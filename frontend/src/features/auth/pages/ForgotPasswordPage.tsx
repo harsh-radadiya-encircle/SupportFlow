@@ -9,7 +9,8 @@ import { AuthAlert } from '../components/AuthAlert';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { Mail, ArrowLeft, CheckCircle2, KeyRound } from 'lucide-react';
-import { authApi } from '../api/auth.api';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../../../shared/config/firebase';
 
 const forgotSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -35,26 +36,13 @@ export const ForgotPasswordPage: React.FC = () => {
     setGoogleNotice(null);
 
     try {
-      await authApi.forgotPassword(data.email);
+      await sendPasswordResetEmail(auth, data.email);
       setIsSubmitted(true);
       toast.success('Password reset email sent! Check your inbox.');
     } catch (err: any) {
-      const msg =
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to send reset email. Please try again.';
-
-      if (msg.includes('Google')) {
-        setGoogleNotice(msg);
-        toast.error('Google Account detected. Sign in with Google directly.');
-      } else if (err.response?.status === 404 || msg.includes('not found')) {
-        const notFoundMsg = 'No account found with this email address.';
-        setErrorMessage(notFoundMsg);
-        toast.error(notFoundMsg);
-      } else {
-        setErrorMessage(msg);
-        toast.error(msg);
-      }
+      const msg = err.message || 'Failed to send reset email. Please try again.';
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }

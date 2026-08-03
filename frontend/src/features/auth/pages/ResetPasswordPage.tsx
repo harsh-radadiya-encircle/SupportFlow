@@ -9,7 +9,8 @@ import { AuthAlert } from '../components/AuthAlert';
 import { Button } from '../../../shared/components/ui/Button';
 import { Input } from '../../../shared/components/ui/Input';
 import { Lock, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { authApi } from '../api/auth.api';
+import { confirmPasswordReset } from 'firebase/auth';
+import { auth } from '../../../shared/config/firebase';
 
 const resetSchema = z
   .object({
@@ -43,15 +44,12 @@ export const ResetPasswordPage: React.FC = () => {
     setErrorMessage(null);
     try {
       if (!oobCode) throw new Error('Invalid or missing password reset token.');
-      await authApi.resetPassword(oobCode, data.password);
+      await confirmPasswordReset(auth, oobCode, data.password);
       setIsSuccess(true);
       toast.success('Password updated! Redirecting to sign in...');
       setTimeout(() => navigate('/login'), 2500);
     } catch (err: any) {
-      const msg =
-        err.response?.data?.message ||
-        err.message ||
-        'Failed to reset password. The link may have expired.';
+      const msg = err.message || 'Failed to reset password. The link may have expired.';
       setErrorMessage(msg);
       toast.error(msg);
     } finally {
