@@ -136,14 +136,17 @@ export class UserSyncService {
             where: { id: invitation.id },
             data: { isAccepted: true },
           });
-        } else if (role === Role.BUSINESS_ADMIN && dto.businessName) {
+        } else if (role === Role.BUSINESS_ADMIN) {
           // Self-registering business admin: create the business
+          const finalBusinessName =
+            dto.businessName ||
+            `${dto.fullName || dto.email.split("@")[0] || "User"}'s Business`;
           const slug =
-            dto.businessName.toLowerCase().replace(/[^a-z0-9]/g, "-") +
+            finalBusinessName.toLowerCase().replace(/[^a-z0-9]/g, "-") +
             "-" +
             Date.now();
           const business = await tx.business.create({
-            data: { name: dto.businessName, slug },
+            data: { name: finalBusinessName, slug },
           });
           businessId = business.id;
         }

@@ -28,7 +28,7 @@ export const authenticate = async (
     let decodedEmail: string | null = null;
 
     try {
-      const decodedToken = await admin.auth().verifyIdToken(token);
+      const decodedToken = await admin.auth().verifyIdToken(token, true);
       decodedUid = decodedToken.uid;
       decodedEmail = decodedToken.email || null;
     } catch (err: any) {

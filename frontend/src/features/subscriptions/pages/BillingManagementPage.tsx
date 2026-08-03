@@ -32,6 +32,7 @@ export const BillingManagementPage: React.FC = () => {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isDowngradeModalOpen, setIsDowngradeModalOpen] = useState(false);
+  const [upgradingPlan, setUpgradingPlan] = useState<'STANDARD' | 'BUSINESS' | null>(null);
 
   const { data, isLoading } = useSubscriptionDetails();
   const orderMutation = useCreateRazorpayOrder();
@@ -56,9 +57,13 @@ export const BillingManagementPage: React.FC = () => {
     subscriptionStatus,
     currentPeriodEnd,
     daysRemaining = 30,
-    usage,
-    billingHistory,
+    billingHistory = [],
   } = subscriptionData;
+
+  const usage = subscriptionData.usage || {
+    agents: { used: 0, max: 0, percentage: 0 },
+    tickets: { used: 0, max: 0, percentage: 0 },
+  };
 
   const loadRazorpayScript = (): Promise<boolean> => {
     return new Promise((resolve) => {
@@ -72,6 +77,7 @@ export const BillingManagementPage: React.FC = () => {
   };
 
   const handleUpgradePlan = async (targetPlan: 'STANDARD' | 'BUSINESS') => {
+    setUpgradingPlan(targetPlan);
     try {
       const orderData = await orderMutation.mutateAsync({ plan: targetPlan, billingCycle });
 
@@ -122,6 +128,8 @@ export const BillingManagementPage: React.FC = () => {
       }
     } catch (err: any) {
       // Handled in mutation onError toast
+    } finally {
+      setUpgradingPlan(null);
     }
   };
 
@@ -446,15 +454,16 @@ export const BillingManagementPage: React.FC = () => {
                   handleUpgradePlan('STANDARD');
                 }
               }}
-              disabled={orderMutation.isPending || verifyMutation.isPending || plan === 'STANDARD'}
+              disabled={upgradingPlan !== null || verifyMutation.isPending || plan === 'STANDARD'}
+              isLoading={upgradingPlan === 'STANDARD'}
               className="w-full font-bold mt-4 bg-indigo-600 hover:bg-indigo-700 text-white border-indigo-600"
             >
-              {orderMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : plan === 'STANDARD' ? (
+              {plan === 'STANDARD' ? (
                 'Current Plan'
+              ) : plan === 'BUSINESS' ? (
+                'Downgrade to Standard'
               ) : (
-                `Select Standard (${billingCycle})`
+                `Upgrade to Standard (${billingCycle})`
               )}
             </Button>
           </Card>
@@ -519,13 +528,14 @@ export const BillingManagementPage: React.FC = () => {
             <Button
               variant={plan === 'BUSINESS' ? 'outline' : 'primary'}
               onClick={() => handleUpgradePlan('BUSINESS')}
-              disabled={orderMutation.isPending || verifyMutation.isPending || plan === 'BUSINESS'}
+              disabled={upgradingPlan !== null || verifyMutation.isPending || plan === 'BUSINESS'}
+              isLoading={upgradingPlan === 'BUSINESS'}
               className="w-full font-bold mt-4 bg-purple-700 hover:bg-purple-800 text-white border-purple-700"
             >
-              {orderMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : plan === 'BUSINESS' ? (
+              {plan === 'BUSINESS' ? (
                 'Current Plan'
+              ) : plan === 'STANDARD' ? (
+                `Upgrade to Business (${billingCycle})`
               ) : (
                 `Select Business (${billingCycle})`
               )}

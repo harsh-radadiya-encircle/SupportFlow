@@ -21,13 +21,16 @@ const profileSchema = z.object({
       (val) => !val || /^\+?[0-9\s\-()]{10,15}$/.test(val),
       'Phone number must be a valid format (10 to 15 digits)'
     ),
+  businessName: z.string().optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
 export const PersonalInfoForm: React.FC = () => {
-  const { user, updateUserProfile } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+
+  const isBusinessAdmin = user?.role === 'BUSINESS_ADMIN';
 
   const {
     register,
@@ -38,17 +41,24 @@ export const PersonalInfoForm: React.FC = () => {
     defaultValues: {
       fullName: user?.fullName || '',
       phoneNumber: user?.phoneNumber || '',
+      businessName: user?.business?.name || '',
     },
   });
 
   const onUpdateProfile = async (data: ProfileFormValues) => {
     setIsUpdatingProfile(true);
     try {
-      await usersApi.updateProfile({
+      const response = await usersApi.updateProfile({
         fullName: data.fullName,
         phoneNumber: data.phoneNumber || undefined,
+        businessName: isBusinessAdmin ? data.businessName : undefined,
       });
-      updateUserProfile({ fullName: data.fullName, phoneNumber: data.phoneNumber });
+
+      const updatedUser = response?.data || response;
+      if (updatedUser) {
+        setUser(updatedUser);
+      }
+
       toast.success('Profile updated successfully!');
     } catch (err: any) {
       toast.error(err.response?.data?.message || 'Failed to update profile');
@@ -61,10 +71,10 @@ export const PersonalInfoForm: React.FC = () => {
     <Card className="p-6 space-y-6">
       <div>
         <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-          <UserIcon className="w-5 h-5 text-indigo-600" /> Personal Information
+          <UserIcon className="w-5 h-5 text-indigo-600" /> Personal & Business Information
         </h2>
         <p className="text-xs text-slate-500 font-normal mt-1">
-          Update your profile details. Changes will be reflected immediately.
+          Update your profile and business details. Changes will be reflected immediately.
         </p>
       </div>
 
@@ -88,6 +98,19 @@ export const PersonalInfoForm: React.FC = () => {
             error={errors.phoneNumber?.message}
           />
         </div>
+
+        {isBusinessAdmin && (
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 mb-1">
+              Company / Business Name <span className="text-rose-500">*</span>
+            </label>
+            <Input
+              {...register('businessName')}
+              placeholder="e.g. Acme Corp"
+              error={errors.businessName?.message}
+            />
+          </div>
+        )}
 
         <div className="pt-2">
           <Button

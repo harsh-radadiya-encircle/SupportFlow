@@ -43,7 +43,7 @@ export class AuthController {
         );
       }
 
-      const decodedToken = await admin.auth().verifyIdToken(token);
+      const decodedToken = await admin.auth().verifyIdToken(token, true);
 
       let incomingProvider: "EMAIL_PASSWORD" | "GOOGLE" = "EMAIL_PASSWORD";
       const signInProvider = decodedToken.firebase?.sign_in_provider;

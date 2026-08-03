@@ -1,25 +1,29 @@
-import { Request, Response, NextFunction } from 'express';
-import { UsersService } from './users.service';
-import { sendResponse } from '../../common/responses/apiResponse';
-import { AuthenticatedRequest } from '../../common/types';
-import { ApiError } from '../../common/exceptions/apiError';
+import { Request, Response, NextFunction } from "express";
+import { UsersService } from "./users.service";
+import { sendResponse } from "../../common/responses/apiResponse";
+import { AuthenticatedRequest } from "../../common/types";
+import { ApiError } from "../../common/exceptions/apiError";
 
 export class UsersController {
   static async updateProfile(
     req: AuthenticatedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> {
     try {
-      if (!req.user) throw ApiError.unauthorized('User not authenticated');
-      const { fullName, phoneNumber } = req.body;
+      if (!req.user) throw ApiError.unauthorized("User not authenticated");
+      const { fullName, phoneNumber, businessName } = req.body;
 
-      const updatedUser = await UsersService.updateProfile(req.user.id, { fullName, phoneNumber });
+      const updatedUser = await UsersService.updateProfile(req.user.id, {
+        fullName,
+        phoneNumber,
+        businessName,
+      });
 
       sendResponse({
         res,
         statusCode: 200,
-        message: 'Profile updated successfully',
+        message: "Profile updated successfully",
         data: updatedUser,
       });
     } catch (error) {
@@ -30,20 +34,24 @@ export class UsersController {
   static async saveFcmToken(
     req: AuthenticatedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> {
     try {
-      if (!req.user) throw ApiError.unauthorized('User not authenticated');
+      if (!req.user) throw ApiError.unauthorized("User not authenticated");
       const { token, deviceType } = req.body;
 
-      if (!token) throw ApiError.badRequest('FCM token is required');
+      if (!token) throw ApiError.badRequest("FCM token is required");
 
-      const savedToken = await UsersService.saveFcmToken(req.user.id, token, deviceType);
+      const savedToken = await UsersService.saveFcmToken(
+        req.user.id,
+        token,
+        deviceType,
+      );
 
       sendResponse({
         res,
         statusCode: 200,
-        message: 'FCM push notification token registered successfully',
+        message: "FCM push notification token registered successfully",
         data: savedToken,
       });
     } catch (error) {
@@ -51,13 +59,17 @@ export class UsersController {
     }
   }
 
-  static async getActiveBusinesses(req: Request, res: Response, next: NextFunction): Promise<void> {
+  static async getActiveBusinesses(
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
     try {
       const businesses = await UsersService.getActiveBusinesses();
       sendResponse({
         res,
         statusCode: 200,
-        message: 'Active businesses retrieved successfully',
+        message: "Active businesses retrieved successfully",
         data: businesses,
       });
     } catch (error) {
@@ -68,14 +80,14 @@ export class UsersController {
   static async getAllUsers(
     req: AuthenticatedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> {
     try {
       const users = await UsersService.getAllUsers();
       sendResponse({
         res,
         statusCode: 200,
-        message: 'Registered platform users retrieved successfully',
+        message: "Registered platform users retrieved successfully",
         data: users,
       });
     } catch (error) {
@@ -86,7 +98,7 @@ export class UsersController {
   static async deleteUser(
     req: AuthenticatedRequest,
     res: Response,
-    next: NextFunction
+    next: NextFunction,
   ): Promise<void> {
     try {
       const { userId } = req.params;

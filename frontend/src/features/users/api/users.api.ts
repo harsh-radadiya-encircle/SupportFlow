@@ -25,7 +25,7 @@ export const usersApi = {
     return response.data;
   },
 
-  updateProfile: async (data: { fullName?: string; phoneNumber?: string }) => {
+  updateProfile: async (data: { fullName?: string; phoneNumber?: string; businessName?: string }) => {
     const response = await apiClient.patch('/users/profile', data);
     return response.data;
   },

@@ -1,10 +1,10 @@
-import crypto from 'crypto';
-import { Role } from '@prisma/client';
-import { prisma } from '../../utils/prisma';
-import { env } from '../../config/env';
-import { ApiError } from '../../common/exceptions/apiError';
-import { AuthenticatedUser } from '../../common/types';
-import { EmailService } from '../../services/email.service';
+import crypto from "crypto";
+import { Role } from "@prisma/client";
+import { prisma } from "../../utils/prisma";
+import { env } from "../../config/env";
+import { ApiError } from "../../common/exceptions/apiError";
+import { AuthenticatedUser } from "../../common/types";
+import { EmailService } from "../../services/email.service";
 
 export interface InviteAgentDto {
   email: string;
@@ -15,7 +15,7 @@ export interface AcceptInviteDto {
   token: string;
   firebaseUid: string;
   fullName: string;
-  authProvider?: 'EMAIL_PASSWORD' | 'GOOGLE';
+  authProvider?: "EMAIL_PASSWORD" | "GOOGLE";
 }
 
 const PLAN_AGENT_LIMITS: Record<string, number> = {
@@ -28,9 +28,14 @@ export class InvitationsService {
   /**
    * Business Admin invites a new Support Agent to their business team
    */
-  static async inviteAgent(dto: InviteAgentDto, currentUser: AuthenticatedUser) {
+  static async inviteAgent(
+    dto: InviteAgentDto,
+    currentUser: AuthenticatedUser,
+  ) {
     if (!currentUser.businessId) {
-      throw ApiError.forbidden('You must belong to an active business to invite support agents.');
+      throw ApiError.forbidden(
+        "You must belong to an active business to invite support agents.",
+      );
     }
 
     const business = await prisma.business.findUnique({
@@ -38,12 +43,12 @@ export class InvitationsService {
     });
 
     if (!business) {
-      throw ApiError.notFound('Business account not found.');
+      throw ApiError.notFound("Business account not found.");
     }
 
     if (business.isSuspended) {
       throw ApiError.forbidden(
-        'Your business account is suspended. Please contact platform administration.'
+        "Your business account is suspended. Please contact platform administration.",
       );
     }
 
@@ -59,7 +64,7 @@ export class InvitationsService {
     const maxAllowed = PLAN_AGENT_LIMITS[business.plan] || 1;
     if (currentAgentCount >= maxAllowed) {
       throw ApiError.forbidden(
-        `Your ${business.plan} subscription plan allows a maximum of ${maxAllowed} support agent(s). You currently have ${currentAgentCount}. Please upgrade your plan in billing to invite more agents.`
+        `Your ${business.plan} subscription plan allows a maximum of ${maxAllowed} support agent(s). You currently have ${currentAgentCount}. Please upgrade your plan in billing to invite more agents.`,
       );
     }
 
@@ -71,16 +76,16 @@ export class InvitationsService {
     if (existingUser) {
       if (existingUser.businessId === currentUser.businessId) {
         throw ApiError.badRequest(
-          'A user with this email address is already a member of your business team.'
+          "A user with this email address is already a member of your business team.",
         );
       }
       throw ApiError.badRequest(
-        'An account with this email address already exists in SupportFlow.'
+        "An account with this email address already exists in SupportFlow.",
       );
     }
 
     // 3. Generate unique single-use 7-day token
-    const token = crypto.randomBytes(32).toString('hex');
+    const token = crypto.randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 Days
 
     // Delete any previous pending invitation for this email in this business
@@ -115,7 +120,7 @@ export class InvitationsService {
       dto.email,
       currentUser.fullName,
       business.name,
-      inviteUrl
+      inviteUrl,
     );
 
     return {
@@ -127,7 +132,17 @@ export class InvitationsService {
   /**
    * Fetch pending invitations and team members for a business
    */
-  static async getBusinessTeamAndInvitations(businessId: string) {
+  static async getBusinessTeamAndInvitations(businessId?: string) {
+    if (!businessId) {
+      return {
+        agents: [],
+        invitations: [],
+        plan: "FREE",
+        activeAgentCount: 0,
+        maxAgents: 1,
+      };
+    }
+
     const [agents, invitations, business] = await Promise.all([
       prisma.user.findMany({
         where: { businessId, role: Role.SUPPORT_AGENT },
@@ -140,7 +155,7 @@ export class InvitationsService {
           isActive: true,
           createdAt: true,
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.invitation.findMany({
         where: { businessId, isAccepted: false },
@@ -149,7 +164,7 @@ export class InvitationsService {
             select: { fullName: true, email: true },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
       }),
       prisma.business.findUnique({
         where: { id: businessId },
@@ -158,14 +173,14 @@ export class InvitationsService {
     ]);
 
     const activeAgentCount = agents.filter(
-      (a) => a.role === Role.SUPPORT_AGENT && a.isActive
+      (a) => a.role === Role.SUPPORT_AGENT && a.isActive,
     ).length;
-    const maxAgents = PLAN_AGENT_LIMITS[business?.plan || 'FREE'] || 1;
+    const maxAgents = PLAN_AGENT_LIMITS[business?.plan || "FREE"] || 1;
 
     return {
       agents,
       invitations,
-      plan: business?.plan || 'FREE',
+      plan: business?.plan || "FREE",
       activeAgentCount,
       maxAgents,
       remainingSlots: Math.max(0, maxAgents - activeAgentCount),
@@ -175,9 +190,14 @@ export class InvitationsService {
   /**
    * Toggle Support Agent Active / Deactive status (Business Admin only)
    */
-  static async toggleAgentActiveStatus(agentId: string, currentUser: AuthenticatedUser) {
+  static async toggleAgentActiveStatus(
+    agentId: string,
+    currentUser: AuthenticatedUser,
+  ) {
     if (!currentUser.businessId) {
-      throw ApiError.forbidden('You must belong to an active business to manage support agents.');
+      throw ApiError.forbidden(
+        "You must belong to an active business to manage support agents.",
+      );
     }
 
     const agent = await prisma.user.findFirst({
@@ -188,11 +208,13 @@ export class InvitationsService {
     });
 
     if (!agent) {
-      throw ApiError.notFound('Support agent not found in your business team.');
+      throw ApiError.notFound("Support agent not found in your business team.");
     }
 
     if (agent.id === currentUser.id) {
-      throw ApiError.badRequest('You cannot deactivate your own business admin account.');
+      throw ApiError.badRequest(
+        "You cannot deactivate your own business admin account.",
+      );
     }
 
     const updated = await prisma.user.update({
@@ -208,9 +230,14 @@ export class InvitationsService {
   /**
    * Revoke/Delete a pending invitation (Business Admin only)
    */
-  static async deleteInvitation(invitationId: string, currentUser: AuthenticatedUser) {
+  static async deleteInvitation(
+    invitationId: string,
+    currentUser: AuthenticatedUser,
+  ) {
     if (!currentUser.businessId) {
-      throw ApiError.forbidden('You must belong to an active business to manage invitations.');
+      throw ApiError.forbidden(
+        "You must belong to an active business to manage invitations.",
+      );
     }
 
     const invitation = await prisma.invitation.findFirst({
@@ -221,7 +248,7 @@ export class InvitationsService {
     });
 
     if (!invitation) {
-      throw ApiError.notFound('Invitation not found.');
+      throw ApiError.notFound("Invitation not found.");
     }
 
     return prisma.invitation.delete({
@@ -243,19 +270,19 @@ export class InvitationsService {
 
     if (!invitation) {
       throw ApiError.notFound(
-        'Invalid invitation link. Please request a new invitation from your business admin.'
+        "Invalid invitation link. Please request a new invitation from your business admin.",
       );
     }
 
     if (invitation.isAccepted) {
       throw ApiError.badRequest(
-        'This invitation has already been accepted. Please sign in to your account.'
+        "This invitation has already been accepted. Please sign in to your account.",
       );
     }
 
     if (invitation.expiresAt < new Date()) {
       throw ApiError.badRequest(
-        'This invitation link has expired. Please request a new invitation.'
+        "This invitation link has expired. Please request a new invitation.",
       );
     }
 
@@ -275,7 +302,7 @@ export class InvitationsService {
         email: invitation.email,
         fullName: dto.fullName,
         role: invitation.role,
-        authProvider: dto.authProvider || 'EMAIL_PASSWORD',
+        authProvider: dto.authProvider || "EMAIL_PASSWORD",
         businessId: invitation.businessId,
       },
       include: { business: true },

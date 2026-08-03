@@ -190,7 +190,7 @@ export const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => switchMode(false)}
-                className="font-semibold text-indigo-600 hover:text-indigo-700 underline"
+                className="font-semibold text-indigo-600 hover:text-indigo-700 underline bg-transparent p-0 border-0 align-baseline"
               >
                 Sign in
               </button>
@@ -201,7 +201,7 @@ export const LoginPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => switchMode(true)}
-                className="font-semibold text-indigo-600 hover:text-indigo-700 underline"
+                className="font-semibold text-indigo-600 hover:text-indigo-700 underline bg-transparent p-0 border-0 align-baseline"
               >
                 Create account
               </button>

@@ -4,11 +4,30 @@ import { admin, isFirebaseInitialized } from "../../config/firebase";
 export class UsersService {
   static async updateProfile(
     userId: string,
-    data: { fullName?: string; phoneNumber?: string },
+    data: { fullName?: string; phoneNumber?: string; businessName?: string },
   ) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { role: true, businessId: true },
+    });
+
+    if (
+      data.businessName &&
+      user?.role === "BUSINESS_ADMIN" &&
+      user.businessId
+    ) {
+      await prisma.business.update({
+        where: { id: user.businessId },
+        data: { name: data.businessName },
+      });
+    }
+
     return prisma.user.update({
       where: { id: userId },
-      data,
+      data: {
+        fullName: data.fullName,
+        phoneNumber: data.phoneNumber,
+      },
       select: {
         id: true,
         email: true,
@@ -127,55 +146,66 @@ export class UsersService {
       throw new Error("User account not found.");
     }
 
-    // 1. Delete from Firebase Auth if admin SDK is active
-    if (isFirebaseInitialized && user.firebaseUid) {
-      try {
-        await admin.auth().deleteUser(user.firebaseUid);
-      } catch (fbErr: any) {
-        if (fbErr.code === "auth/user-not-found") {
-          console.warn(
-            "[Firebase Auth Delete] User already deleted from Firebase.",
-          );
-        } else {
-          console.error("[Firebase Auth Delete User Error]:", fbErr.message);
-          throw new Error(
-            `Failed to delete user from Firebase Auth: ${fbErr.message}`,
-          );
+    const isBusinessAdmin = user.role === "BUSINESS_ADMIN" && user.businessId;
+
+    // Collect all user IDs and firebase UIDs to delete
+    const userIdsToDelete = [userId];
+    const firebaseUidsToDelete = user.firebaseUid ? [user.firebaseUid] : [];
+
+    // 1. Perform Cascade Foreign Key Cleanup inside a Prisma Transaction FIRST
+    const deletedUser = await prisma.$transaction(async (tx) => {
+      if (isBusinessAdmin && user.businessId) {
+        // Find other users associated with this business (e.g. agents)
+        const otherUsers = await tx.user.findMany({
+          where: { businessId: user.businessId, id: { not: userId } },
+          select: { id: true, firebaseUid: true },
+        });
+
+        for (const ou of otherUsers) {
+          userIdsToDelete.push(ou.id);
+          if (ou.firebaseUid) {
+            firebaseUidsToDelete.push(ou.firebaseUid);
+          }
         }
       }
-    } else {
-      console.warn(
-        "[Firebase Auth Delete] Skipping Firebase deletion (Firebase not initialized or missing UID).",
-      );
-    }
 
-    // 2. Perform Cascade Foreign Key Cleanup inside a Prisma Transaction
-    return prisma.$transaction(async (tx) => {
-      // Unassign user from tickets where assigned as agent
+      // Unassign all users we are deleting from tickets where they are assigned as agent
       await tx.ticket.updateMany({
-        where: { assignedAgentId: userId },
+        where: { assignedAgentId: { in: userIdsToDelete } },
         data: { assignedAgentId: null },
       });
 
-      // Delete user's notifications & FCM tokens
-      await tx.notification.deleteMany({ where: { userId } });
-      await tx.fcmToken.deleteMany({ where: { userId } });
+      // Delete notifications & FCM tokens
+      await tx.fcmToken.deleteMany({
+        where: { userId: { in: userIdsToDelete } },
+      });
+      await tx.notification.deleteMany({
+        where: { userId: { in: userIdsToDelete } },
+      });
 
-      // Delete messages sent by this user
-      await tx.message.deleteMany({ where: { senderId: userId } });
+      // Delete messages sent by these users
+      await tx.message.deleteMany({
+        where: { senderId: { in: userIdsToDelete } },
+      });
 
-      // Delete internal notes authored by this user
-      await tx.internalNote.deleteMany({ where: { authorId: userId } });
+      // Delete internal notes authored by these users
+      await tx.internalNote.deleteMany({
+        where: { authorId: { in: userIdsToDelete } },
+      });
 
-      // Delete activity logs authored by this user
-      await tx.ticketActivity.deleteMany({ where: { actorId: userId } });
+      // Delete activity logs authored by these users
+      await tx.ticketActivity.deleteMany({
+        where: { actorId: { in: userIdsToDelete } },
+      });
 
-      // Delete invitations sent by this user
-      await tx.invitation.deleteMany({ where: { invitedById: userId } });
+      // Delete invitations sent by these users
+      await tx.invitation.deleteMany({
+        where: { invitedById: { in: userIdsToDelete } },
+      });
 
-      // Find tickets created by this user as customer and clean up their associated records
+      // Find tickets created by these users as customers and clean up their associated records
       const userTickets = await tx.ticket.findMany({
-        where: { customerId: userId },
+        where: { customerId: { in: userIdsToDelete } },
         select: { id: true },
       });
       const ticketIds = userTickets.map((t) => t.id);
@@ -194,10 +224,45 @@ export class UsersService {
         await tx.ticket.deleteMany({ where: { id: { in: ticketIds } } });
       }
 
-      // Finally, delete the User record
-      return tx.user.delete({
-        where: { id: userId },
+      // If the user was a BUSINESS_ADMIN, delete their associated business
+      if (isBusinessAdmin && user.businessId) {
+        // Deleting the business cascades to tickets, invitations, billingHistory
+        await tx.business.delete({
+          where: { id: user.businessId },
+        });
+      }
+
+      // Finally, delete the User records
+      await tx.user.deleteMany({
+        where: { id: { in: userIdsToDelete } },
       });
+
+      return user;
     });
+
+    // 2. Delete from Firebase Auth only AFTER the Postgres transaction succeeds
+    if (isFirebaseInitialized && firebaseUidsToDelete.length > 0) {
+      try {
+        // Revoke refresh tokens first for all users
+        for (const fUid of firebaseUidsToDelete) {
+          await admin
+            .auth()
+            .revokeRefreshTokens(fUid)
+            .catch((err) => {
+              console.error(
+                `[Firebase Auth Revoke Error for ${fUid}]:`,
+                err.message,
+              );
+            });
+        }
+
+        // Delete users in batch from Firebase
+        await admin.auth().deleteUsers(firebaseUidsToDelete);
+      } catch (fbErr: any) {
+        console.error("[Firebase Auth Delete Users Error]:", fbErr.message);
+      }
+    }
+
+    return deletedUser;
   }
 }
