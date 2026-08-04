@@ -36,7 +36,7 @@ export const SubscriptionModalManager: React.FC = () => {
     }
 
     // Paid Plan logic
-    if (daysRemaining !== null && daysRemaining <= 5) {
+    if (daysRemaining !== null && daysRemaining !== undefined && daysRemaining <= 5) {
       // 2. EXPIRY ALERT (Plan is Canceled / will downgrade to FREE)
       if (subscriptionStatus === 'CANCELED') {
         const isPrompted = sessionStorage.getItem('sf_expire_prompt_shown');
@@ -76,7 +76,8 @@ export const SubscriptionModalManager: React.FC = () => {
     return null;
   }
 
-  const { daysRemaining, currentPeriodEnd } = data;
+  const { currentPeriodEnd } = data;
+  const daysRemaining = data.daysRemaining ?? 0;
 
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return 'N/A';

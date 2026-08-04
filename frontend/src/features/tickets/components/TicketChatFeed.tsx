@@ -143,9 +143,13 @@ export const TicketChatFeed: React.FC<TicketChatFeedProps> = ({
                       })}
                       {isMe && (
                         msg.isRead ? (
-                          <CheckCheck className="w-3.5 h-3.5 text-indigo-600 ml-0.5" title="Read" />
+                          <span title="Read">
+                            <CheckCheck className="w-3.5 h-3.5 text-indigo-600 ml-0.5" />
+                          </span>
                         ) : (
-                          <Check className="w-3.5 h-3.5 text-slate-400 ml-0.5" title="Sent" />
+                          <span title="Sent">
+                            <Check className="w-3.5 h-3.5 text-slate-400 ml-0.5" />
+                          </span>
                         )
                       )}
                     </span>
