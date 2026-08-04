@@ -6,6 +6,57 @@ This guide covers deploying SupportFlow to production. The backend is a Node.js/
 
 ---
 
+## 🚀 Quick Deployment: Render (Backend) + Vercel (Frontend)
+
+This is the recommended stack for SupportFlow. Render handles Node.js + WebSockets + PostgreSQL, while Vercel serves the React SPA.
+
+---
+
+### 🖥️ 1. Backend Deployment on Render
+
+1. Create a **PostgreSQL Database** on Render (or use Supabase/Neon). Copy the Connection String.
+2. In Render Dashboard, click **New + → Web Service**.
+3. Connect your GitHub repository.
+4. Configure settings:
+   - **Root Directory**: `backend`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm start`
+5. Add Environment Variables:
+   - `NODE_ENV` = `production`
+   - `DATABASE_URL` = `<your-postgresql-url>`
+   - `JWT_SECRET` = `<random-32-char-string>`
+   - `FRONTEND_URL` = `https://<your-app>.vercel.app`
+   - `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`
+   - `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`
+   - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`
+6. Deploy! Your backend URL will be: `https://<your-backend>.onrender.com`.
+
+---
+
+### 🌐 2. Frontend Deployment on Vercel
+
+1. In Vercel Dashboard, click **Add New → Project**.
+2. Select your repository.
+3. Configure settings:
+   - **Root Directory**: `frontend`
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. Add Environment Variables:
+   - `VITE_API_URL` = `https://<your-backend>.onrender.com/api/v1`
+   - `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, etc.
+5. Deploy! Your frontend URL will be: `https://<your-app>.vercel.app`.
+
+---
+
+### 🔗 3. Post-Deployment Linking
+
+1. In **Render Backend**: Set `FRONTEND_URL` = `https://<your-app>.vercel.app`.
+2. In **Firebase Console**: Go to Auth → Settings → Authorized Domains → Add `<your-app>.vercel.app`.
+3. In **Razorpay Dashboard**: Add Webhook URL `https://<your-backend>.onrender.com/api/v1/subscriptions/webhook`.
+
+---
+
 ## 📋 Pre-Deployment Checklist
 
 ### Security
