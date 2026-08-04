@@ -11,7 +11,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "ts-node prisma/seed.ts",
     "prisma:studio": "prisma studio",
-    "prepare": "cd .. && husky backend/.husky"
+    "prepare": "cd .. && husky backend/.husky || true"
   },
   "dependencies": {
     "@prisma/client": "^6.3.0",
