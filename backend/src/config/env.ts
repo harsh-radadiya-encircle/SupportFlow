@@ -3,6 +3,18 @@ import path from "path";
 
 dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
+const parsePrivateKey = (key: string | undefined): string => {
+  if (!key) return "";
+  let cleaned = key.trim();
+  if (cleaned.startsWith('"') && cleaned.endsWith('"')) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  if (cleaned.startsWith("'") && cleaned.endsWith("'")) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  return cleaned.replace(/\\n/g, "\n");
+};
+
 export const env = {
   PORT: process.env.PORT || "5000",
   NODE_ENV: process.env.NODE_ENV || "development",
@@ -21,7 +33,7 @@ export const env = {
   FIREBASE: {
     PROJECT_ID: process.env.FIREBASE_PROJECT_ID || "supportflow-demo",
     CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL || "",
-    PRIVATE_KEY: (process.env.FIREBASE_PRIVATE_KEY || "").replace(/\\n/g, "\n"),
+    PRIVATE_KEY: parsePrivateKey(process.env.FIREBASE_PRIVATE_KEY),
   },
   RAZORPAY: {
     KEY_ID: process.env.RAZORPAY_KEY_ID || "rzp_test_mock",
