@@ -5,6 +5,7 @@ import { env } from "../../config/env";
 import { ApiError } from "../../common/exceptions/apiError";
 import { AuthenticatedUser } from "../../common/types";
 import { EmailService } from "../../services/email.service";
+import { getPlanAgentLimit } from "../subscriptions/plans.config";
 
 export interface InviteAgentDto {
   email: string;
@@ -17,12 +18,6 @@ export interface AcceptInviteDto {
   fullName: string;
   authProvider?: "EMAIL_PASSWORD" | "GOOGLE";
 }
-
-const PLAN_AGENT_LIMITS: Record<string, number> = {
-  FREE: 1,
-  STANDARD: 5,
-  BUSINESS: 20,
-};
 
 export class InvitationsService {
   /**
@@ -52,7 +47,7 @@ export class InvitationsService {
       );
     }
 
-    // 1. Enforce Subscription Plan Agent Limits
+    // 1. Enforce Subscription Plan Agent Limits (from centralized PLAN_CONFIG)
     const currentAgentCount = await prisma.user.count({
       where: {
         businessId: currentUser.businessId,
@@ -61,7 +56,7 @@ export class InvitationsService {
       },
     });
 
-    const maxAllowed = PLAN_AGENT_LIMITS[business.plan] || 1;
+    const maxAllowed = getPlanAgentLimit(business.plan);
     if (currentAgentCount >= maxAllowed) {
       throw ApiError.forbidden(
         `Your ${business.plan} subscription plan allows a maximum of ${maxAllowed} support agent(s). You currently have ${currentAgentCount}. Please upgrade your plan in billing to invite more agents.`,
@@ -175,7 +170,7 @@ export class InvitationsService {
     const activeAgentCount = agents.filter(
       (a) => a.role === Role.SUPPORT_AGENT && a.isActive,
     ).length;
-    const maxAgents = PLAN_AGENT_LIMITS[business?.plan || "FREE"] || 1;
+    const maxAgents = getPlanAgentLimit(business?.plan || "FREE");
 
     return {
       agents,

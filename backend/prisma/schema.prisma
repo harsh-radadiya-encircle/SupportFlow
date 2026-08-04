@@ -105,6 +105,11 @@ model Business {
   plan                   SubscriptionPlan   @default(FREE)
   subscriptionStatus     SubscriptionStatus @default(ACTIVE)
   currentPeriodEnd       DateTime?
+  billingCycle           String?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  pendingDowngradePlan   SubscriptionPlan?
+  lastPaymentAt          DateTime?
+  nextBillingDate        DateTime?
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
@@ -112,9 +117,24 @@ model Business {
   tickets              Ticket[]
   invitations          Invitation[]
   billingHistory       BillingHistory[]
+  webhookEvents        WebhookEvent[]
 
   @@index([plan, subscriptionStatus])
   @@index([isSuspended])
+  @@index([currentPeriodEnd])
+}
+
+model WebhookEvent {
+  id          String   @id @default(uuid())
+  eventId     String   @unique
+  eventType   String
+  businessId  String?
+  business    Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+  payload     Json
+  processedAt DateTime @default(now())
+
+  @@index([eventId])
+  @@index([businessId])
 }
 
 model Invitation {
@@ -244,16 +264,20 @@ model Notification {
 }
 
 model BillingHistory {
-  id                String   @id @default(uuid())
+  id                String            @id @default(uuid())
   businessId        String
-  business          Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  razorpayPaymentId String   @unique
+  business          Business          @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  invoiceNumber     String?
+  razorpayPaymentId String            @unique
   razorpayOrderId   String?
   amountPaid        Int
-  currency          String   @default("INR")
+  currency          String            @default("INR")
   status            String
+  planAtPayment     SubscriptionPlan?
+  billingCycle      String?
+  paymentMethod     String?
   pdfUrl            String?
-  createdAt         DateTime @default(now())
+  createdAt         DateTime          @default(now())
 
   @@index([businessId, createdAt])
 }

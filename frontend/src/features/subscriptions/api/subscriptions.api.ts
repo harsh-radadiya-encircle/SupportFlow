@@ -5,8 +5,13 @@ export interface SubscriptionDetailsResponse {
   name: string;
   plan: 'FREE' | 'STANDARD' | 'BUSINESS';
   subscriptionStatus: string;
+  billingCycle: string | null;
+  cancelAtPeriodEnd: boolean;
+  pendingDowngradePlan: 'FREE' | 'STANDARD' | 'BUSINESS' | null;
   currentPeriodEnd: string | null;
-  daysRemaining?: number;
+  nextBillingDate: string | null;
+  lastPaymentAt: string | null;
+  daysRemaining?: number | null;
   razorpayCustomerId: string | null;
   usage: {
     agents: {
@@ -22,11 +27,15 @@ export interface SubscriptionDetailsResponse {
   };
   billingHistory: Array<{
     id: string;
+    invoiceNumber?: string | null;
     razorpayPaymentId: string;
     razorpayOrderId?: string | null;
     amountPaid: number;
     currency: string;
     status: string;
+    planAtPayment?: string | null;
+    billingCycle?: string | null;
+    paymentMethod?: string | null;
     pdfUrl: string | null;
     createdAt: string;
   }>;
@@ -69,10 +78,10 @@ export const verifyRazorpayPayment = async (payload: {
   razorpay_signature: string;
   plan: 'STANDARD' | 'BUSINESS';
   billingCycle?: 'monthly' | 'yearly';
-}): Promise<{ success: boolean; message: string; plan: string }> => {
+}): Promise<{ success: boolean; message: string; plan: string; invoiceNumber?: string }> => {
   const response = await apiClient.post<{
     success: boolean;
-    data: { success: boolean; message: string; plan: string };
+    data: { success: boolean; message: string; plan: string; invoiceNumber?: string };
   }>('/subscriptions/verify-payment', payload);
   return response.data.data;
 };
@@ -81,10 +90,27 @@ export const cancelSubscription = async (): Promise<{
   success: boolean;
   message: string;
   plan: string;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
 }> => {
   const response = await apiClient.post<{
     success: boolean;
-    data: { success: boolean; message: string; plan: string };
+    data: { success: boolean; message: string; plan: string; cancelAtPeriodEnd: boolean; currentPeriodEnd: string | null };
   }>('/subscriptions/cancel');
+  return response.data.data;
+};
+
+export const scheduleDowngrade = async (targetPlan: 'STANDARD' | 'FREE'): Promise<{
+  success: boolean;
+  message: string;
+  plan: string;
+  pendingDowngradePlan: string;
+  cancelAtPeriodEnd: boolean;
+  currentPeriodEnd: string | null;
+}> => {
+  const response = await apiClient.post<{
+    success: boolean;
+    data: { success: boolean; message: string; plan: string; pendingDowngradePlan: string; cancelAtPeriodEnd: boolean; currentPeriodEnd: string | null };
+  }>('/subscriptions/downgrade', { targetPlan });
   return response.data.data;
 };

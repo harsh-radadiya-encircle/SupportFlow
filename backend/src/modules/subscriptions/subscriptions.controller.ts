@@ -4,8 +4,10 @@ import { SubscriptionsService } from "./subscriptions.service";
 import {
   createCheckoutSessionSchema,
   verifyPaymentSchema,
+  scheduleDowngradeSchema,
 } from "./subscriptions.schema";
 import { ApiError } from "../../common/exceptions/apiError";
+import { sendResponse } from "../../common/responses/apiResponse";
 
 export class SubscriptionsController {
   /**
@@ -26,7 +28,12 @@ export class SubscriptionsController {
             name: "No Business Associated",
             plan: "FREE",
             subscriptionStatus: "ACTIVE",
+            billingCycle: null,
+            cancelAtPeriodEnd: false,
+            pendingDowngradePlan: null,
             currentPeriodEnd: null,
+            nextBillingDate: null,
+            lastPaymentAt: null,
             daysRemaining: null,
             razorpayCustomerId: null,
             usage: {
@@ -41,17 +48,14 @@ export class SubscriptionsController {
       const details = await SubscriptionsService.getSubscriptionDetails(
         user.businessId,
       );
-      res.status(200).json({
-        success: true,
-        data: details,
-      });
+      return res.status(200).json({ success: true, data: details });
     } catch (err) {
       next(err);
     }
   }
 
   /**
-   * POST /api/v1/subscriptions/razorpay-order (Create Razorpay Order)
+   * POST /api/v1/subscriptions/razorpay-order
    */
   static async createRazorpayOrder(
     req: AuthenticatedRequest,
@@ -67,8 +71,10 @@ export class SubscriptionsController {
         dto.billingCycle,
         user,
       );
-      res.status(200).json({
-        success: true,
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: "Order created",
         data: result,
       });
     } catch (err) {
@@ -77,7 +83,7 @@ export class SubscriptionsController {
   }
 
   /**
-   * POST /api/v1/subscriptions/verify-payment (Verify Razorpay HMAC Signature)
+   * POST /api/v1/subscriptions/verify-payment
    */
   static async verifyPayment(
     req: AuthenticatedRequest,
@@ -92,8 +98,10 @@ export class SubscriptionsController {
         dto,
         user,
       );
-      res.status(200).json({
-        success: true,
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: "Payment verified",
         data: result,
       });
     } catch (err) {
@@ -102,7 +110,8 @@ export class SubscriptionsController {
   }
 
   /**
-   * POST /api/v1/subscriptions/cancel (Cancel Subscription and Downgrade)
+   * POST /api/v1/subscriptions/cancel
+   * Schedules downgrade to FREE at end of current billing period.
    */
   static async cancelSubscription(
     req: AuthenticatedRequest,
@@ -112,8 +121,37 @@ export class SubscriptionsController {
     try {
       const user = req.user!;
       const result = await SubscriptionsService.cancelSubscription(user);
-      res.status(200).json({
-        success: true,
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: "Cancellation scheduled",
+        data: result,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  /**
+   * POST /api/v1/subscriptions/downgrade
+   * Schedules a downgrade to a lower paid plan at end of current billing period.
+   */
+  static async scheduleDowngrade(
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction,
+  ) {
+    try {
+      const user = req.user!;
+      const dto = scheduleDowngradeSchema.parse(req.body);
+      const result = await SubscriptionsService.scheduleDowngrade(
+        dto.targetPlan,
+        user,
+      );
+      sendResponse({
+        res,
+        statusCode: 200,
+        message: "Downgrade scheduled",
         data: result,
       });
     } catch (err) {

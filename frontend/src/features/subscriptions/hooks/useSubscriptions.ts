@@ -6,6 +6,7 @@ import {
   createRazorpayOrder,
   verifyRazorpayPayment,
   cancelSubscription,
+  scheduleDowngrade,
 } from '../api/subscriptions.api';
 
 export const useSubscriptionDetails = () => {
@@ -59,7 +60,7 @@ export const useVerifyRazorpayPayment = () => {
     onSuccess: (data, variables) => {
       toast.success(data.message || 'Payment verified successfully!');
       if (data?.plan || variables.plan) {
-        useAuthStore.getState().updateUserBusinessPlan(data.plan || variables.plan);
+        useAuthStore.getState().updateUserBusinessPlan((data.plan || variables.plan) as any);
       }
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
     },
@@ -76,13 +77,29 @@ export const useCancelSubscription = () => {
   return useMutation({
     mutationFn: () => cancelSubscription(),
     onSuccess: (data) => {
-      toast.success(data.message || 'Subscription canceled.');
-      useAuthStore.getState().updateUserBusinessPlan('FREE');
+      // Status stays ACTIVE (cancelAtPeriodEnd = true) — keep the plan label but show scheduled cancellation
+      toast.success(data.message || 'Subscription cancellation scheduled.');
       queryClient.invalidateQueries({ queryKey: ['subscription'] });
     },
     onError: (err: any) => {
       const msg = err.response?.data?.message || err.message || 'Failed to cancel subscription.';
       toast.error(`Cancellation Error: ${msg}`);
+    },
+  });
+};
+
+export const useScheduleDowngrade = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (targetPlan: 'STANDARD' | 'FREE') => scheduleDowngrade(targetPlan),
+    onSuccess: (data) => {
+      toast.success(data.message || 'Downgrade scheduled. Your current plan remains active until period end.');
+      queryClient.invalidateQueries({ queryKey: ['subscription'] });
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.message || 'Failed to schedule downgrade.';
+      toast.error(`Downgrade Error: ${msg}`);
     },
   });
 };

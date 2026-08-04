@@ -1,0 +1,1319 @@
+{
+  "info": {
+    "_postman_id": "supportflow-api-v1-collection",
+    "name": "SupportFlow API — Production",
+    "description": "## SupportFlow REST API Collection\n\nComplete API reference for all SupportFlow backend endpoints.\n\n### Base URL\n- **Development:** `http://localhost:5000/api/v1`\n- **Production:** `https://api.yourdomain.com/api/v1`\n\n### Authentication\nAll protected endpoints require a **Firebase ID Token** in the `Authorization` header:\n```\nAuthorization: Bearer {{firebase_id_token}}\n```\n\n### How to Use\n1. Set the `base_url` variable to your server.\n2. Set `firebase_id_token` after calling `/auth/sync`.\n3. Run the **Auth** folder first to populate variables.\n\n### Role Abbreviations\n- **PA** = PLATFORM_ADMIN\n- **BA** = BUSINESS_ADMIN\n- **SA** = SUPPORT_AGENT\n- **CU** = CUSTOMER",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:5000/api/v1",
+      "type": "string",
+      "description": "Backend API base URL. Change to production URL when deploying."
+    },
+    {
+      "key": "firebase_id_token",
+      "value": "",
+      "type": "string",
+      "description": "Firebase ID Token obtained from the Firebase SDK. Required for all authenticated endpoints."
+    },
+    {
+      "key": "ticket_id",
+      "value": "",
+      "type": "string",
+      "description": "Ticket ID — set after creating a ticket."
+    },
+    {
+      "key": "invitation_id",
+      "value": "",
+      "type": "string",
+      "description": "Invitation ID — set after creating an invitation."
+    },
+    {
+      "key": "invitation_token",
+      "value": "",
+      "type": "string",
+      "description": "Invitation verification token from email link."
+    },
+    {
+      "key": "agent_id",
+      "value": "",
+      "type": "string",
+      "description": "Support agent user ID — set after fetching team."
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string",
+      "description": "User ID for admin operations."
+    },
+    {
+      "key": "business_id",
+      "value": "",
+      "type": "string",
+      "description": "Business ID — set after syncing user."
+    },
+    {
+      "key": "notification_id",
+      "value": "",
+      "type": "string",
+      "description": "Notification ID — set after fetching notifications."
+    },
+    {
+      "key": "razorpay_order_id",
+      "value": "",
+      "type": "string",
+      "description": "Razorpay order ID returned from /subscriptions/razorpay-order."
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{firebase_id_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "🔐 Auth",
+      "description": "Authentication endpoints — user registration, login, profile, and provider management.\n\n**Rate Limited:** 100 requests / 15 minutes per IP.",
+      "item": [
+        {
+          "name": "Check Auth Provider",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/check-provider",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "check-provider"]
+            },
+            "description": "**Public endpoint.** Check if an email is registered and which auth providers are linked.\n\nUse this on the login/register page to determine whether to show login or register UI."
+          },
+          "response": [
+            {
+              "name": "200 — Email exists",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"User provider checked successfully\",\n  \"data\": {\n    \"exists\": true,\n    \"providers\": [\"EMAIL_PASSWORD\"]\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "200 — Email not found",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"User provider checked successfully\",\n  \"data\": {\n    \"exists\": false,\n    \"providers\": []\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Sync User (Register — Business Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data;",
+                  "  if (data && data.businessId) {",
+                  "    pm.collectionVariables.set('business_id', data.businessId);",
+                  "    console.log('business_id set:', data.businessId);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"BUSINESS_ADMIN\",\n  \"businessName\": \"Acme Support Inc\",\n  \"fullName\": \"John Doe\",\n  \"mode\": \"register\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/sync",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "sync"]
+            },
+            "description": "**Requires:** `Authorization: Bearer <Firebase_ID_Token>`\n\nRegister a new Business Admin. The Firebase ID Token is obtained from the Firebase SDK after the user creates their account.\n\n**Roles:** All\n\n⚠️ Set `firebase_id_token` in collection variables before running."
+          },
+          "response": [
+            {
+              "name": "200 — Business Admin created",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"User synchronized successfully\",\n  \"data\": {\n    \"id\": \"clx1234567890\",\n    \"email\": \"john@example.com\",\n    \"fullName\": \"John Doe\",\n    \"role\": \"BUSINESS_ADMIN\",\n    \"businessId\": \"clx0987654321\",\n    \"isActive\": true,\n    \"avatarUrl\": null,\n    \"createdAt\": \"2026-01-01T00:00:00.000Z\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Sync User (Register — Customer)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"CUSTOMER\",\n  \"fullName\": \"Jane Smith\",\n  \"businessId\": \"{{business_id}}\",\n  \"mode\": \"register\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/sync",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "sync"]
+            },
+            "description": "Register a new Customer. Customer selects the business they want to contact.\n\n**Requires:** `Authorization: Bearer <Firebase_ID_Token>`"
+          },
+          "response": []
+        },
+        {
+          "name": "Sync User (Login — Returning User)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"login\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/sync",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "sync"]
+            },
+            "description": "Sync/login a returning user. No role or businessName required.\n\n**Requires:** `Authorization: Bearer <Firebase_ID_Token>`"
+          },
+          "response": []
+        },
+        {
+          "name": "Get My Profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data;",
+                  "  if (data && data.businessId) {",
+                  "    pm.collectionVariables.set('business_id', data.businessId);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get the authenticated user's full profile object.\n\n**Roles:** All authenticated users"
+          },
+          "response": [
+            {
+              "name": "200 — Profile fetched",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"User profile fetched successfully\",\n  \"data\": {\n    \"id\": \"clx1234567890\",\n    \"email\": \"john@example.com\",\n    \"fullName\": \"John Doe\",\n    \"role\": \"BUSINESS_ADMIN\",\n    \"businessId\": \"clx0987654321\",\n    \"isActive\": true,\n    \"avatarUrl\": null,\n    \"phoneNumber\": null\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "401 — No token",
+              "status": "Unauthorized",
+              "code": 401,
+              "body": "{\n  \"success\": false,\n  \"message\": \"No authorization token provided\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Server-side logout signal. The client should also call `auth.signOut()` on Firebase SDK.\n\n**Roles:** All authenticated users"
+          },
+          "response": [
+            {
+              "name": "200 — Logged out",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Logged out successfully\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get Auth Providers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/providers",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "providers"]
+            },
+            "description": "Get all Firebase auth providers linked to the authenticated user's account.\n\n**Roles:** All authenticated users"
+          },
+          "response": [
+            {
+              "name": "200 — Providers fetched",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"User authentication providers fetched successfully\",\n  \"data\": [\"EMAIL_PASSWORD\", \"GOOGLE\"]\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Link Auth Provider",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{base_url}}/auth/link-provider",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "link-provider"]
+            },
+            "description": "Link an additional auth provider (e.g., link Google to an email account).\n\n**Roles:** All authenticated users"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👤 Users",
+      "description": "User profile management, FCM token registration, and admin user operations.",
+      "item": [
+        {
+          "name": "Get Active Businesses",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/businesses",
+              "host": ["{{base_url}}"],
+              "path": ["users", "businesses"]
+            },
+            "description": "**Public endpoint. No auth required.**\n\nGet a list of all active, non-suspended businesses. Used on the Customer registration page for business selection."
+          },
+          "response": [
+            {
+              "name": "200 — Businesses listed",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Active businesses retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"clx0987654321\",\n      \"businessName\": \"Acme Support Inc\"\n    },\n    {\n      \"id\": \"clxabc123def456\",\n      \"businessName\": \"TechHelp Solutions\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Register FCM Push Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"firebase-fcm-device-token-string-here\",\n  \"deviceType\": \"web\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/users/fcm-token",
+              "host": ["{{base_url}}"],
+              "path": ["users", "fcm-token"]
+            },
+            "description": "Register a Firebase Cloud Messaging device token for push notifications. Call after login and whenever a new FCM token is generated.\n\n**Roles:** All authenticated users\n\n`deviceType`: `web` | `android` | `ios`"
+          },
+          "response": [
+            {
+              "name": "200 — Token registered",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"FCM push notification token registered successfully\",\n  \"data\": {\n    \"id\": \"clxtoken123\",\n    \"userId\": \"clx1234567890\",\n    \"token\": \"firebase-fcm-device-token-string-here\",\n    \"deviceType\": \"web\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Updated\",\n  \"phoneNumber\": \"+91 98765 43210\",\n  \"businessName\": \"Updated Business Name\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/users/profile",
+              "host": ["{{base_url}}"],
+              "path": ["users", "profile"]
+            },
+            "description": "Update the authenticated user's profile. All fields are optional — only send what needs updating.\n\n**Roles:** All authenticated users"
+          },
+          "response": [
+            {
+              "name": "200 — Profile updated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile updated successfully\",\n  \"data\": {\n    \"id\": \"clx1234567890\",\n    \"fullName\": \"John Updated\",\n    \"phoneNumber\": \"+91 98765 43210\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get All Users [PA]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/admin/all",
+              "host": ["{{base_url}}"],
+              "path": ["users", "admin", "all"]
+            },
+            "description": "Get all registered platform users.\n\n**Roles:** `PLATFORM_ADMIN` only"
+          },
+          "response": [
+            {
+              "name": "200 — All users",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Registered platform users retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"clx1234567890\",\n      \"email\": \"john@example.com\",\n      \"fullName\": \"John Doe\",\n      \"role\": \"BUSINESS_ADMIN\",\n      \"isActive\": true,\n      \"createdAt\": \"2026-01-01T00:00:00.000Z\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "403 — Forbidden",
+              "status": "Forbidden",
+              "code": 403,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Access denied. Insufficient permissions.\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Delete User [PA]",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/users/admin/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["users", "admin", "{{user_id}}"]
+            },
+            "description": "Permanently delete a user account. This action is irreversible.\n\n**Roles:** `PLATFORM_ADMIN` only\n\n⚠️ Set `user_id` variable before calling."
+          },
+          "response": [
+            {
+              "name": "200 — User deleted",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"User account 'user@example.com' has been deleted successfully.\",\n  \"data\": {\n    \"id\": \"clx1234567890\",\n    \"email\": \"user@example.com\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🎫 Tickets",
+      "description": "Support ticket management — create, list, view, update status, assign agents, internal notes, and CSAT ratings.\n\nAll endpoints require authentication. Access is scoped by role:\n- **Customers** see only their own tickets\n- **Agents** see assigned tickets\n- **Business Admins** see all tickets in their business\n- **Platform Admins** see all tickets",
+      "item": [
+        {
+          "name": "Create Ticket",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json().data;",
+                  "  if (data && data.id) {",
+                  "    pm.collectionVariables.set('ticket_id', data.id);",
+                  "    console.log('ticket_id set:', data.id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Cannot login to my account\",\n  \"description\": \"I have been trying to reset my password for the past 2 days but the reset email never arrives in my inbox. I have checked spam as well.\",\n  \"category\": \"TECHNICAL_ISSUE\",\n  \"priority\": \"HIGH\",\n  \"businessId\": \"{{business_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets",
+              "host": ["{{base_url}}"],
+              "path": ["tickets"]
+            },
+            "description": "Create a new support ticket.\n\n**Roles:** All authenticated users\n\n**category enum:** `GENERAL_INQUIRY` | `TECHNICAL_ISSUE` | `BILLING` | `FEATURE_REQUEST` | `BUG_REPORT`\n\n**priority enum:** `LOW` | `MEDIUM` | `HIGH` | `URGENT`\n\nNote: Auto-sets `ticket_id` variable for subsequent requests."
+          },
+          "response": [
+            {
+              "name": "201 — Ticket created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Support ticket created successfully\",\n  \"data\": {\n    \"id\": \"clxticket123456\",\n    \"ticketNumber\": \"SF-2026-001\",\n    \"title\": \"Cannot login to my account\",\n    \"description\": \"I have been trying to reset my password...\",\n    \"status\": \"OPEN\",\n    \"priority\": \"HIGH\",\n    \"category\": \"TECHNICAL_ISSUE\",\n    \"customerId\": \"clx1234567890\",\n    \"businessId\": \"clx0987654321\",\n    \"assignedAgentId\": null,\n    \"csatScore\": null,\n    \"createdAt\": \"2026-01-01T10:00:00.000Z\",\n    \"updatedAt\": \"2026-01-01T10:00:00.000Z\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "400 — Validation error",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"title\", \"message\": \"Ticket title must be at least 3 characters\" }\n  ]\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get Tickets (Paginated)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets?page=1&limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["tickets"],
+              "query": [
+                { "key": "page", "value": "1", "description": "Page number (default: 1)" },
+                { "key": "limit", "value": "20", "description": "Results per page (default: 20)" },
+                { "key": "status", "value": "OPEN", "disabled": true, "description": "Filter: OPEN | ASSIGNED | IN_PROGRESS | WAITING_FOR_CUSTOMER | RESOLVED | CLOSED" },
+                { "key": "priority", "value": "HIGH", "disabled": true, "description": "Filter: LOW | MEDIUM | HIGH | URGENT" },
+                { "key": "category", "value": "TECHNICAL_ISSUE", "disabled": true, "description": "Filter: GENERAL_INQUIRY | TECHNICAL_ISSUE | BILLING | FEATURE_REQUEST | BUG_REPORT" },
+                { "key": "search", "value": "", "disabled": true, "description": "Search in ticket title or description" }
+              ]
+            },
+            "description": "Get tickets with pagination and optional filters. Results are role-scoped:\n- **CUSTOMER** → Own tickets only\n- **SUPPORT_AGENT** → Assigned tickets\n- **BUSINESS_ADMIN** → All business tickets\n- **PLATFORM_ADMIN** → All platform tickets\n\n**Roles:** All authenticated users"
+          },
+          "response": [
+            {
+              "name": "200 — Ticket list",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Tickets retrieved successfully\",\n  \"data\": [\n    {\n      \"id\": \"clxticket123456\",\n      \"ticketNumber\": \"SF-2026-001\",\n      \"title\": \"Cannot login to my account\",\n      \"status\": \"OPEN\",\n      \"priority\": \"HIGH\",\n      \"category\": \"TECHNICAL_ISSUE\",\n      \"createdAt\": \"2026-01-01T10:00:00.000Z\",\n      \"customer\": { \"id\": \"clx...\", \"fullName\": \"Jane Smith\" },\n      \"assignedAgent\": null\n    }\n  ],\n  \"meta\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 150,\n    \"totalPages\": 8\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get Ticket By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "{{ticket_id}}"]
+            },
+            "description": "Get full ticket details including messages, internal notes, timeline, and assigned agent.\n\n**Roles:** All authenticated users (role-scoped access)\n\n⚠️ Set `ticket_id` variable first."
+          },
+          "response": [
+            {
+              "name": "200 — Ticket details",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ticket details retrieved successfully\",\n  \"data\": {\n    \"id\": \"clxticket123456\",\n    \"ticketNumber\": \"SF-2026-001\",\n    \"title\": \"Cannot login to my account\",\n    \"description\": \"I have been trying to reset my password...\",\n    \"status\": \"IN_PROGRESS\",\n    \"priority\": \"HIGH\",\n    \"category\": \"TECHNICAL_ISSUE\",\n    \"messages\": [\n      {\n        \"id\": \"clxmsg001\",\n        \"content\": \"Hello, I can help with that!\",\n        \"isRead\": true,\n        \"createdAt\": \"2026-01-01T10:30:00.000Z\",\n        \"sender\": { \"id\": \"clx...\", \"fullName\": \"Agent Name\", \"role\": \"SUPPORT_AGENT\", \"avatarUrl\": null }\n      }\n    ],\n    \"assignedAgent\": { \"id\": \"clx...\", \"fullName\": \"Agent Name\" },\n    \"customer\": { \"id\": \"clx...\", \"fullName\": \"Jane Smith\" },\n    \"csatScore\": null,\n    \"createdAt\": \"2026-01-01T10:00:00.000Z\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "404 — Not found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Ticket not found\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Update Ticket Status [SA/BA/PA]",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"IN_PROGRESS\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "{{ticket_id}}", "status"]
+            },
+            "description": "Update a ticket's status.\n\n**Roles:** `SUPPORT_AGENT`, `BUSINESS_ADMIN`, `PLATFORM_ADMIN`\n\n**status enum:** `OPEN` | `ASSIGNED` | `IN_PROGRESS` | `WAITING_FOR_CUSTOMER` | `RESOLVED` | `CLOSED`"
+          },
+          "response": [
+            {
+              "name": "200 — Status updated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Ticket status updated to IN_PROGRESS\",\n  \"data\": { \"id\": \"clxticket123456\", \"status\": \"IN_PROGRESS\" }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Assign Agent to Ticket [SA/BA/PA]",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assignedAgentId\": \"{{agent_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}/assign",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "{{ticket_id}}", "assign"]
+            },
+            "description": "Assign or reassign a support agent to a ticket. Sends a `TICKET_ASSIGNED` notification to the agent.\n\n**Roles:** `SUPPORT_AGENT`, `BUSINESS_ADMIN`, `PLATFORM_ADMIN`"
+          },
+          "response": [
+            {
+              "name": "200 — Agent assigned",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Support agent assigned successfully\",\n  \"data\": { \"id\": \"clxticket123456\", \"assignedAgentId\": \"clxagent789\", \"status\": \"ASSIGNED\" }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Add Internal Note [SA/BA/PA]",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Escalated to L2 support team. Customer has been waiting 2 days. Priority raised.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}/notes",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "{{ticket_id}}", "notes"]
+            },
+            "description": "Add an internal note to a ticket. Internal notes are **hidden from customers** and only visible to agents and admins.\n\n**Roles:** `SUPPORT_AGENT`, `BUSINESS_ADMIN`, `PLATFORM_ADMIN`"
+          },
+          "response": [
+            {
+              "name": "201 — Note added",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Internal note added successfully\",\n  \"data\": {\n    \"id\": \"clxnote001\",\n    \"ticketId\": \"clxticket123456\",\n    \"content\": \"Escalated to L2 support team.\",\n    \"author\": { \"id\": \"clx...\", \"fullName\": \"Agent Name\" },\n    \"createdAt\": \"2026-01-01T11:00:00.000Z\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Submit CSAT Rating [CU only]",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"score\": 5,\n  \"comment\": \"Excellent support! Issue was resolved within a few hours. Very impressed.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/{{ticket_id}}/csat",
+              "host": ["{{base_url}}"],
+              "path": ["tickets", "{{ticket_id}}", "csat"]
+            },
+            "description": "Submit a Customer Satisfaction (CSAT) rating after ticket resolution.\n\n**Roles:** `CUSTOMER` only\n\n`score`: Integer 1–5\n`comment`: Optional feedback text"
+          },
+          "response": [
+            {
+              "name": "200 — CSAT submitted",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Feedback submitted successfully\",\n  \"data\": { \"id\": \"clxticket123456\", \"csatScore\": 5, \"csatComment\": \"Excellent support!\" }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "403 — Not a customer",
+              "status": "Forbidden",
+              "code": 403,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Access denied. Insufficient permissions.\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📬 Invitations",
+      "description": "Agent invitation management — invite, verify, accept invitations, and manage team members.\n\nMost endpoints require `BUSINESS_ADMIN` role. Verify and Accept are public.",
+      "item": [
+        {
+          "name": "Invite Agent [BA]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "  const data = pm.response.json().data;",
+                  "  if (data && data.id) {",
+                  "    pm.collectionVariables.set('invitation_id', data.id);",
+                  "    console.log('invitation_id set:', data.id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newagent@company.com\",\n  \"role\": \"SUPPORT_AGENT\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/invitations",
+              "host": ["{{base_url}}"],
+              "path": ["invitations"]
+            },
+            "description": "Invite a support agent to join the business. Sends an email with a unique invitation link.\n\n**Roles:** `BUSINESS_ADMIN` only\n\n`role`: `SUPPORT_AGENT` | `BUSINESS_ADMIN` (default: `SUPPORT_AGENT`)"
+          },
+          "response": [
+            {
+              "name": "201 — Invitation sent",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Invitation sent successfully to newagent@company.com\",\n  \"data\": {\n    \"id\": \"clxinvite001\",\n    \"email\": \"newagent@company.com\",\n    \"role\": \"SUPPORT_AGENT\",\n    \"expiresAt\": \"2026-01-08T00:00:00.000Z\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get Team & Pending Invitations [BA]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invitations",
+              "host": ["{{base_url}}"],
+              "path": ["invitations"]
+            },
+            "description": "Get all active team members and pending invitations for the business.\n\n**Roles:** `BUSINESS_ADMIN` only"
+          },
+          "response": [
+            {
+              "name": "200 — Team & invitations",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"agents\": [\n      {\n        \"id\": \"clxagent001\",\n        \"fullName\": \"Alice Agent\",\n        \"email\": \"alice@company.com\",\n        \"role\": \"SUPPORT_AGENT\",\n        \"isActive\": true,\n        \"avatarUrl\": null\n      }\n    ],\n    \"pendingInvitations\": [\n      {\n        \"id\": \"clxinvite001\",\n        \"email\": \"newagent@company.com\",\n        \"role\": \"SUPPORT_AGENT\",\n        \"expiresAt\": \"2026-01-08T00:00:00.000Z\"\n      }\n    ]\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Toggle Agent Active Status [BA]",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invitations/agents/{{agent_id}}/toggle-active",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "agents", "{{agent_id}}", "toggle-active"]
+            },
+            "description": "Activate or deactivate a support agent's account. Deactivated agents cannot log in or access tickets.\n\n**Roles:** `BUSINESS_ADMIN` only"
+          },
+          "response": [
+            {
+              "name": "200 — Status toggled",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Agent deactivated successfully\",\n  \"data\": { \"id\": \"clxagent001\", \"isActive\": false }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Delete Invitation [BA]",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invitations/{{invitation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "{{invitation_id}}"]
+            },
+            "description": "Cancel and permanently delete a pending invitation.\n\n**Roles:** `BUSINESS_ADMIN` only"
+          },
+          "response": [
+            {
+              "name": "200 — Invitation deleted",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Invitation deleted successfully\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Verify Invitation Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data;",
+                  "  if (data && data.token) {",
+                  "    pm.collectionVariables.set('invitation_token', data.token);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/invitations/verify/{{invitation_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "verify", "{{invitation_token}}"]
+            },
+            "description": "**Public endpoint.** Verify an invitation token before showing the acceptance form. Called when the invited agent opens the link from their email.\n\n**Auth:** Not required"
+          },
+          "response": [
+            {
+              "name": "200 — Token valid",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"email\": \"newagent@company.com\",\n    \"role\": \"SUPPORT_AGENT\",\n    \"businessName\": \"Acme Support Inc\",\n    \"expiresAt\": \"2026-01-08T00:00:00.000Z\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "400 — Token expired or invalid",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invitation token is invalid or has expired\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Accept Invitation",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{invitation_token}}\",\n  \"firebaseUid\": \"firebase-uid-from-registration\",\n  \"fullName\": \"New Agent Name\",\n  \"authProvider\": \"EMAIL_PASSWORD\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/invitations/accept",
+              "host": ["{{base_url}}"],
+              "path": ["invitations", "accept"]
+            },
+            "description": "**Public endpoint.** Accept an invitation and create the agent's account in the system.\n\nThe agent must first register via Firebase (Email/Password or Google), then call this endpoint with the Firebase UID.\n\n**Auth:** Not required\n\n`authProvider`: `EMAIL_PASSWORD` | `GOOGLE`"
+          },
+          "response": [
+            {
+              "name": "201 — Account created",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Invitation accepted. Your agent account has been created.\",\n  \"data\": {\n    \"id\": \"clxagent002\",\n    \"email\": \"newagent@company.com\",\n    \"fullName\": \"New Agent Name\",\n    \"role\": \"SUPPORT_AGENT\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notifications",
+      "description": "In-app notification management. All notifications are also delivered in real-time via Socket.IO `new_notification` event.\n\nAll endpoints require authentication.",
+      "item": [
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["notifications"]
+            },
+            "description": "Get all notifications for the authenticated user, ordered by most recent.\n\n**Roles:** All authenticated users"
+          },
+          "response": [
+            {
+              "name": "200 — Notifications list",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"clxnotif001\",\n      \"title\": \"💬 New Customer Message\",\n      \"message\": \"Jane Smith: \\\"Hello, I need help with my order...\\\"\",\n      \"type\": \"NEW_MESSAGE\",\n      \"isRead\": false,\n      \"ticketId\": \"clxticket123456\",\n      \"createdAt\": \"2026-01-01T10:00:00.000Z\"\n    },\n    {\n      \"id\": \"clxnotif002\",\n      \"title\": \"🎫 Ticket Assigned\",\n      \"message\": \"Ticket SF-2026-001 has been assigned to you\",\n      \"type\": \"TICKET_ASSIGNED\",\n      \"isRead\": true,\n      \"ticketId\": \"clxticket123456\",\n      \"createdAt\": \"2026-01-01T09:00:00.000Z\"\n    }\n  ]\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Mark All Notifications as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{base_url}}/notifications/read-all",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "read-all"]
+            },
+            "description": "Mark all of the authenticated user's notifications as read.\n\n**Roles:** All authenticated users"
+          },
+          "response": [
+            {
+              "name": "200 — All read",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"All notifications marked as read\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{base_url}}/notifications/{{notification_id}}/read",
+              "host": ["{{base_url}}"],
+              "path": ["notifications", "{{notification_id}}", "read"]
+            },
+            "description": "Mark a single notification as read.\n\n**Roles:** All authenticated users\n\n⚠️ Set `notification_id` variable first."
+          },
+          "response": [
+            {
+              "name": "200 — Marked as read",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Notification marked as read\",\n  \"data\": { \"id\": \"clxnotif001\", \"isRead\": true }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "💳 Subscriptions",
+      "description": "Razorpay subscription billing — create payment orders, verify payments, cancel/downgrade plans, and handle webhooks.\n\nUpgrade/cancel/downgrade require `BUSINESS_ADMIN` role. The webhook endpoint is public (HMAC-verified).",
+      "item": [
+        {
+          "name": "Get Current Subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/subscriptions/current",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "current"]
+            },
+            "description": "Get the current subscription details and usage stats for the authenticated user's business.\n\n**Roles:** All authenticated users"
+          },
+          "response": [
+            {
+              "name": "200 — Subscription details",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"plan\": \"STANDARD\",\n    \"billingCycle\": \"monthly\",\n    \"status\": \"ACTIVE\",\n    \"currentPeriodStart\": \"2026-01-01T00:00:00.000Z\",\n    \"currentPeriodEnd\": \"2026-01-31T00:00:00.000Z\",\n    \"cancelAtPeriodEnd\": false,\n    \"agentsUsed\": 2,\n    \"agentsLimit\": 5,\n    \"ticketsUsed\": 47,\n    \"ticketsLimit\": null\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Create Razorpay Order [BA]",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json().data;",
+                  "  if (data && data.orderId) {",
+                  "    pm.collectionVariables.set('razorpay_order_id', data.orderId);",
+                  "    console.log('razorpay_order_id set:', data.orderId);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"STANDARD\",\n  \"billingCycle\": \"monthly\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/razorpay-order",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "razorpay-order"]
+            },
+            "description": "Create a Razorpay payment order to initiate the checkout modal on the frontend.\n\n**Roles:** `BUSINESS_ADMIN` only\n\n`plan`: `STANDARD` | `BUSINESS`\n`billingCycle`: `monthly` | `yearly`\n\nPrices:\n- STANDARD Monthly: ₹2,499\n- STANDARD Yearly: ₹24,990\n- BUSINESS Monthly: ₹6,499\n- BUSINESS Yearly: ₹64,990"
+          },
+          "response": [
+            {
+              "name": "200 — Order created",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"orderId\": \"order_xxx123\",\n    \"amount\": 249900,\n    \"currency\": \"INR\",\n    \"key\": \"rzp_test_xxx\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Verify Payment [BA]",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_order_id\": \"{{razorpay_order_id}}\",\n  \"razorpay_payment_id\": \"pay_xxx456\",\n  \"razorpay_signature\": \"hmac-sha256-signature-from-razorpay\",\n  \"plan\": \"STANDARD\",\n  \"billingCycle\": \"monthly\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/verify-payment",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "verify-payment"]
+            },
+            "description": "Verify Razorpay payment signature after the user completes checkout. On success, activates the subscription.\n\n**Roles:** `BUSINESS_ADMIN` only\n\nThe `razorpay_signature` is provided by the Razorpay SDK after payment completion."
+          },
+          "response": [
+            {
+              "name": "200 — Payment verified, subscription activated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Payment verified. Subscription activated!\",\n  \"data\": {\n    \"plan\": \"STANDARD\",\n    \"status\": \"ACTIVE\",\n    \"currentPeriodEnd\": \"2026-02-01T00:00:00.000Z\"\n  }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "400 — Invalid signature",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Payment verification failed. Invalid signature.\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Cancel Subscription [BA]",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "cancel"]
+            },
+            "description": "Cancel the active subscription. The business retains its current plan features until `currentPeriodEnd`, then downgrades to FREE.\n\n**Roles:** `BUSINESS_ADMIN` only"
+          },
+          "response": [
+            {
+              "name": "200 — Cancellation scheduled",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Subscription cancelled. You'll retain access until the end of your billing period.\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Schedule Downgrade [BA]",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targetPlan\": \"FREE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/downgrade",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "downgrade"]
+            },
+            "description": "Schedule a downgrade to a lower plan at the end of the current billing period.\n\n**Roles:** `BUSINESS_ADMIN` only\n\n`targetPlan`: `STANDARD` | `FREE`"
+          },
+          "response": [
+            {
+              "name": "200 — Downgrade scheduled",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Downgrade to FREE scheduled for end of billing period.\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Webhook — Razorpay Events",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "X-Razorpay-Signature", "value": "hmac-sha256-signature", "description": "Provided by Razorpay servers automatically" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"event\": \"payment.captured\",\n  \"payload\": {\n    \"payment\": {\n      \"entity\": {\n        \"id\": \"pay_xxx456\",\n        \"order_id\": \"order_xxx123\",\n        \"amount\": 249900,\n        \"currency\": \"INR\",\n        \"status\": \"captured\"\n      }\n    }\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/subscriptions/webhook",
+              "host": ["{{base_url}}"],
+              "path": ["subscriptions", "webhook"]
+            },
+            "description": "**Called by Razorpay servers only. Not called from client code.**\n\nHMAC-SHA256 signature verified using `RAZORPAY_WEBHOOK_SECRET`.\n\n**Supported events:**\n- `payment.captured`\n- `payment.failed`\n- `subscription.charged`\n- `subscription.cancelled`\n\n⚠️ Configure this URL in the Razorpay Dashboard → Settings → Webhooks."
+          },
+          "response": [
+            {
+              "name": "200 — Webhook processed",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Webhook processed\"\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "400 — Invalid signature",
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid webhook signature\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📊 Dashboard",
+      "description": "Role-specific dashboard metrics and analytics. All endpoints require authentication.\n\n- `/business` → Business Admin metrics\n- `/agent` → Agent performance\n- `/platform` → Platform Admin super-stats\n- `/ratings` → CSAT ratings breakdown",
+      "item": [
+        {
+          "name": "Business Admin Dashboard [BA]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/business",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "business"]
+            },
+            "description": "Get business-level metrics: total tickets, open/resolved counts, average resolution time, CSAT score, agent count, and trend charts.\n\n**Roles:** `BUSINESS_ADMIN` only"
+          },
+          "response": [
+            {
+              "name": "200 — Business metrics",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"totalTickets\": 150,\n    \"openTickets\": 23,\n    \"inProgressTickets\": 12,\n    \"resolvedTickets\": 115,\n    \"averageResolutionTimeHours\": 4.2,\n    \"csatScore\": 4.3,\n    \"agentCount\": 3,\n    \"ticketsByStatus\": {\n      \"OPEN\": 23,\n      \"IN_PROGRESS\": 12,\n      \"RESOLVED\": 115\n    },\n    \"ticketsByCategory\": {\n      \"TECHNICAL_ISSUE\": 67,\n      \"BILLING\": 28,\n      \"GENERAL_INQUIRY\": 55\n    },\n    \"ticketTrend\": [\n      { \"date\": \"2026-01-01\", \"count\": 12 },\n      { \"date\": \"2026-01-02\", \"count\": 8 }\n    ]\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Agent Dashboard [SA/BA]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/agent",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "agent"]
+            },
+            "description": "Get personal agent performance metrics: assigned tickets, resolved count, avg resolution time, CSAT score.\n\n**Roles:** `SUPPORT_AGENT`, `BUSINESS_ADMIN`"
+          },
+          "response": [
+            {
+              "name": "200 — Agent metrics",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"assignedTickets\": 8,\n    \"resolvedThisMonth\": 22,\n    \"avgResolutionTimeHours\": 3.1,\n    \"csatScore\": 4.6,\n    \"openTickets\": 5,\n    \"inProgressTickets\": 3\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Platform Admin Dashboard [PA]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/platform",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "platform"]
+            },
+            "description": "Get platform-wide super admin metrics: total businesses, users, tickets, subscription breakdown.\n\n**Roles:** `PLATFORM_ADMIN` only"
+          },
+          "response": [
+            {
+              "name": "200 — Platform metrics",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"totalBusinesses\": 45,\n    \"activeBusinesses\": 41,\n    \"suspendedBusinesses\": 4,\n    \"totalUsers\": 312,\n    \"totalTickets\": 8921,\n    \"subscriptionBreakdown\": {\n      \"FREE\": 30,\n      \"STANDARD\": 12,\n      \"BUSINESS\": 3\n    },\n    \"businesses\": [\n      {\n        \"id\": \"clxbiz001\",\n        \"businessName\": \"Acme Corp\",\n        \"isSuspended\": false,\n        \"plan\": \"STANDARD\",\n        \"agentCount\": 3,\n        \"ticketCount\": 142\n      }\n    ]\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Toggle Business Suspension [PA]",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": { "mode": "raw", "raw": "{}", "options": { "raw": { "language": "json" } } },
+            "url": {
+              "raw": "{{base_url}}/dashboard/platform/businesses/{{business_id}}/toggle-suspend",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "platform", "businesses", "{{business_id}}", "toggle-suspend"]
+            },
+            "description": "Suspend or reactivate a business account. Suspended businesses cannot log in or use the platform.\n\n**Roles:** `PLATFORM_ADMIN` only"
+          },
+          "response": [
+            {
+              "name": "200 — Business suspended",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Business suspended successfully\",\n  \"data\": { \"id\": \"clxbiz001\", \"isSuspended\": true }\n}",
+              "_postman_previewlanguage": "json"
+            },
+            {
+              "name": "200 — Business reactivated",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Business reactivated successfully\",\n  \"data\": { \"id\": \"clxbiz001\", \"isSuspended\": false }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        },
+        {
+          "name": "Get CSAT Ratings [SA/BA]",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/dashboard/ratings",
+              "host": ["{{base_url}}"],
+              "path": ["dashboard", "ratings"]
+            },
+            "description": "Get CSAT (Customer Satisfaction) rating breakdown and recent feedback.\n\n**Roles:** `SUPPORT_AGENT`, `BUSINESS_ADMIN`"
+          },
+          "response": [
+            {
+              "name": "200 — Ratings breakdown",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"averageScore\": 4.3,\n    \"totalRatings\": 89,\n    \"distribution\": {\n      \"5\": 45,\n      \"4\": 28,\n      \"3\": 10,\n      \"2\": 4,\n      \"1\": 2\n    },\n    \"recentRatings\": [\n      {\n        \"score\": 5,\n        \"comment\": \"Excellent support!\",\n        \"createdAt\": \"2026-01-01T10:00:00.000Z\",\n        \"ticket\": { \"id\": \"clxticket001\", \"title\": \"Login issue\", \"ticketNumber\": \"SF-2026-001\" }\n      }\n    ]\n  }\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🏥 Health",
+      "description": "System health check endpoint. Use for uptime monitoring.",
+      "item": [
+        {
+          "name": "API Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "**Public endpoint.** Returns a simple OK response to confirm the API is running.\n\nUse this as the target URL for uptime monitoring tools (UptimeRobot, BetterUptime, etc.)."
+          },
+          "response": [
+            {
+              "name": "200 — API operational",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"message\": \"SupportFlow API V1 Operational\"\n}",
+              "_postman_previewlanguage": "json"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

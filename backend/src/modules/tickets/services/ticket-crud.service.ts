@@ -1,8 +1,14 @@
-import { TicketCategory, TicketPriority, TicketStatus, Role } from '@prisma/client';
-import { prisma } from '../../../utils/prisma';
-import { ApiError } from '../../../common/exceptions/apiError';
-import { AuthenticatedUser } from '../../../common/types';
-import { NotificationService } from '../../../services/notification.service';
+import {
+  TicketCategory,
+  TicketPriority,
+  TicketStatus,
+  Role,
+} from "@prisma/client";
+import { prisma } from "../../../utils/prisma";
+import { ApiError } from "../../../common/exceptions/apiError";
+import { AuthenticatedUser } from "../../../common/types";
+import { NotificationService } from "../../../services/notification.service";
+import { getPlanTicketLimit } from "../../subscriptions/plans.config";
 
 export interface CreateTicketDto {
   title: string;
@@ -32,11 +38,13 @@ export class TicketCrudService {
       // Default to first active non-suspended business if customer didn't select one
       const defaultBusiness = await prisma.business.findFirst({
         where: { isSuspended: false },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: "asc" },
       });
 
       if (!defaultBusiness) {
-        throw ApiError.badRequest('No active business available to receive support tickets.');
+        throw ApiError.badRequest(
+          "No active business available to receive support tickets.",
+        );
       }
       targetBusinessId = defaultBusiness.id;
     }
@@ -46,11 +54,14 @@ export class TicketCrudService {
     });
 
     if (!business || business.isSuspended) {
-      throw ApiError.badRequest('The selected business is invalid or currently suspended.');
+      throw ApiError.badRequest(
+        "The selected business is invalid or currently suspended.",
+      );
     }
 
-    // Enforce Free Plan Monthly Ticket Limits (Max 25 tickets/month)
-    if (business.plan === 'FREE') {
+    // Enforce Plan Monthly Ticket Limits
+    const ticketLimit = getPlanTicketLimit(business.plan);
+    if (ticketLimit !== Infinity) {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
@@ -61,9 +72,9 @@ export class TicketCrudService {
         },
       });
 
-      if (monthlyTicketCount >= 25) {
+      if (monthlyTicketCount >= ticketLimit) {
         throw ApiError.forbidden(
-          'This business has reached the Free Plan limit of 25 support tickets per month. Please contact the business administrator to upgrade their plan.'
+          `This business has reached the ${business.plan} plan limit of ${ticketLimit} support tickets per month. Please contact the business administrator to upgrade their plan.`,
         );
       }
     }
@@ -81,7 +92,9 @@ export class TicketCrudService {
           customerId: user.id,
         },
         include: {
-          customer: { select: { id: true, fullName: true, email: true, avatarUrl: true } },
+          customer: {
+            select: { id: true, fullName: true, email: true, avatarUrl: true },
+          },
           business: { select: { id: true, name: true } },
         },
       });
@@ -91,7 +104,7 @@ export class TicketCrudService {
         data: {
           ticketId: newTicket.id,
           actorId: user.id,
-          action: 'TICKET_CREATED',
+          action: "TICKET_CREATED",
           details: {
             title: newTicket.title,
             category: newTicket.category,
@@ -124,9 +137,9 @@ export class TicketCrudService {
           NotificationService.sendNotification({
             userId: admin.id,
             ticketId: ticket.id,
-            title: '🎫 New Ticket Created',
+            title: "🎫 New Ticket Created",
             message: `New ticket #${ticket.ticketNumber || ticket.id.substring(0, 6)}: "${ticket.title}" created by ${user.fullName}.`,
-            type: 'NEW_TICKET',
+            type: "NEW_TICKET",
           }).catch(() => null);
         });
       })
@@ -149,10 +162,10 @@ export class TicketCrudService {
     if (user.role === Role.CUSTOMER) {
       where.customerId = user.id;
     } else if (user.role === Role.SUPPORT_AGENT) {
-      where.businessId = user.businessId || '';
+      where.businessId = user.businessId || "";
       where.assignedAgentId = user.id; // Strictly ONLY tickets assigned to this agent
     } else if (user.role === Role.BUSINESS_ADMIN) {
-      where.businessId = user.businessId || '';
+      where.businessId = user.businessId || "";
     }
     // PLATFORM_ADMIN sees all tickets
 
@@ -166,8 +179,8 @@ export class TicketCrudService {
         ...(where.AND || []),
         {
           OR: [
-            { title: { contains: query.search, mode: 'insensitive' } },
-            { description: { contains: query.search, mode: 'insensitive' } },
+            { title: { contains: query.search, mode: "insensitive" } },
+            { description: { contains: query.search, mode: "insensitive" } },
           ],
         },
       ];
@@ -178,9 +191,11 @@ export class TicketCrudService {
         where,
         skip,
         take: limit,
-        orderBy: { updatedAt: 'desc' },
+        orderBy: { updatedAt: "desc" },
         include: {
-          customer: { select: { id: true, fullName: true, email: true, avatarUrl: true } },
+          customer: {
+            select: { id: true, fullName: true, email: true, avatarUrl: true },
+          },
           assignedAgent: { select: { id: true, fullName: true, email: true } },
           business: { select: { id: true, name: true } },
           _count: { select: { messages: true, internalNotes: true } },
@@ -207,23 +222,27 @@ export class TicketCrudService {
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
       include: {
-        customer: { select: { id: true, fullName: true, email: true, avatarUrl: true } },
+        customer: {
+          select: { id: true, fullName: true, email: true, avatarUrl: true },
+        },
         assignedAgent: { select: { id: true, fullName: true, email: true } },
         business: { select: { id: true, name: true } },
         messages: {
-          orderBy: { createdAt: 'asc' },
+          orderBy: { createdAt: "asc" },
           include: {
-            sender: { select: { id: true, fullName: true, role: true, avatarUrl: true } },
+            sender: {
+              select: { id: true, fullName: true, role: true, avatarUrl: true },
+            },
           },
         },
         internalNotes: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           include: {
             author: { select: { id: true, fullName: true, role: true } },
           },
         },
         activities: {
-          orderBy: { createdAt: 'desc' },
+          orderBy: { createdAt: "desc" },
           include: {
             actor: { select: { id: true, fullName: true, role: true } },
           },
@@ -232,12 +251,14 @@ export class TicketCrudService {
     });
 
     if (!ticket) {
-      throw ApiError.notFound('Ticket not found.');
+      throw ApiError.notFound("Ticket not found.");
     }
 
     // Permission Verification
     if (user.role === Role.CUSTOMER && ticket.customerId !== user.id) {
-      throw ApiError.forbidden('You do not have permission to view this support ticket.');
+      throw ApiError.forbidden(
+        "You do not have permission to view this support ticket.",
+      );
     }
 
     if (
@@ -245,7 +266,7 @@ export class TicketCrudService {
       ticket.businessId !== user.businessId
     ) {
       throw ApiError.forbidden(
-        'You do not have permission to access tickets for another business.'
+        "You do not have permission to access tickets for another business.",
       );
     }
 
@@ -263,9 +284,14 @@ export class TicketCrudService {
   /**
    * Submit Customer Satisfaction (CSAT) rating
    */
-  async submitCsat(ticketId: string, score: number, comment: string | undefined, user: AuthenticatedUser) {
+  async submitCsat(
+    ticketId: string,
+    score: number,
+    comment: string | undefined,
+    user: AuthenticatedUser,
+  ) {
     if (user.role !== Role.CUSTOMER) {
-      throw ApiError.forbidden('Only customers can submit CSAT ratings.');
+      throw ApiError.forbidden("Only customers can submit CSAT ratings.");
     }
 
     const ticket = await prisma.ticket.findUnique({
@@ -273,19 +299,21 @@ export class TicketCrudService {
     });
 
     if (!ticket) {
-      throw ApiError.notFound('Ticket not found.');
+      throw ApiError.notFound("Ticket not found.");
     }
 
     if (ticket.customerId !== user.id) {
-      throw ApiError.forbidden('You can only rate your own tickets.');
+      throw ApiError.forbidden("You can only rate your own tickets.");
     }
 
-    if (ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED') {
-      throw ApiError.badRequest('You can only rate a ticket after it has been resolved.');
+    if (ticket.status !== "RESOLVED" && ticket.status !== "CLOSED") {
+      throw ApiError.badRequest(
+        "You can only rate a ticket after it has been resolved.",
+      );
     }
 
     if (ticket.csatScore) {
-      throw ApiError.badRequest('You have already rated this ticket.');
+      throw ApiError.badRequest("You have already rated this ticket.");
     }
 
     const updatedTicket = await prisma.ticket.update({
@@ -301,9 +329,9 @@ export class TicketCrudService {
       NotificationService.sendNotification({
         userId: updatedTicket.assignedAgentId,
         ticketId: ticket.id,
-        title: '⭐ New CSAT Rating Received',
+        title: "⭐ New CSAT Rating Received",
         message: `Your ticket #${ticket.ticketNumber || ticket.id.substring(0, 6)} received a ${score}/5 rating!`,
-        type: 'CSAT_RECEIVED',
+        type: "CSAT_RECEIVED",
       }).catch(() => null);
     }
 
