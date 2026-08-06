@@ -21,9 +21,24 @@ export const useInviteAgent = () => {
 
   return useMutation({
     mutationFn: (payload: InviteAgentPayload) => invitationsApi.inviteAgent(payload),
-    onSuccess: () => {
+    onSuccess: (res: any) => {
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
-      toast.success('Agent invitation created successfully!');
+      const inviteUrl = res?.data?.inviteUrl;
+      const emailSent = res?.data?.emailSent;
+      const emailMessage = res?.data?.emailMessage;
+
+      if (inviteUrl) {
+        navigator.clipboard.writeText(inviteUrl);
+      }
+
+      if (emailSent === false) {
+        toast.success(
+          emailMessage || 'Invitation created! Email could not be sent via SMTP, so invitation link was copied to clipboard.',
+          { duration: 6000 }
+        );
+      } else {
+        toast.success('Agent invitation created & link copied to clipboard!');
+      }
     },
     onError: (err: any) => {
       const msg = err.response?.data?.message || err.message || 'Failed to send invitation.';

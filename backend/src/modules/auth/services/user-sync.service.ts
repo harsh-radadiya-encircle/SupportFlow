@@ -2,6 +2,7 @@ import { Role, AuthProvider } from "@prisma/client";
 import { prisma } from "../../../utils/prisma";
 import { ApiError } from "../../../common/exceptions/apiError";
 import { admin } from "../../../config/firebase";
+import { getPlanAgentLimit } from "../../subscriptions/plans.config";
 
 export interface SyncUserDto {
   firebaseUid: string;
@@ -130,8 +131,27 @@ export class UserSyncService {
       }
 
       existingUser = await prisma.$transaction(async (tx) => {
-        // If invitation exists, mark it as consumed
+        // If invitation exists, check plan agent limits before consuming
         if (invitation) {
+          if (invitation.role === Role.SUPPORT_AGENT) {
+            const business = await tx.business.findUnique({
+              where: { id: invitation.businessId },
+            });
+            const activeAgentCount = await tx.user.count({
+              where: {
+                businessId: invitation.businessId,
+                role: Role.SUPPORT_AGENT,
+                isActive: true,
+              },
+            });
+            const maxAllowed = getPlanAgentLimit(business?.plan || "FREE");
+            if (activeAgentCount >= maxAllowed) {
+              throw ApiError.forbidden(
+                `This business team has reached its limit of ${maxAllowed} active support agent(s) on the ${business?.plan || "FREE"} plan. Please contact your Business Admin to upgrade their subscription plan.`,
+              );
+            }
+          }
+
           await tx.invitation.update({
             where: { id: invitation.id },
             data: { isAccepted: true },

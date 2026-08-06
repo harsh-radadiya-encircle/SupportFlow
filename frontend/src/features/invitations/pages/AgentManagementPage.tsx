@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -89,14 +90,9 @@ export const AgentManagementPage: React.FC = () => {
     inviteMutation.mutate(
       { email: formData.email, role: formData.role as Role },
       {
-        onSuccess: (res) => {
+        onSuccess: () => {
           reset();
           setIsModalOpen(false);
-          const inviteUrl = res?.data?.inviteUrl;
-          if (inviteUrl) {
-            navigator.clipboard.writeText(inviteUrl);
-            toast.success('Invitation link copied to clipboard!');
-          }
         },
       }
     );
@@ -242,9 +238,15 @@ export const AgentManagementPage: React.FC = () => {
 
         <Button
           variant="primary"
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            if (teamData.remainingSlots <= 0) {
+              toast.error(`Plan limit reached (${teamData.maxAgents} max agents). Upgrade your plan to invite more agents.`);
+              return;
+            }
+            setIsModalOpen(true);
+          }}
           disabled={teamData.remainingSlots <= 0}
-          className="shrink-0 bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-md"
+          className="shrink-0 bg-slate-900 hover:bg-slate-800 text-white font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <UserPlus className="w-4 h-4 mr-2" /> Invite Support Agent
         </Button>
@@ -252,13 +254,14 @@ export const AgentManagementPage: React.FC = () => {
 
       {/* Plan Quota Usage Meter */}
       <Card glass className="p-5 border border-slate-200">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
           <span className="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
             <Users className="w-4 h-4 text-indigo-600" /> Support Agent Quota Usage
           </span>
           <span className="text-xs font-bold text-slate-700">
-            {teamData.activeAgentCount} / {teamData.maxAgents} Active ({teamData.remainingSlots}{' '}
-            slots remaining)
+            {teamData.activeAgentCount} / {teamData.maxAgents} Active
+            {teamData.invitations?.length > 0 && ` (${teamData.invitations.length} pending)`}
+            {' — '}{teamData.remainingSlots} slots remaining
           </span>
         </div>
         <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
@@ -273,10 +276,20 @@ export const AgentManagementPage: React.FC = () => {
             style={{ width: `${quotaPercent}%` }}
           />
         </div>
-        {teamData.remainingSlots <= 0 && (
-          <p className="text-xs font-semibold text-rose-600 mt-2 flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" /> Plan limit reached. Upgrade your subscription plan
-            to invite additional agents.
+
+        {teamData.activeAgentCount > teamData.maxAgents && (
+          <div className="mt-3 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold">Team Limit Exceeded ({teamData.activeAgentCount}/{teamData.maxAgents}):</span>{' '}
+              Your active support agent count exceeds your {teamData.plan} plan limit. Deactivate {teamData.activeAgentCount - teamData.maxAgents} agent(s) or upgrade your plan in Billing to restore compliance.
+            </div>
+          </div>
+        )}
+
+        {teamData.remainingSlots <= 0 && teamData.activeAgentCount <= teamData.maxAgents && (
+          <p className="text-xs font-semibold text-amber-600 mt-2 flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5" /> Plan limit reached ({teamData.activeAgentCount} active + {teamData.invitations?.length || 0} pending). Upgrade your subscription plan to invite additional agents.
           </p>
         )}
       </Card>
@@ -394,49 +407,51 @@ export const AgentManagementPage: React.FC = () => {
         )}
       </div>
 
-      {/* Invite Agent Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4 font-sans">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2 font-bold text-slate-900 text-lg">
-                <UserPlus className="w-5 h-5 text-indigo-600" /> Invite Support Agent
-              </div>
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <Input
-                label="Agent Email Address"
-                type="email"
-                placeholder="agent@company.com"
-                leftIcon={<Mail className="w-4 h-4" />}
-                error={errors.email?.message}
-                {...register('email')}
-              />
-
-              <div className="pt-2 flex justify-end gap-2">
-                <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="primary"
-                  isLoading={inviteMutation.isPending}
-                  className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+      {/* Invite Agent Modal using React Portal for 100% Full-Screen Overlay */}
+      {isModalOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-md bg-white rounded-2xl p-6 shadow-2xl border border-slate-200 space-y-4 font-sans relative z-10">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2 font-bold text-slate-900 text-lg">
+                  <UserPlus className="w-5 h-5 text-indigo-600" /> Invite Support Agent
+                </div>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 text-sm font-bold p-1 rounded-lg hover:bg-slate-100 transition-colors"
                 >
-                  Send Invitation
-                </Button>
+                  ✕
+                </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <Input
+                  label="Agent Email Address"
+                  type="email"
+                  placeholder="agent@company.com"
+                  leftIcon={<Mail className="w-4 h-4" />}
+                  error={errors.email?.message}
+                  {...register('email')}
+                />
+
+                <div className="pt-2 flex justify-end gap-2">
+                  <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    variant="primary"
+                    isLoading={inviteMutation.isPending}
+                    className="bg-slate-900 hover:bg-slate-800 text-white font-bold"
+                  >
+                    Send Invitation
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

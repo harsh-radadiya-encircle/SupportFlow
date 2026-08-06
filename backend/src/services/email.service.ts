@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
-import { env } from '../config/env';
+import nodemailer from "nodemailer";
+import { env } from "../config/env";
 
 export interface SendEmailOptions {
   to: string;
@@ -13,10 +13,17 @@ export class EmailService {
    * Create Nodemailer SMTP Transporter dynamically on every dispatch
    */
   private static getTransporter() {
-    const host = (process.env.SMTP_HOST || env.SMTP.HOST || 'smtp.gmail.com').trim();
-    const port = parseInt(process.env.SMTP_PORT || String(env.SMTP.PORT || '587'), 10);
-    const user = (process.env.SMTP_USER || env.SMTP.USER || '').trim();
-    const pass = (process.env.SMTP_PASS || env.SMTP.PASS || '').trim();
+    const host = (
+      process.env.SMTP_HOST ||
+      env.SMTP.HOST ||
+      "smtp.gmail.com"
+    ).trim();
+    const port = parseInt(
+      process.env.SMTP_PORT || String(env.SMTP.PORT || "587"),
+      10,
+    );
+    const user = (process.env.SMTP_USER || env.SMTP.USER || "").trim();
+    const pass = (process.env.SMTP_PASS || env.SMTP.PASS || "").trim();
 
     if (!user || !pass) {
       return null;
@@ -30,41 +37,57 @@ export class EmailService {
         user,
         pass,
       },
+      connectionTimeout: 6000, // 6s connection timeout
+      greetingTimeout: 6000, // 6s greeting timeout
+      socketTimeout: 8000, // 8s socket timeout
     });
   }
 
   /**
    * Send a transactional email using Nodemailer SMTP
    */
-  static async sendEmail({ to, toName, subject, htmlContent }: SendEmailOptions): Promise<boolean> {
+  static async sendEmail({
+    to,
+    toName,
+    subject,
+    htmlContent,
+  }: SendEmailOptions): Promise<boolean> {
     const transporter = this.getTransporter();
 
     const fromEmail = (
       process.env.SMTP_FROM_EMAIL ||
       env.SMTP.FROM_EMAIL ||
       process.env.SMTP_USER ||
-      'noreply@supportflow.com'
+      "noreply@supportflow.com"
     ).trim();
     const fromName = (
       process.env.SMTP_FROM_NAME ||
       env.SMTP.FROM_NAME ||
-      'SupportFlow Team'
+      "SupportFlow Team"
     ).trim();
 
     if (!transporter) {
-      console.log('\n=================== 📧 DEV EMAIL NOTICE 📧 ===================');
+      console.log(
+        "\n=================== 📧 DEV EMAIL NOTICE 📧 ===================",
+      );
       console.log(`[To]: ${to}`);
       console.log(`[Subject]: ${subject}`);
-      console.log('[Notice]: SMTP_USER or SMTP_PASS is missing in backend/.env.');
       console.log(
-        'Action: Configure SMTP_USER and SMTP_PASS in .env to dispatch real SMTP emails.'
+        "[Notice]: SMTP_USER or SMTP_PASS is missing in backend/.env.",
       );
-      console.log('===============================================================\n');
+      console.log(
+        "Action: Configure SMTP_USER and SMTP_PASS in .env to dispatch real SMTP emails.",
+      );
+      console.log(
+        "===============================================================\n",
+      );
       return true;
     }
 
     try {
-      console.log(`[Nodemailer SMTP] Sending email to ${to} via SMTP server...`);
+      console.log(
+        `[Nodemailer SMTP] Sending email to ${to} via SMTP server...`,
+      );
       const info = await transporter.sendMail({
         from: `"${fromName}" <${fromEmail}>`,
         to: toName ? `"${toName}" <${to}>` : to,
@@ -73,12 +96,17 @@ export class EmailService {
       });
 
       console.log(
-        `[Nodemailer SMTP] Email successfully delivered to ${to}. Message ID: ${info.messageId}`
+        `[Nodemailer SMTP] Email successfully delivered to ${to}. Message ID: ${info.messageId}`,
       );
       return true;
     } catch (error: any) {
-      console.error('[Nodemailer SMTP Error]: Failed to send email via SMTP:', error.message);
-      throw new Error(`SMTP email delivery failed: ${error.message}`, { cause: error });
+      console.error(
+        "[Nodemailer SMTP Error]: Failed to send email via SMTP:",
+        error.message,
+      );
+      throw new Error(`SMTP email delivery failed: ${error.message}`, {
+        cause: error,
+      });
     }
   }
 
@@ -88,10 +116,10 @@ export class EmailService {
   static async sendPasswordResetEmail(
     email: string,
     userName: string,
-    resetUrl: string
+    resetUrl: string,
   ): Promise<boolean> {
     console.log(`\n🔑 [PASSWORD RESET LINK]: ${resetUrl}\n`);
-    const subject = '🔒 Reset Your SupportFlow Password';
+    const subject = "🔒 Reset Your SupportFlow Password";
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -146,7 +174,12 @@ export class EmailService {
 </html>
     `;
 
-    return this.sendEmail({ to: email, toName: userName, subject, htmlContent });
+    return this.sendEmail({
+      to: email,
+      toName: userName,
+      subject,
+      htmlContent,
+    });
   }
 
   /**
@@ -156,7 +189,7 @@ export class EmailService {
     email: string,
     inviterName: string,
     businessName: string,
-    inviteUrl: string
+    inviteUrl: string,
   ): Promise<boolean> {
     console.log(`\n📩 [AGENT INVITATION LINK]: ${inviteUrl}\n`);
     const subject = `📩 Join ${businessName} on SupportFlow`;

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { auth } from '../config/firebase';
@@ -110,7 +110,7 @@ export const DashboardLayout: React.FC = () => {
     }
   };
 
-  const getNavLinks = () => {
+  const navLinks = useMemo(() => {
     switch (user?.role) {
       case 'PLATFORM_ADMIN':
         return [
@@ -141,9 +141,7 @@ export const DashboardLayout: React.FC = () => {
           { name: 'New Support Ticket', path: '/customer/tickets/new', icon: Ticket },
         ];
     }
-  };
-
-  const navLinks = getNavLinks();
+  }, [user?.role]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-900 antialiased font-sans">

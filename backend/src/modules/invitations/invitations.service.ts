@@ -47,8 +47,8 @@ export class InvitationsService {
       );
     }
 
-    // 1. Enforce Subscription Plan Agent Limits (from centralized PLAN_CONFIG)
-    const currentAgentCount = await prisma.user.count({
+    // 1. Enforce Subscription Plan Agent Limits (active agents + non-expired pending invitations)
+    const activeAgentCount = await prisma.user.count({
       where: {
         businessId: currentUser.businessId,
         role: Role.SUPPORT_AGENT,
@@ -56,10 +56,20 @@ export class InvitationsService {
       },
     });
 
+    const pendingInviteCount = await prisma.invitation.count({
+      where: {
+        businessId: currentUser.businessId,
+        isAccepted: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
     const maxAllowed = getPlanAgentLimit(business.plan);
-    if (currentAgentCount >= maxAllowed) {
+    const totalOccupied = activeAgentCount + pendingInviteCount;
+
+    if (totalOccupied >= maxAllowed) {
       throw ApiError.forbidden(
-        `Your ${business.plan} subscription plan allows a maximum of ${maxAllowed} support agent(s). You currently have ${currentAgentCount}. Please upgrade your plan in billing to invite more agents.`,
+        `Your ${business.plan} subscription plan allows a maximum of ${maxAllowed} support agent seat(s). You currently have ${activeAgentCount} active agent(s) and ${pendingInviteCount} pending invitation(s). Please revoke a pending invitation or upgrade your plan in Billing to invite more agents.`,
       );
     }
 
@@ -110,17 +120,30 @@ export class InvitationsService {
 
     const inviteUrl = `${env.FRONTEND_URL}/accept-invite?token=${token}`;
 
-    // Dispatch Agent Invitation Email via Nodemailer SMTP (or log in dev mode)
-    await EmailService.sendAgentInvitationEmail(
-      dto.email,
-      currentUser.fullName,
-      business.name,
-      inviteUrl,
-    );
+    // Dispatch Agent Invitation Email via Nodemailer SMTP (graceful fallback if SMTP fails or times out)
+    let emailSent = false;
+    let emailMessage = "";
+    try {
+      emailSent = await EmailService.sendAgentInvitationEmail(
+        dto.email,
+        currentUser.fullName,
+        business.name,
+        inviteUrl,
+      );
+    } catch (err: any) {
+      console.warn(
+        `[Invite Email Warning] SMTP delivery failed for ${dto.email}: ${err.message}`,
+      );
+      emailSent = false;
+      emailMessage =
+        "Invitation created, but email dispatch failed. The invitation link has been copied so you can share it manually.";
+    }
 
     return {
       invitation,
       inviteUrl,
+      emailSent,
+      emailMessage,
     };
   }
 
@@ -170,6 +193,9 @@ export class InvitationsService {
     const activeAgentCount = agents.filter(
       (a) => a.role === Role.SUPPORT_AGENT && a.isActive,
     ).length;
+    const pendingInviteCount = invitations.filter(
+      (inv) => !inv.isAccepted && new Date(inv.expiresAt) > new Date(),
+    ).length;
     const maxAgents = getPlanAgentLimit(business?.plan || "FREE");
 
     return {
@@ -177,8 +203,12 @@ export class InvitationsService {
       invitations,
       plan: business?.plan || "FREE",
       activeAgentCount,
+      pendingInviteCount,
       maxAgents,
-      remainingSlots: Math.max(0, maxAgents - activeAgentCount),
+      remainingSlots: Math.max(
+        0,
+        maxAgents - (activeAgentCount + pendingInviteCount),
+      ),
     };
   }
 
@@ -210,6 +240,26 @@ export class InvitationsService {
       throw ApiError.badRequest(
         "You cannot deactivate your own business admin account.",
       );
+    }
+
+    if (!agent.isActive) {
+      // Check agent limit before activating a deactivated agent
+      const business = await prisma.business.findUnique({
+        where: { id: currentUser.businessId },
+      });
+      const activeAgentCount = await prisma.user.count({
+        where: {
+          businessId: currentUser.businessId,
+          role: Role.SUPPORT_AGENT,
+          isActive: true,
+        },
+      });
+      const maxAllowed = getPlanAgentLimit(business?.plan || "FREE");
+      if (activeAgentCount >= maxAllowed) {
+        throw ApiError.forbidden(
+          `Cannot activate support agent. Your ${business?.plan || "FREE"} plan allows a maximum of ${maxAllowed} active support agent(s). You currently have ${activeAgentCount} active agent(s). Please deactivate another agent or upgrade your subscription plan in Billing.`,
+        );
+      }
     }
 
     const updated = await prisma.user.update({
@@ -289,6 +339,38 @@ export class InvitationsService {
    */
   static async acceptInvitation(dto: AcceptInviteDto) {
     const invitation = await this.verifyInvitationToken(dto.token);
+
+    // Enforce business agent seat limit check before accepting invitation
+    if (invitation.role === Role.SUPPORT_AGENT) {
+      const business = await prisma.business.findUnique({
+        where: { id: invitation.businessId },
+      });
+
+      if (!business) {
+        throw ApiError.notFound("Associated business account not found.");
+      }
+
+      if (business.isSuspended) {
+        throw ApiError.forbidden(
+          "This business account is suspended. Please contact platform administration.",
+        );
+      }
+
+      const activeAgentCount = await prisma.user.count({
+        where: {
+          businessId: invitation.businessId,
+          role: Role.SUPPORT_AGENT,
+          isActive: true,
+        },
+      });
+
+      const maxAllowed = getPlanAgentLimit(business.plan);
+      if (activeAgentCount >= maxAllowed) {
+        throw ApiError.forbidden(
+          `This business team has reached its limit of ${maxAllowed} active support agent(s) on the ${business.plan} plan (${activeAgentCount}/${maxAllowed}). Please contact your Business Admin to upgrade their subscription plan.`,
+        );
+      }
+    }
 
     // Create Support Agent User linked to the business
     const user = await prisma.user.create({
